@@ -131,6 +131,25 @@ export const useSessionStore = defineStore('session', () => {
     selections.value = {}
   }
 
+  async function submitOrder() {
+    if (!sessionId.value) return null
+    try {
+      const res = await fetch(`${API_BASE}/session/${sessionId.value}/submit`, {
+        method: 'POST',
+      })
+      if (!res.ok) return null
+      const json = await res.json()
+      // Clear local session — leave it in the backend for the budtender
+      localStorage.removeItem('sessionId')
+      sessionId.value = null
+      selections.value = {}
+      return json.orderNumber
+    } catch (e) {
+      console.error('Submit order failed:', e)
+      return null
+    }
+  }
+
   return {
     sessionId,
     selections,
@@ -139,5 +158,6 @@ export const useSessionStore = defineStore('session', () => {
     updateQuantity,
     removeSelections,
     clearSession,
+    submitOrder,
   }
 })

@@ -12,8 +12,11 @@ CORS(app, origins=["https://menu2.highhopesma.com", "http://localhost:5173"])
 
 SESSION_TIMEOUT_MINUTES = int(os.getenv("SESSION_TIMEOUT_MINUTES", 15))
 
-# In-memory session store: sessionId -> { updatedAt: datetime, selections: dict }
+# In-memory session store: sessionId -> { updatedAt, selections, ready, orderNumber }
 sessions: dict = {}
+
+# Order counter: 1–99, wraps around
+order_counter: int = 0
 
 
 def _purge_expired() -> None:
@@ -35,6 +38,8 @@ def create_or_update_session():
     sessions[session_id] = {
         "updatedAt": datetime.now(timezone.utc),
         "selections": selections,
+        "ready": False,
+        "orderNumber": None,
     }
     return "", 200
 
@@ -43,6 +48,20 @@ def create_or_update_session():
 def delete_session(session_id):
     sessions.pop(session_id, None)
     return "", 200
+
+
+@app.route("/api/session/<session_id>/submit", methods=["POST"])
+def submit_session(session_id):
+    global order_counter
+    if session_id not in sessions:
+        return jsonify({"error": "session not found"}), 404
+
+    order_counter = (order_counter % 99) + 1
+    sessions[session_id]["ready"] = True
+    sessions[session_id]["orderNumber"] = order_counter
+    sessions[session_id]["updatedAt"] = datetime.now(timezone.utc)
+
+    return jsonify({"orderNumber": order_counter})
 
 
 @app.route("/api/sessions", methods=["GET"])
@@ -56,9 +75,12 @@ def get_sessions():
                     "sessionId": sid,
                     "updatedAt": s["updatedAt"].isoformat(),
                     "selections": s["selections"],
+                    "ready": s.get("ready", False),
+                    "orderNumber": s.get("orderNumber"),
                 }
             )
-    result.sort(key=lambda x: x["updatedAt"])
+    # Ready orders first, then by updatedAt
+    result.sort(key=lambda x: (not x["ready"], x["updatedAt"]))
     return jsonify(result)
 
 

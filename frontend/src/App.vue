@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useProductsStore } from '@/stores/products'
 import { useSessionStore } from '@/stores/session'
 import NavBar from '@/components/NavBar.vue'
+import CartPanel from '@/components/CartPanel.vue'
 import CartAnimation from '@/components/CartAnimation.vue'
 
 const route = useRoute()
@@ -58,6 +59,7 @@ onUnmounted(() => {
 
 <template>
   <NavBar v-if="showNavBar" />
+  <CartPanel v-if="showNavBar" />
   <CartAnimation />
 
   <!-- /budtender never needs product data -->
@@ -65,15 +67,17 @@ onUnmounted(() => {
     <router-view />
   </template>
   <template v-else>
-    <div v-if="productsStore.loading" class="flex flex-col items-center justify-center h-screen gap-4">
+    <div v-if="productsStore.loading" class="flex flex-col items-center justify-center h-screen gap-4 pr-72">
       <div class="h-10 w-10 animate-spin rounded-full border-4 border-teal-500 border-t-transparent"></div>
       <p class="text-gray-500 text-lg">Loading menu...</p>
     </div>
-    <div v-else-if="productsStore.error" class="flex items-center justify-center h-screen px-8">
+    <div v-else-if="productsStore.error" class="flex items-center justify-center h-screen px-8 pr-72">
       <p class="text-center text-xl text-gray-700 max-w-lg leading-relaxed">
         Menu temporarily unavailable — please ask a budtender for assistance.
       </p>
     </div>
-    <router-view v-else />
+    <div v-else class="pr-72">
+      <router-view />
+    </div>
   </template>
 </template>

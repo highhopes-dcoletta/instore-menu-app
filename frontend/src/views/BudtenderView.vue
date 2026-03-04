@@ -1,10 +1,9 @@
 <!--
-  Budtender dashboard — no kiosk nav, no checkboxes.
-  Polls GET /api/sessions every 5 seconds.
-  Shows sessions with selections, oldest-first.
+  Budtender dashboard — polls GET /api/sessions every second.
+  Ready orders appear first with order number + green badge.
 -->
 <script setup>
-import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 
 const sessions = ref([])
 let pollTimer = null
@@ -53,11 +52,29 @@ onUnmounted(() => clearInterval(pollTimer))
       <div
         v-for="s in sessions"
         :key="s.sessionId"
-        class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm"
+        :class="[
+          'rounded-xl border p-5 shadow-sm',
+          s.ready ? 'border-teal-400 bg-teal-50' : 'border-gray-200 bg-white',
+        ]"
       >
-        <div class="mb-3 text-xs font-bold uppercase tracking-widest text-gray-400">
-          Last updated {{ timeSince(s.updatedAt) }}
+        <!-- Header row -->
+        <div class="flex items-center gap-3 mb-3">
+          <!-- Order number -->
+          <div v-if="s.orderNumber != null" class="text-3xl font-black text-teal-600 tabular-nums leading-none w-12 shrink-0">
+            #{{ String(s.orderNumber).padStart(2, '0') }}
+          </div>
+
+          <div class="flex-1 min-w-0">
+            <span v-if="s.ready" class="inline-block bg-teal-500 text-white text-xs font-bold uppercase tracking-widest px-2 py-0.5 rounded-full mb-1">
+              Ready
+            </span>
+            <div class="text-xs font-bold uppercase tracking-widest text-gray-400">
+              {{ s.ready ? 'Submitted' : 'Last updated' }} {{ timeSince(s.updatedAt) }}
+            </div>
+          </div>
         </div>
+
+        <!-- Item list -->
         <ul class="space-y-1">
           <li
             v-for="(item, id) in s.selections"
