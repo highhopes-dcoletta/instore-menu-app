@@ -29,6 +29,7 @@ function formatItem(item) {
   const parts = [item.name]
   if (item.unitWeight) parts.push(item.unitWeight)
   if (item.price != null) parts.push(`$${item.price}`)
+  if (item.qty && item.qty > 1) parts.push(`×${item.qty}`)
   return parts.join(' — ')
 }
 

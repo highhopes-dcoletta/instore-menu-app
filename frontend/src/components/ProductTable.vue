@@ -41,18 +41,18 @@ function isActiveSort(col) {
   return props.sortable && route.query.sort === col
 }
 
-// ── Checkboxes ────────────────────────────────────────────────────────────────
+// ── Cart quantity controls ────────────────────────────────────────────────────
 
-function isChecked(id) {
-  return !!session.selections[id]
+function qty(id) {
+  return session.selections[id]?.qty ?? 0
 }
 
-function toggle(product) {
-  session.toggleSelection(product.id, {
+function updateQty(product, delta) {
+  session.updateQuantity(product.id, {
     name: product.Name ?? '',
     unitWeight: product['Unit Weight'] ?? '',
     price: product.Price ?? 0,
-  })
+  }, delta)
 }
 
 function potency(product) {
@@ -68,7 +68,7 @@ function potency(product) {
     <table class="w-full text-base">
       <thead>
         <tr class="border-b-2 border-gray-200 text-left text-xs font-bold uppercase tracking-widest text-gray-400">
-          <th class="w-10 pb-2 pr-2"></th>
+          <th class="w-20 pb-2 pr-3"></th>
 
           <th v-if="columns.includes('name')" class="pb-2 pr-6">
             <button
@@ -114,17 +114,34 @@ function potency(product) {
           :key="product.id"
           :class="[
             'border-b border-gray-100 transition-colors',
-            isChecked(product.id) ? 'bg-teal-50' : '',
+            qty(product.id) > 0 ? 'bg-teal-50' : '',
           ]"
         >
-          <!-- Checkbox -->
-          <td class="py-3 pr-2">
-            <input
-              type="checkbox"
-              :checked="isChecked(product.id)"
-              @change="toggle(product)"
-              class="h-5 w-5 rounded accent-teal-500 cursor-pointer"
-            />
+          <!-- Cart control -->
+          <td class="py-3 pr-3">
+            <!-- Add to cart icon -->
+            <button
+              v-if="qty(product.id) === 0"
+              @click="updateQty(product, 1)"
+              class="text-gray-400 hover:text-teal-500 transition-colors"
+              title="Add to cart"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 0 0-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.925-7.125A60.914 60.914 0 0 0 5.4 4.5H4.5" />
+              </svg>
+            </button>
+            <!-- Quantity controls -->
+            <div v-else class="flex items-center gap-1">
+              <button
+                @click="updateQty(product, -1)"
+                class="w-6 h-6 rounded-full border border-gray-300 text-gray-600 hover:border-teal-500 hover:text-teal-600 transition-colors text-sm leading-none flex items-center justify-center"
+              >−</button>
+              <span class="w-5 text-center text-sm font-semibold tabular-nums">{{ qty(product.id) }}</span>
+              <button
+                @click="updateQty(product, 1)"
+                class="w-6 h-6 rounded-full bg-teal-500 text-white hover:bg-teal-600 transition-colors text-sm leading-none flex items-center justify-center"
+              >+</button>
+            </div>
           </td>
 
           <!-- Name — click opens modal -->

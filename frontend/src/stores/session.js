@@ -7,7 +7,9 @@ export const useSessionStore = defineStore('session', () => {
   const sessionId = ref(null)
   const selections = ref({}) // productId -> { name, unitWeight, price }
 
-  const selectionCount = computed(() => Object.keys(selections.value).length)
+  const selectionCount = computed(() =>
+    Object.values(selections.value).reduce((sum, s) => sum + (s.qty ?? 1), 0)
+  )
 
   // ─── Internal helpers ────────────────────────────────────────────────────────
 
@@ -55,18 +57,20 @@ export const useSessionStore = defineStore('session', () => {
   }
 
   /**
-   * Toggle a product in/out of the current session's selections.
+   * Increment or decrement the quantity of a product.
+   * delta: +1 to add, -1 to remove one. Removes product when qty reaches 0.
    * productData: { name, unitWeight, price }
    */
-  async function toggleSelection(productId, productData) {
-    if (selections.value[productId]) {
-      // ── Uncheck ──────────────────────────────────────────────────────────────
+  async function updateQuantity(productId, productData, delta) {
+    const currentQty = selections.value[productId]?.qty ?? 0
+    const newQty = currentQty + delta
+
+    if (newQty <= 0) {
       const updated = { ...selections.value }
       delete updated[productId]
       selections.value = updated
 
       if (Object.keys(selections.value).length === 0) {
-        // Selections are now empty — tear down the session
         const id = sessionId.value
         if (id) {
           await _delete(id)
@@ -77,13 +81,12 @@ export const useSessionStore = defineStore('session', () => {
         await _post()
       }
     } else {
-      // ── Check ─────────────────────────────────────────────────────────────────
       if (!sessionId.value) {
         const newId = crypto.randomUUID()
         sessionId.value = newId
         localStorage.setItem('sessionId', newId)
       }
-      selections.value = { ...selections.value, [productId]: productData }
+      selections.value = { ...selections.value, [productId]: { ...productData, qty: newQty } }
       await _post()
     }
   }
@@ -129,7 +132,7 @@ export const useSessionStore = defineStore('session', () => {
     selections,
     selectionCount,
     initialize,
-    toggleSelection,
+    updateQuantity,
     removeSelections,
     clearSession,
   }

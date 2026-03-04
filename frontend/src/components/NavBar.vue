@@ -16,7 +16,7 @@ const sessionStore = useSessionStore()
     <router-link to="/sleep" class="px-3 py-1 hover:bg-gray-700 rounded">SLEEP</router-link>
     <router-link to="/pain" class="px-3 py-1 hover:bg-gray-700 rounded">PAIN</router-link>
     <span v-if="sessionStore.selectionCount" class="ml-auto text-teal-400">
-      {{ sessionStore.selectionCount }} selected
+      {{ sessionStore.selectionCount }} in cart
     </span>
   </nav>
 </template>
