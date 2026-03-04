@@ -41,18 +41,26 @@ const cartOpen = ref(false)
             :key="id"
             class="flex items-center justify-between px-4 py-3 gap-3"
           >
-            <div class="flex items-center gap-2 min-w-0">
-              <span class="shrink-0 w-6 h-6 rounded-full bg-teal-500 text-white text-xs font-bold flex items-center justify-center">
-                {{ item.qty }}
-              </span>
-              <span class="text-sm text-gray-800 leading-tight truncate">
-                {{ item.name }}
-                <span v-if="item.unitWeight" class="text-gray-500">  {{ item.unitWeight }}</span>
-              </span>
-            </div>
-            <span v-if="item.price != null" class="shrink-0 text-sm font-semibold text-gray-700 tabular-nums">
-              ${{ item.price }}
+            <span class="text-sm text-gray-800 leading-tight truncate flex-1 min-w-0">
+              {{ item.name }}
+              <span v-if="item.unitWeight" class="text-gray-500"> {{ item.unitWeight }}</span>
             </span>
+            <div class="flex items-center gap-2 shrink-0">
+              <span v-if="item.price != null" class="text-sm font-semibold text-gray-700 tabular-nums">
+                ${{ item.price }}
+              </span>
+              <div class="flex items-center gap-1">
+                <button
+                  @click="sessionStore.updateQuantity(id, item, -1)"
+                  class="w-6 h-6 rounded-full border border-gray-300 text-gray-600 hover:border-teal-500 hover:text-teal-600 transition-colors text-sm flex items-center justify-center"
+                >−</button>
+                <span class="w-5 text-center text-sm font-semibold tabular-nums text-gray-800">{{ item.qty }}</span>
+                <button
+                  @click="sessionStore.updateQuantity(id, item, 1)"
+                  class="w-6 h-6 rounded-full bg-teal-500 text-white hover:bg-teal-600 transition-colors text-sm flex items-center justify-center"
+                >+</button>
+              </div>
+            </div>
           </li>
         </ul>
       </div>
