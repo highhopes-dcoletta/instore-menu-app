@@ -119,23 +119,24 @@ function potency(product) {
         >
           <!-- Cart control -->
           <td class="py-3 pr-3">
-            <!-- Add to cart -->
-            <button
-              v-if="qty(product.id) === 0"
-              @click="updateQty(product, 1)"
-              class="w-6 h-6 rounded-full bg-teal-500 text-white hover:bg-teal-600 transition-colors text-sm leading-none flex items-center justify-center"
-            >+</button>
-            <!-- Quantity controls -->
-            <div v-else class="flex items-center gap-1">
-              <button
-                @click="updateQty(product, -1)"
-                class="w-6 h-6 rounded-full border border-gray-300 text-gray-600 hover:border-teal-500 hover:text-teal-600 transition-colors text-sm leading-none flex items-center justify-center"
-              >−</button>
-              <span class="w-5 text-center text-sm font-semibold tabular-nums">{{ qty(product.id) }}</span>
-              <button
-                @click="updateQty(product, 1)"
-                class="w-6 h-6 rounded-full bg-teal-500 text-white hover:bg-teal-600 transition-colors text-sm leading-none flex items-center justify-center"
-              >+</button>
+            <div class="flex items-center justify-end gap-1">
+              <template v-if="qty(product.id) === 0">
+                <button
+                  @click="updateQty(product, 1)"
+                  class="w-6 h-6 rounded-full bg-teal-500 text-white hover:bg-teal-600 transition-colors text-sm leading-none flex items-center justify-center"
+                >+</button>
+              </template>
+              <template v-else>
+                <button
+                  @click="updateQty(product, -1)"
+                  class="w-6 h-6 rounded-full border border-gray-300 text-gray-600 hover:border-teal-500 hover:text-teal-600 transition-colors text-sm leading-none flex items-center justify-center"
+                >−</button>
+                <span class="w-5 text-center text-sm font-semibold tabular-nums">{{ qty(product.id) }}</span>
+                <button
+                  @click="updateQty(product, 1)"
+                  class="w-6 h-6 rounded-full bg-teal-500 text-white hover:bg-teal-600 transition-colors text-sm leading-none flex items-center justify-center"
+                >+</button>
+              </template>
             </div>
           </td>
 
