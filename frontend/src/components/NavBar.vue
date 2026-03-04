@@ -20,7 +20,7 @@ const cartTotalAfterTax = computed(() => (cartSubtotal.value * 1.20).toFixed(2))
 </script>
 
 <template>
-  <nav class="bg-gray-900 text-white flex items-center gap-1 px-4 py-2 text-sm font-bold tracking-wide">
+  <nav class="sticky top-0 z-50 bg-gray-900 text-white flex items-center gap-1 px-4 py-2 text-sm font-bold tracking-wide">
     <router-link to="/" class="px-3 py-1 hover:bg-gray-700 rounded">HOME</router-link>
     <router-link to="/flower" class="px-3 py-1 hover:bg-gray-700 rounded">FLOWER</router-link>
     <router-link to="/pre-rolls" class="px-3 py-1 hover:bg-gray-700 rounded">PRE-ROLLS</router-link>
