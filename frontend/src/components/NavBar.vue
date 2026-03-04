@@ -1,7 +1,9 @@
-<!-- NavBar — stub. Full layout TBD when views are built. -->
 <script setup>
+import { ref } from 'vue'
 import { useSessionStore } from '@/stores/session'
+
 const sessionStore = useSessionStore()
+const cartOpen = ref(false)
 </script>
 
 <template>
@@ -15,8 +17,50 @@ const sessionStore = useSessionStore()
     <router-link to="/tinctures-and-topicals" class="px-3 py-1 hover:bg-gray-700 rounded">TINCS &amp; TOPS</router-link>
     <router-link to="/sleep" class="px-3 py-1 hover:bg-gray-700 rounded">SLEEP</router-link>
     <router-link to="/pain" class="px-3 py-1 hover:bg-gray-700 rounded">PAIN</router-link>
-    <span v-if="sessionStore.selectionCount" class="ml-auto text-teal-400">
-      {{ sessionStore.selectionCount }} in cart
-    </span>
+
+    <!-- Cart badge + dropdown -->
+    <div v-if="sessionStore.selectionCount" class="ml-auto relative">
+      <button
+        @click="cartOpen = !cartOpen"
+        class="text-teal-400 hover:text-teal-300 transition-colors px-2 py-1"
+      >
+        {{ sessionStore.selectionCount }} in cart
+      </button>
+
+      <!-- Dropdown -->
+      <div
+        v-if="cartOpen"
+        class="absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-2xl z-50 overflow-hidden"
+      >
+        <div class="px-4 py-3 border-b border-gray-100 text-xs font-bold uppercase tracking-widest text-gray-400">
+          Your Cart
+        </div>
+        <ul class="divide-y divide-gray-100 max-h-96 overflow-y-auto">
+          <li
+            v-for="(item, id) in sessionStore.selections"
+            :key="id"
+            class="flex items-center justify-between px-4 py-3 gap-3"
+          >
+            <div class="flex items-center gap-2 min-w-0">
+              <span class="shrink-0 w-6 h-6 rounded-full bg-teal-500 text-white text-xs font-bold flex items-center justify-center">
+                {{ item.qty }}
+              </span>
+              <span class="text-sm text-gray-800 leading-tight truncate">
+                {{ item.name }}
+                <span v-if="item.unitWeight" class="text-gray-500">  {{ item.unitWeight }}</span>
+              </span>
+            </div>
+            <span v-if="item.price != null" class="shrink-0 text-sm font-semibold text-gray-700 tabular-nums">
+              ${{ item.price }}
+            </span>
+          </li>
+        </ul>
+      </div>
+    </div>
   </nav>
+
+  <!-- Backdrop to close cart -->
+  <Teleport to="body">
+    <div v-if="cartOpen" class="fixed inset-0 z-40" @click="cartOpen = false" />
+  </Teleport>
 </template>
