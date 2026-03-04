@@ -11,9 +11,9 @@ export const useSessionStore = defineStore('session', () => {
 
   // ─── Internal helpers ────────────────────────────────────────────────────────
 
-  async function _post() {
+  async function _post(attempt = 1) {
     try {
-      await fetch(`${API_BASE}/session`, {
+      const res = await fetch(`${API_BASE}/session`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -21,8 +21,12 @@ export const useSessionStore = defineStore('session', () => {
           selections: selections.value,
         }),
       })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
     } catch (e) {
-      console.error('Session POST failed:', e)
+      console.error(`Session POST failed (attempt ${attempt}):`, e)
+      if (attempt < 3 && sessionId.value) {
+        setTimeout(() => _post(attempt + 1), 1000 * attempt)
+      }
     }
   }
 

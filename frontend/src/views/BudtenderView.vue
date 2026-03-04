@@ -11,7 +11,7 @@ let pollTimer = null
 
 async function fetchSessions() {
   try {
-    const res = await fetch('/api/sessions')
+    const res = await fetch('/api/sessions', { cache: 'no-store' })
     if (res.ok) sessions.value = await res.json()
   } catch (e) {
     // Network error — keep showing last known state

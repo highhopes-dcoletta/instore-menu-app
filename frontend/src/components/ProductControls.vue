@@ -14,13 +14,13 @@ function onSearch(e) {
 </script>
 
 <template>
-  <div class="mb-4 flex justify-end">
+  <div class="mb-4">
     <input
       type="text"
       placeholder="Search..."
       :value="route.query['search-for'] || ''"
       @input="onSearch"
-      class="rounded border border-gray-300 px-3 py-1.5 text-sm w-52 focus:outline-none focus:border-teal-400"
+      class="w-full rounded border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:border-teal-400"
     />
   </div>
 </template>

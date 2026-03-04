@@ -41,15 +41,15 @@ export function useProductFilters(categoryFn) {
     if (brand) list = list.filter((p) => p.Brand === brand)
 
     const preground = route.query.preground
-    if (preground === 'yes') list = list.filter((p) => p['Pre-Ground?'])
-    else if (preground === 'no') list = list.filter((p) => !p['Pre-Ground?'])
+    if (preground === 'yes') list = list.filter((p) => p['Pre-Ground?'] === 'Yes')
+    else if (preground === 'no') list = list.filter((p) => p['Pre-Ground?'] !== 'Yes')
 
     const packaging = route.query.packaging
     if (packaging) list = list.filter((p) => p.Subcategory === packaging)
 
     const infused = route.query.infused
-    if (infused === 'yes') list = list.filter((p) => p['Infused Preroll?'])
-    else if (infused === 'no') list = list.filter((p) => !p['Infused Preroll?'])
+    if (infused === 'yes') list = list.filter((p) => p['Infused Preroll?'] === 'Yes')
+    else if (infused === 'no') list = list.filter((p) => p['Infused Preroll?'] !== 'Yes')
 
     const subcategory = route.query.subcategory
     if (subcategory) list = list.filter((p) => p.Subcategory === subcategory)
@@ -82,6 +82,12 @@ export function useProductFilters(categoryFn) {
       const asc = dir !== 'desc'   // default first click: A-Z (asc)
       list = [...list].sort((a, b) => {
         const cmp = (a.Name ?? '').localeCompare(b.Name ?? '')
+        return asc ? cmp : -cmp
+      })
+    } else if (sort === 'strain') {
+      const asc = dir !== 'desc'   // default first click: A-Z (asc)
+      list = [...list].sort((a, b) => {
+        const cmp = (a.Strain ?? '').localeCompare(b.Strain ?? '')
         return asc ? cmp : -cmp
       })
     } else if (sort === 'potency') {

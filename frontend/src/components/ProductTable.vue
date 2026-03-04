@@ -1,11 +1,12 @@
 <script setup>
+import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useSessionStore } from '@/stores/session'
+import ProductModal from './ProductModal.vue'
 
 const props = defineProps({
   products:  { type: Array,   required: true },
   columns:   { type: Array,   default: () => ['name', 'strain', 'potency', 'price'] },
-  // Set false on pages where spec says no sorting (TincturesTopicals)
   sortable:  { type: Boolean, default: true },
 })
 
@@ -13,17 +14,20 @@ const route  = useRoute()
 const router = useRouter()
 const session = useSessionStore()
 
+// ── Modal ─────────────────────────────────────────────────────────────────────
+
+const modalProduct = ref(null)
+
 // ── Sorting ───────────────────────────────────────────────────────────────────
 
-// Default direction for the first click on each sortable column
-const SORT_DEFAULTS = { name: 'asc', potency: 'desc', price: 'asc' }
+const SORT_DEFAULTS = { name: 'asc', strain: 'asc', potency: 'desc', price: 'asc' }
 
 function sortBy(col) {
   if (!props.sortable || !(col in SORT_DEFAULTS)) return
   const isActive = route.query.sort === col
   const dir = isActive
-    ? (route.query.dir === 'asc' ? 'desc' : 'asc')  // second click: flip
-    : SORT_DEFAULTS[col]                               // first click: default
+    ? (route.query.dir === 'asc' ? 'desc' : 'asc')
+    : SORT_DEFAULTS[col]
   router.replace({ query: { ...route.query, sort: col, dir } })
 }
 
@@ -52,8 +56,8 @@ function toggle(product) {
 
 function potency(product) {
   if (product.Potency == null) return '—'
-  const val = String(product.Potency).replace(/%/g, '')
   const unit = product['Potency Unit'] ?? '%'
+  const val = String(product.Potency).replace(/[^0-9.]/g, '')
   return `${val}${unit}`
 }
 </script>
@@ -74,7 +78,14 @@ function potency(product) {
             <span v-else>Product</span>
           </th>
 
-          <th v-if="columns.includes('strain')" class="pb-2 pr-6">Strain</th>
+          <th v-if="columns.includes('strain')" class="pb-2 pr-6">
+            <button
+              v-if="sortable"
+              @click="sortBy('strain')"
+              :class="['hover:text-gray-700 transition-colors', isActiveSort('strain') && 'text-teal-600']"
+            >Strain{{ sortIcon('strain') }}</button>
+            <span v-else>Strain</span>
+          </th>
 
           <th v-if="columns.includes('potency')" class="pb-2 pr-6">
             <button
@@ -101,26 +112,32 @@ function potency(product) {
           v-for="product in products"
           :key="product.id"
           :class="[
-            'border-b border-gray-100 cursor-pointer transition-colors',
-            isChecked(product.id) ? 'bg-teal-50 hover:bg-teal-100' : 'hover:bg-gray-50',
+            'border-b border-gray-100 transition-colors',
+            isChecked(product.id) ? 'bg-teal-50' : '',
           ]"
-          @click="toggle(product)"
         >
+          <!-- Checkbox -->
           <td class="py-3 pr-2">
             <input
               type="checkbox"
               :checked="isChecked(product.id)"
-              @click.stop
               @change="toggle(product)"
               class="h-5 w-5 rounded accent-teal-500 cursor-pointer"
             />
           </td>
-          <td v-if="columns.includes('name')" class="py-3 pr-6">
+
+          <!-- Name — click opens modal -->
+          <td
+            v-if="columns.includes('name')"
+            class="py-3 pr-6 cursor-pointer hover:text-teal-600 transition-colors"
+            @click="modalProduct = product"
+          >
             {{ product.Name }}
             <span v-if="product['Unit Weight']" class="ml-1.5 font-bold text-gray-700">
               {{ product['Unit Weight'] }}
             </span>
           </td>
+
           <td v-if="columns.includes('strain')" class="py-3 pr-6 text-gray-500">
             {{ product.Strain || '—' }}
           </td>
@@ -140,4 +157,10 @@ function potency(product) {
       </tbody>
     </table>
   </div>
+
+  <ProductModal
+    v-if="modalProduct"
+    :product="modalProduct"
+    @close="modalProduct = null"
+  />
 </template>

@@ -70,9 +70,20 @@ const brandOptions = computed(() =>
 const strainOptions = computed(() =>
   [...new Set(props.products.map((p) => p.Strain).filter(Boolean))].sort()
 )
-const sizeOptions = computed(() =>
-  [...new Set(props.products.map((p) => p['Unit Weight']).filter(Boolean))].sort()
-)
+// Parse "1/8oz", "1/4oz", "1oz", "3.5g", etc. to a numeric grams value for sorting
+function parseWeight(str) {
+  const s = str.replace(/oz$/i, '').replace(/g$/i, '').trim()
+  if (s.includes('/')) {
+    const [num, den] = s.split('/')
+    return parseFloat(num) / parseFloat(den)
+  }
+  return parseFloat(s) || 0
+}
+
+const sizeOptions = computed(() => {
+  const unique = [...new Set(props.products.map((p) => p['Unit Weight']).filter(Boolean))]
+  return unique.sort((a, b) => parseWeight(a) - parseWeight(b))
+})
 
 // ── Hardcoded option sets ──────────────────────────────────────────────────────
 
@@ -125,19 +136,13 @@ const CATEGORY_OPTS = [
       </div>
     </div>
 
-    <!-- Pre-Ground? -->
+    <!-- Pre-Ground — single toggle -->
     <div v-if="filters.includes('preground')">
       <div class="label">Pre-Ground?</div>
-      <div class="flex flex-wrap gap-1.5">
-        <button
-          @click="isActive('preground', 'yes') ? clear('preground') : set('preground', 'yes')"
-          :class="['chip', isActive('preground', 'yes') ? 'chip-on' : 'chip-off']"
-        >Yes</button>
-        <button
-          @click="isActive('preground', 'no') ? clear('preground') : set('preground', 'no')"
-          :class="['chip', isActive('preground', 'no') ? 'chip-on' : 'chip-off']"
-        >No</button>
-      </div>
+      <button
+        @click="isActive('preground', 'yes') ? clear('preground') : set('preground', 'yes')"
+        :class="['chip', isActive('preground', 'yes') ? 'chip-on' : 'chip-off']"
+      >Pre-Ground Only</button>
     </div>
 
     <!-- Packaging -->
@@ -153,18 +158,19 @@ const CATEGORY_OPTS = [
       </div>
     </div>
 
-    <!-- Infused (dropdown) -->
+    <!-- Infused -->
     <div v-if="filters.includes('infused')">
       <div class="label">Infused?</div>
-      <select
-        :value="route.query.infused || ''"
-        @change="$event.target.value ? set('infused', $event.target.value) : clear('infused')"
-        class="rounded border border-gray-300 bg-white px-2 py-1 text-sm focus:outline-none focus:border-teal-400"
-      >
-        <option value="">All</option>
-        <option value="yes">Yes</option>
-        <option value="no">No</option>
-      </select>
+      <div class="flex flex-wrap gap-1.5">
+        <button
+          @click="isActive('infused', 'yes') ? clear('infused') : set('infused', 'yes')"
+          :class="['chip', isActive('infused', 'yes') ? 'chip-on' : 'chip-off']"
+        >Infused Only</button>
+        <button
+          @click="isActive('infused', 'no') ? clear('infused') : set('infused', 'no')"
+          :class="['chip', isActive('infused', 'no') ? 'chip-on' : 'chip-off']"
+        >Non-Infused Only</button>
+      </div>
     </div>
 
     <!-- Vape type tags -->

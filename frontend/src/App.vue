@@ -30,15 +30,21 @@ async function onInactivity() {
 const ACTIVITY_EVENTS = ['click', 'touchstart', 'keydown', 'scroll']
 
 onMounted(async () => {
-  // Clean up any stale session from a prior page load, then load products
-  await sessionStore.initialize()
-  productsStore.loadProducts() // intentionally not awaited — loading state handles UI
+  // Budtender page is designed to run on a separate device/tab.
+  // It must NOT run initialize() — that would delete the kiosk's active session
+  // from Flask (localStorage is shared across same-origin tabs).
+  // It also doesn't need the inactivity timer.
+  const isBudtender = route.path === '/budtender'
 
-  // Kick off inactivity tracking
-  for (const evt of ACTIVITY_EVENTS) {
-    window.addEventListener(evt, resetTimer, { passive: true })
+  if (!isBudtender) {
+    await sessionStore.initialize()
+    for (const evt of ACTIVITY_EVENTS) {
+      window.addEventListener(evt, resetTimer, { passive: true })
+    }
+    resetTimer()
   }
-  resetTimer()
+
+  productsStore.loadProducts() // intentionally not awaited — loading state handles UI
 })
 
 onUnmounted(() => {
