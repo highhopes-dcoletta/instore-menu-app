@@ -82,7 +82,11 @@ export const useSessionStore = defineStore('session', () => {
       }
     } else {
       if (!sessionId.value) {
-        const newId = crypto.randomUUID()
+        const newId = crypto.randomUUID?.() ??
+          'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+            const r = Math.random() * 16 | 0
+            return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16)
+          })
         sessionId.value = newId
         localStorage.setItem('sessionId', newId)
       }

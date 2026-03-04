@@ -19,7 +19,11 @@ echo "==> Setting up server..."
 ssh $SSHOPTS "$HOST" bash << EOF
 set -e
 
+# Install system deps (includes git)
+apt-get install -y -q git nginx python3-venv python3-pip > /dev/null 2>&1 || true
+
 # Clone or update repo
+export GIT_TERMINAL_PROMPT=0
 if [ -d "$REMOTE_DIR/.git" ]; then
     echo "  Pulling latest..."
     cd $REMOTE_DIR && git pull
@@ -30,9 +34,6 @@ fi
 
 # Set timezone
 timedatectl set-timezone America/New_York
-
-# Install system deps
-apt-get install -y -q nginx python3-venv python3-pip > /dev/null 2>&1 || true
 
 # Create web root
 mkdir -p $WEB_DIR
