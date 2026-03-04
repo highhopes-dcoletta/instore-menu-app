@@ -69,7 +69,7 @@ echo "==> Copying .env to server..."
 scp $SSHOPTS backend/.env "$HOST:$REMOTE_DIR/backend/.env"
 
 echo "==> Restarting service..."
-ssh $SSHOPTS "$HOST" "rm -f $REMOTE_DIR/backend/gunicorn.ctl && systemctl restart $SERVICE"
+ssh $SSHOPTS "$HOST" "systemctl stop $SERVICE; sleep 2; rm -f $REMOTE_DIR/backend/gunicorn.ctl; systemctl start $SERVICE; sleep 2"
 
 echo ""
 echo "==> Deploy complete. Testing API..."
