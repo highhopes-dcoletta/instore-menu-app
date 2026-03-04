@@ -36,7 +36,7 @@ const MENU_QUERY = `
   }
 `
 
-const REFRESH_INTERVAL_MS = 5 * 60 * 1000
+const REFRESH_INTERVAL_MS = 60 * 1000
 const MAX_RETRIES = 3
 
 // Parse a Dutchie formatted potency string like "31.74%" or "103mg"
