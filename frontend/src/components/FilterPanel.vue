@@ -17,6 +17,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { strainLabel } from '@/utils/strainLabels'
 
 const props = defineProps({
   filters: { type: Array, default: () => [] },
@@ -119,7 +120,7 @@ const CATEGORY_OPTS = [
           :key="opt"
           @click="toggleMulti('strain', opt)"
           :class="['chip', isMultiActive('strain', opt) ? 'chip-on' : 'chip-off']"
-        >{{ opt }}</button>
+        >{{ strainLabel(opt) }}</button>
       </div>
     </div>
 

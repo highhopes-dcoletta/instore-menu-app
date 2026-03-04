@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useSessionStore } from '@/stores/session'
 import ProductModal from './ProductModal.vue'
+import { strainLabel } from '@/utils/strainLabels'
 
 const props = defineProps({
   products:  { type: Array,   required: true },
@@ -139,7 +140,7 @@ function potency(product) {
           </td>
 
           <td v-if="columns.includes('strain')" class="py-3 pr-6 text-gray-500">
-            {{ product.Strain || '—' }}
+            {{ strainLabel(product.Strain) }}
           </td>
           <td v-if="columns.includes('potency')" class="py-3 pr-6 tabular-nums">
             {{ potency(product) }}
