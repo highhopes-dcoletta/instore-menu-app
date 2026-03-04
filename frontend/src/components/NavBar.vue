@@ -35,6 +35,7 @@ const cartTotalAfterTax = computed(() => (cartSubtotal.value * 1.20).toFixed(2))
     <div v-if="sessionStore.selectionCount" class="ml-auto relative">
       <button
         @click="cartOpen = !cartOpen"
+        data-cart-counter
         class="text-teal-400 hover:text-teal-300 transition-colors px-2 py-1"
       >
         <span :key="cartBumpKey" class="inline-block cart-bump">{{ sessionStore.selectionCount }}</span> in cart

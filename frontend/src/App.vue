@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useProductsStore } from '@/stores/products'
 import { useSessionStore } from '@/stores/session'
 import NavBar from '@/components/NavBar.vue'
+import CartAnimation from '@/components/CartAnimation.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -57,6 +58,7 @@ onUnmounted(() => {
 
 <template>
   <NavBar v-if="showNavBar" />
+  <CartAnimation />
 
   <!-- /budtender never needs product data -->
   <template v-if="route.path === '/budtender'">
