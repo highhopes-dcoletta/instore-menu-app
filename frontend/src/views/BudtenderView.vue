@@ -35,7 +35,7 @@ function formatItem(item) {
 
 onMounted(() => {
   fetchSessions()
-  pollTimer = setInterval(fetchSessions, 5000)
+  pollTimer = setInterval(fetchSessions, 1000)
 })
 
 onUnmounted(() => clearInterval(pollTimer))
