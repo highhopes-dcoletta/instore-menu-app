@@ -1,9 +1,15 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useSessionStore } from '@/stores/session'
 
 const sessionStore = useSessionStore()
 const cartOpen = ref(false)
+
+const cartTotal = computed(() =>
+  Object.values(sessionStore.selections).reduce(
+    (sum, item) => sum + (item.price ?? 0) * (item.qty ?? 1), 0
+  ).toFixed(2)
+)
 </script>
 
 <template>
@@ -63,6 +69,10 @@ const cartOpen = ref(false)
             </div>
           </li>
         </ul>
+        <div class="px-4 py-3 border-t border-gray-100 flex items-center justify-between">
+          <span class="text-xs text-gray-400">before tax</span>
+          <span class="text-base font-black text-gray-800 tabular-nums">${{ cartTotal }}</span>
+        </div>
       </div>
     </div>
   </nav>
