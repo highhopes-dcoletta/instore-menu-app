@@ -67,41 +67,41 @@ function potency(product) {
   <div class="overflow-x-auto">
     <table class="w-full text-base">
       <thead>
-        <tr class="border-b-2 border-gray-200 text-left text-xs font-bold uppercase tracking-widest text-gray-400">
-          <th class="w-20 pb-2 pr-3"></th>
+        <tr class="border-b border-gray-200 text-left text-sm font-bold text-slate-700">
+          <th class="w-20 pb-3 pr-3"></th>
 
-          <th v-if="columns.includes('name')" class="pb-2 pr-6">
+          <th v-if="columns.includes('name')" class="pb-3 pr-6">
             <button
               v-if="sortable"
               @click="sortBy('name')"
-              :class="['hover:text-gray-700 transition-colors', isActiveSort('name') && 'text-teal-600']"
-            >Product{{ sortIcon('name') }}</button>
-            <span v-else>Product</span>
+              :class="['hover:text-teal-600 transition-colors', isActiveSort('name') && 'text-teal-600']"
+            >Name{{ sortIcon('name') }}</button>
+            <span v-else>Name</span>
           </th>
 
-          <th v-if="columns.includes('strain')" class="pb-2 pr-6">
+          <th v-if="columns.includes('strain')" class="pb-3 pr-6">
             <button
               v-if="sortable"
               @click="sortBy('strain')"
-              :class="['hover:text-gray-700 transition-colors', isActiveSort('strain') && 'text-teal-600']"
+              :class="['hover:text-teal-600 transition-colors', isActiveSort('strain') && 'text-teal-600']"
             >Strain{{ sortIcon('strain') }}</button>
             <span v-else>Strain</span>
           </th>
 
-          <th v-if="columns.includes('potency')" class="pb-2 pr-6">
+          <th v-if="columns.includes('potency')" class="pb-3 pr-6">
             <button
               v-if="sortable"
               @click="sortBy('potency')"
-              :class="['hover:text-gray-700 transition-colors', isActiveSort('potency') && 'text-teal-600']"
-            >TAC{{ sortIcon('potency') }}</button>
-            <span v-else>TAC</span>
+              :class="['hover:text-teal-600 transition-colors', isActiveSort('potency') && 'text-teal-600']"
+            >Potency (TAC){{ sortIcon('potency') }}</button>
+            <span v-else>Potency (TAC)</span>
           </th>
 
-          <th v-if="columns.includes('price')" class="pb-2">
+          <th v-if="columns.includes('price')" class="pb-3">
             <button
               v-if="sortable"
               @click="sortBy('price')"
-              :class="['hover:text-gray-700 transition-colors', isActiveSort('price') && 'text-teal-600']"
+              :class="['hover:text-teal-600 transition-colors', isActiveSort('price') && 'text-teal-600']"
             >Price{{ sortIcon('price') }}</button>
             <span v-else>Price</span>
           </th>
@@ -118,7 +118,7 @@ function potency(product) {
           ]"
         >
           <!-- Cart control -->
-          <td class="py-3 pr-3">
+          <td class="py-4 pr-3">
             <div class="flex items-center justify-end gap-1">
               <template v-if="qty(product.id) === 0">
                 <button
@@ -143,22 +143,19 @@ function potency(product) {
           <!-- Name — click opens modal -->
           <td
             v-if="columns.includes('name')"
-            class="py-3 pr-6 cursor-pointer hover:text-teal-600 transition-colors"
+            class="py-4 pr-6 cursor-pointer hover:text-teal-600 transition-colors text-slate-800"
             @click="modalProduct = product"
           >
-            {{ product.Name }}
-            <span v-if="product['Unit Weight']" class="ml-1.5 font-bold text-gray-700">
-              {{ product['Unit Weight'] }}
-            </span>
+            {{ product.Name }}<span v-if="product['Unit Weight']" class="ml-1.5 font-bold"> {{ product['Unit Weight'] }}</span>
           </td>
 
-          <td v-if="columns.includes('strain')" class="py-3 pr-6 text-gray-500">
+          <td v-if="columns.includes('strain')" class="py-4 pr-6 text-slate-500">
             {{ strainLabel(product.Strain) }}
           </td>
-          <td v-if="columns.includes('potency')" class="py-3 pr-6 tabular-nums">
+          <td v-if="columns.includes('potency')" class="py-4 pr-6 tabular-nums text-slate-700">
             {{ potency(product) }}
           </td>
-          <td v-if="columns.includes('price')" class="py-3 tabular-nums">
+          <td v-if="columns.includes('price')" class="py-4 tabular-nums text-slate-700">
             {{ product.Price != null ? `$${product.Price}` : '—' }}
           </td>
         </tr>

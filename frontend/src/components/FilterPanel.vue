@@ -205,15 +205,15 @@ const CATEGORY_OPTS = [
 
 <style scoped>
 .label {
-  @apply mb-2 text-xs font-bold uppercase tracking-wider text-gray-400;
+  @apply mb-2 text-xs font-black uppercase tracking-wider text-teal-500;
 }
 .chip {
-  @apply rounded-full border px-3 py-1 text-sm font-medium transition-colors cursor-pointer select-none;
+  @apply rounded-lg border px-3 py-1.5 text-xs font-black uppercase tracking-wide transition-colors cursor-pointer select-none;
 }
 .chip-on {
-  @apply border-teal-500 bg-teal-500 text-white;
+  @apply border-teal-500 bg-white text-teal-500;
 }
 .chip-off {
-  @apply border-gray-300 bg-white text-gray-700 hover:border-teal-400;
+  @apply border-gray-800 bg-white text-gray-800 hover:border-teal-500 hover:text-teal-500;
 }
 </style>
