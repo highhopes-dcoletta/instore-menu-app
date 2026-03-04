@@ -1,0 +1,14 @@
+[Unit]
+Description=High Hopes Menu API
+After=network.target
+
+[Service]
+User=root
+WorkingDirectory=/home/highhopes/highhopes-menu/backend
+EnvironmentFile=/home/highhopes/highhopes-menu/backend/.env
+ExecStart=/home/highhopes/highhopes-menu/backend/venv/bin/gunicorn -w 1 -b 127.0.0.1:5001 app:app
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
