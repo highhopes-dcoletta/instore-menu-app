@@ -1,0 +1,71 @@
+<script setup>
+import { computed, onMounted, onUnmounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useProductsStore } from '@/stores/products'
+import { useSessionStore } from '@/stores/session'
+import NavBar from '@/components/NavBar.vue'
+
+const route = useRoute()
+const router = useRouter()
+const sessionStore = useSessionStore()
+const productsStore = useProductsStore()
+
+const showNavBar = computed(() => route.path !== '/budtender')
+
+// ─── Inactivity timeout (2 minutes) ─────────────────────────────────────────
+
+const INACTIVITY_MS = 2 * 60 * 1000
+let inactivityTimer = null
+
+function resetTimer() {
+  clearTimeout(inactivityTimer)
+  inactivityTimer = setTimeout(onInactivity, INACTIVITY_MS)
+}
+
+async function onInactivity() {
+  await sessionStore.clearSession()
+  router.push('/')
+}
+
+const ACTIVITY_EVENTS = ['click', 'touchstart', 'keydown', 'scroll']
+
+onMounted(async () => {
+  // Clean up any stale session from a prior page load, then load products
+  await sessionStore.initialize()
+  productsStore.loadProducts() // intentionally not awaited — loading state handles UI
+
+  // Kick off inactivity tracking
+  for (const evt of ACTIVITY_EVENTS) {
+    window.addEventListener(evt, resetTimer, { passive: true })
+  }
+  resetTimer()
+})
+
+onUnmounted(() => {
+  clearTimeout(inactivityTimer)
+  for (const evt of ACTIVITY_EVENTS) {
+    window.removeEventListener(evt, resetTimer)
+  }
+})
+</script>
+
+<template>
+  <NavBar v-if="showNavBar" />
+
+  <!-- /budtender never needs product data -->
+  <template v-if="route.path === '/budtender'">
+    <router-view />
+  </template>
+  <template v-else>
+    <div v-if="productsStore.loading" class="flex flex-col items-center justify-center h-screen gap-4">
+      <div class="h-10 w-10 animate-spin rounded-full border-4 border-teal-500 border-t-transparent"></div>
+      <p class="text-gray-500 text-lg">Loading menu...</p>
+    </div>
+    <div v-else-if="productsStore.error" class="flex items-center justify-center h-screen px-8">
+      <p class="text-center text-xl text-gray-700 max-w-lg leading-relaxed">
+        Menu temporarily unavailable — please ask a budtender for assistance.
+      </p>
+    </div>
+    <router-view v-else />
+  </template>
+</template>
