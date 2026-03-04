@@ -1,9 +1,16 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useSessionStore } from '@/stores/session'
 
 const sessionStore = useSessionStore()
 const cartOpen = ref(false)
+const cartBump = ref(false)
+
+watch(() => sessionStore.selectionCount, () => {
+  cartBump.value = false
+  requestAnimationFrame(() => { cartBump.value = true })
+  setTimeout(() => { cartBump.value = false }, 400)
+})
 
 const cartSubtotal = computed(() =>
   Object.values(sessionStore.selections).reduce(
@@ -32,7 +39,7 @@ const cartTotalAfterTax = computed(() => (cartSubtotal.value * 1.20).toFixed(2))
         @click="cartOpen = !cartOpen"
         class="text-teal-400 hover:text-teal-300 transition-colors px-2 py-1"
       >
-        {{ sessionStore.selectionCount }} in cart
+        <span :class="['inline-block', cartBump && 'cart-bump']">{{ sessionStore.selectionCount }}</span> in cart
       </button>
 
       <!-- Dropdown -->
@@ -88,3 +95,15 @@ const cartTotalAfterTax = computed(() => (cartSubtotal.value * 1.20).toFixed(2))
     <div v-if="cartOpen" class="fixed inset-0 z-40" @click="cartOpen = false" />
   </Teleport>
 </template>
+
+<style scoped>
+@keyframes bump {
+  0%   { transform: scale(1);    animation-timing-function: ease-in; }
+  25%  { transform: scale(2.2);  animation-timing-function: ease-out; }
+  80%  { transform: scale(0.92); }
+  100% { transform: scale(1); }
+}
+.cart-bump {
+  animation: bump 1s linear;
+}
+</style>
