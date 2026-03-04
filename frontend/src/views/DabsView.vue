@@ -20,7 +20,7 @@ const TABS = [
   { value: 'WAX',          label: 'Wax' },
 ]
 
-const COLUMNS = ['name', 'strain', 'potency']
+const COLUMNS = ['name', 'strain', 'potency', 'stock']
 
 const { filtered, categoryProducts } = useProductFilters((p) => p.Category === 'CONCENTRATES')
 </script>

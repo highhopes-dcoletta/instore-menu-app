@@ -7,7 +7,7 @@ import { strainLabel } from '@/utils/strainLabels'
 
 const props = defineProps({
   products:  { type: Array,   required: true },
-  columns:   { type: Array,   default: () => ['name', 'strain', 'potency', 'price'] },
+  columns:   { type: Array,   default: () => ['name', 'strain', 'potency', 'price', 'stock'] },
   sortable:  { type: Boolean, default: true },
 })
 
@@ -53,6 +53,15 @@ function updateQty(product, delta) {
     unitWeight: product['Unit Weight'] ?? '',
     price: product.Price ?? 0,
   }, delta)
+}
+
+// ── Stock signal bars ─────────────────────────────────────────────────────────
+
+function stockBars(qty) {
+  if (qty == null) return { bars: 0, color: '' }
+  if (qty <= 9)  return { bars: 1, color: '#f87171' }  // red-400
+  if (qty <= 19) return { bars: 2, color: '#fbbf24' }  // amber-400
+  return           { bars: 3, color: '#14b8a6' }        // teal-500
 }
 
 function potency(product) {
@@ -105,6 +114,8 @@ function potency(product) {
             >Price{{ sortIcon('price') }}</button>
             <span v-else>Price</span>
           </th>
+
+          <th v-if="columns.includes('stock')" class="pb-3 pl-4">Stock</th>
         </tr>
       </thead>
 
@@ -157,6 +168,14 @@ function potency(product) {
           </td>
           <td v-if="columns.includes('price')" class="py-4 tabular-nums text-slate-700">
             {{ product.Price != null ? `$${product.Price}` : '—' }}
+          </td>
+
+          <td v-if="columns.includes('stock')" class="py-4 pl-4">
+            <svg v-if="product.Quantity != null" width="18" height="14" viewBox="0 0 18 14" aria-hidden="true">
+              <rect x="0"  y="9" width="4" height="5" rx="1" :fill="stockBars(product.Quantity).bars >= 1 ? stockBars(product.Quantity).color : '#e5e7eb'" />
+              <rect x="7"  y="5" width="4" height="9" rx="1" :fill="stockBars(product.Quantity).bars >= 2 ? stockBars(product.Quantity).color : '#e5e7eb'" />
+              <rect x="14" y="0" width="4" height="14" rx="1" :fill="stockBars(product.Quantity).bars >= 3 ? stockBars(product.Quantity).color : '#e5e7eb'" />
+            </svg>
           </td>
         </tr>
 

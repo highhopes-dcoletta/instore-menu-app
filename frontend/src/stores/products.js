@@ -84,6 +84,7 @@ function normalizeVariant(product, variant) {
     Tags: tags,
     'Pre-Ground?': isPreGround ? 'Yes' : null,
     'Infused Preroll?': isInfused ? 'Yes' : null,
+    Quantity: variant.quantity ?? null,
   }
 }
 

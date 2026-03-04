@@ -4,7 +4,7 @@ import FilterPanel from '@/components/FilterPanel.vue'
 import ProductControls from '@/components/ProductControls.vue'
 import ProductTable from '@/components/ProductTable.vue'
 
-const COLUMNS = ['name', 'potency', 'strain', 'price']
+const COLUMNS = ['name', 'potency', 'strain', 'price', 'stock']
 
 const { filtered, categoryProducts } = useProductFilters(
   (p) => Array.isArray(p.Tags) && p.Tags.includes('Pain')
