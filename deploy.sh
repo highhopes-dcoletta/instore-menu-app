@@ -75,5 +75,5 @@ echo "==> Deploy complete. Testing API..."
 ssh $SSHOPTS "$HOST" "curl -s http://127.0.0.1:5001/api/sessions"
 
 echo ""
-echo "==> Done! http://menu.highhopesma.com"
-echo "    (Run 'sudo certbot --nginx -d menu.highhopesma.com' on the server to add SSL)"
+echo "==> Done! http://menu2.highhopesma.com"
+echo "    (Run 'sudo certbot --nginx -d menu2.highhopesma.com' on the server to add SSL)"
