@@ -69,11 +69,11 @@ echo "==> Copying .env to server..."
 scp $SSHOPTS backend/.env "$HOST:$REMOTE_DIR/backend/.env"
 
 echo "==> Restarting service..."
-ssh $SSHOPTS "$HOST" "systemctl restart $SERVICE"
+ssh $SSHOPTS "$HOST" "rm -f $REMOTE_DIR/backend/gunicorn.ctl && systemctl restart $SERVICE"
 
 echo ""
 echo "==> Deploy complete. Testing API..."
-ssh $SSHOPTS "$HOST" "curl -s http://127.0.0.1:5001/api/sessions"
+ssh $SSHOPTS "$HOST" "curl -sm 5 http://127.0.0.1:5001/api/sessions || echo '(API did not respond)'"
 
 echo ""
 echo "==> Done! http://menu2.highhopesma.com"
