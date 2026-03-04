@@ -32,8 +32,8 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
 
         <!-- Image -->
         <img
-          v-if="product['Image URL']"
-          :src="product['Image URL']"
+          v-if="product.Image"
+          :src="product.Image"
           :alt="product.Name"
           class="w-48 h-48 object-cover rounded-xl mb-6"
         />
