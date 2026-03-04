@@ -5,11 +5,13 @@ import { useSessionStore } from '@/stores/session'
 const sessionStore = useSessionStore()
 const cartOpen = ref(false)
 
-const cartTotal = computed(() =>
+const cartSubtotal = computed(() =>
   Object.values(sessionStore.selections).reduce(
     (sum, item) => sum + (item.price ?? 0) * (item.qty ?? 1), 0
-  ).toFixed(2)
+  )
 )
+const cartTotal = computed(() => cartSubtotal.value.toFixed(2))
+const cartTotalAfterTax = computed(() => (cartSubtotal.value * 1.20).toFixed(2))
 </script>
 
 <template>
@@ -69,9 +71,13 @@ const cartTotal = computed(() =>
             </div>
           </li>
         </ul>
-        <div class="px-4 py-3 border-t border-gray-100 flex items-center justify-between">
+        <div class="px-4 pt-3 pb-1 border-t border-gray-100 flex items-center justify-between">
           <span class="text-xs text-gray-400">before tax</span>
-          <span class="text-base font-black text-gray-800 tabular-nums">${{ cartTotal }}</span>
+          <span class="text-sm font-semibold text-gray-600 tabular-nums">${{ cartTotal }}</span>
+        </div>
+        <div class="px-4 pb-3 flex items-center justify-between">
+          <span class="text-xs text-gray-500">after tax (20%)</span>
+          <span class="text-base font-black text-gray-800 tabular-nums">${{ cartTotalAfterTax }}</span>
         </div>
       </div>
     </div>
