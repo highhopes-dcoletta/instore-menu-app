@@ -30,7 +30,7 @@ const cartOpen = ref(false)
       <!-- Dropdown -->
       <div
         v-if="cartOpen"
-        class="absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-2xl z-50 overflow-hidden"
+        class="absolute right-0 top-full mt-2 w-[480px] bg-white rounded-xl shadow-2xl z-50 overflow-hidden"
       >
         <div class="px-4 py-3 border-b border-gray-100 text-xs font-bold uppercase tracking-widest text-gray-400">
           Your Cart
