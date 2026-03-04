@@ -15,7 +15,7 @@ const props = defineProps({
 const route  = useRoute()
 const router = useRouter()
 const session = useSessionStore()
-const { fire: fireCartAnimation } = useCartAnimation()
+const { fire: fireCartAnimation, fireToast } = useCartAnimation()
 
 // ── Modal ─────────────────────────────────────────────────────────────────────
 
@@ -50,13 +50,14 @@ function qty(id) {
 }
 
 function updateQty(product, delta, event) {
-  const isFirst = delta > 0 && session.selectionCount === 0
+  const wasEmpty = delta > 0 && session.selectionCount === 0
   session.updateQuantity(product.id, {
     name: product.Name ?? '',
     unitWeight: product['Unit Weight'] ?? '',
     price: product.Price ?? 0,
   }, delta)
-  if (isFirst && event) fireCartAnimation(event.clientX, event.clientY)
+  if (delta > 0 && event) fireCartAnimation(event.clientX, event.clientY)
+  if (wasEmpty) fireToast()
 }
 
 // ── Stock signal bars ─────────────────────────────────────────────────────────
