@@ -52,6 +52,21 @@ function parsePotency(formatted) {
 // Flatten one (product, variant) pair into the field shape the app expects.
 function normalizeVariant(product, variant) {
   const { value: potencyVal, unit: potencyUnit } = parsePotency(product.potencyThc?.formatted)
+  const effects = product.effects ?? []
+
+  // Pre-Ground?: Dutchie subcategory PRE_GROUND, or name contains "pre-ground"/"preground"
+  const isPreGround =
+    product.subcategory === 'PRE_GROUND' || /pre.?ground/i.test(product.name)
+
+  // Infused Preroll?: Dutchie INFUSED subcategories, or pre-roll with "infused" in name
+  const isInfused =
+    ['INFUSED', 'INFUSED_PRE_ROLL_PACKS'].includes(product.subcategory) ||
+    (product.category === 'PRE_ROLLS' && /infused/i.test(product.name))
+
+  // Tags: map Dutchie effects to app tag names used by Sleep/Pain views
+  const tags = []
+  if (effects.includes('SLEEPY')) tags.push('Sleep')
+
   return {
     id: variant.id,
     Name: product.name,
@@ -66,9 +81,9 @@ function normalizeVariant(product, variant) {
     'Potency Unit': potencyUnit,
     Image: product.image ?? null,
     Description: product.description ?? null,
-    Tags: product.effects ?? [],
-    'Pre-Ground?': null,
-    'Infused Preroll?': null,
+    Tags: tags,
+    'Pre-Ground?': isPreGround ? 'Yes' : null,
+    'Infused Preroll?': isInfused ? 'Yes' : null,
   }
 }
 
