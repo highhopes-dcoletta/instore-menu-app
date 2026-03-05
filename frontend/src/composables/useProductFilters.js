@@ -107,9 +107,12 @@ export function useProductFilters(categoryFn) {
     } else if (sort === 'stock') {
       const asc = dir !== 'desc'   // default first click: low-high (asc)
       list = [...list].sort((a, b) => {
-        const av = a.Quantity ?? -1
-        const bv = b.Quantity ?? -1
-        return asc ? av - bv : bv - av
+        const an = a.Quantity == null
+        const bn = b.Quantity == null
+        if (an && bn) return 0
+        if (an) return 1
+        if (bn) return -1
+        return asc ? a.Quantity - b.Quantity : b.Quantity - a.Quantity
       })
     }
     // else: no sort param → leave in server/store order
