@@ -1,10 +1,38 @@
 <script setup>
-import { onMounted, onUnmounted } from 'vue'
+import { computed, onMounted, onUnmounted } from 'vue'
+import { useSessionStore } from '@/stores/session'
+import { useCartAnimation } from '@/composables/useCartAnimation'
 
 const props = defineProps({
   product: { type: Object, required: true },
 })
 const emit = defineEmits(['close'])
+
+const session = useSessionStore()
+const { fire: fireCartAnimation, fireToast, BUBBLE_DURATION } = useCartAnimation()
+
+const qty = computed(() => session.selections[props.product.id]?.qty ?? 0)
+
+function updateQty(delta, event) {
+  if (delta > 0) {
+    const wasEmpty = session.selectionCount === 0
+    fireCartAnimation(event.clientX, event.clientY, props.product.Image, null, null)
+    if (wasEmpty) fireToast()
+    setTimeout(() => session.updateQuantity(props.product.id, {
+      name: props.product.Name ?? '',
+      unitWeight: props.product['Unit Weight'] ?? '',
+      price: props.product.Price ?? 0,
+      image: props.product.Image ?? null,
+    }, delta), BUBBLE_DURATION)
+  } else {
+    session.updateQuantity(props.product.id, {
+      name: props.product.Name ?? '',
+      unitWeight: props.product['Unit Weight'] ?? '',
+      price: props.product.Price ?? 0,
+      image: props.product.Image ?? null,
+    }, delta)
+  }
+}
 
 function onKey(e) {
   if (e.key === 'Escape') emit('close')
@@ -47,9 +75,30 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
         </p>
 
         <!-- Description -->
-        <p v-if="product.Description" class="text-gray-500 leading-relaxed">
+        <p v-if="product.Description" class="text-gray-500 leading-relaxed mb-6">
           {{ product.Description }}
         </p>
+
+        <!-- Cart control -->
+        <div class="flex items-center gap-3 mt-2">
+          <template v-if="qty === 0">
+            <button
+              @click="updateQty(1, $event)"
+              class="flex-1 py-3 rounded-xl bg-teal-500 text-white font-bold text-base hover:bg-teal-600 active:bg-teal-700 transition-colors"
+            >Add to Cart</button>
+          </template>
+          <template v-else>
+            <button
+              @click="updateQty(-1, $event)"
+              class="w-11 h-11 rounded-full border border-gray-300 text-gray-600 hover:border-teal-500 hover:text-teal-600 transition-colors text-xl leading-none flex items-center justify-center"
+            >−</button>
+            <span class="w-8 text-center text-lg font-bold tabular-nums">{{ qty }}</span>
+            <button
+              @click="updateQty(1, $event)"
+              class="w-11 h-11 rounded-full bg-teal-500 text-white hover:bg-teal-600 transition-colors text-xl leading-none flex items-center justify-center"
+            >+</button>
+          </template>
+        </div>
 
       </div>
     </div>
