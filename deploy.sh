@@ -65,15 +65,34 @@ EOF
 echo "==> Syncing frontend..."
 rsync -az --delete -e "ssh $SSHOPTS" frontend/dist/ "$HOST:$WEB_DIR/"
 
+echo "==> Verifying sync..."
+LOCAL_HASH=$(md5 -q frontend/dist/index.html)
+REMOTE_HASH=$(ssh $SSHOPTS "$HOST" "md5sum $WEB_DIR/index.html | cut -d' ' -f1")
+if [ "$LOCAL_HASH" != "$REMOTE_HASH" ]; then
+  echo "ERROR: index.html mismatch after rsync (local=$LOCAL_HASH remote=$REMOTE_HASH)" >&2
+  exit 1
+fi
+echo "  index.html verified."
+
 echo "==> Copying .env to server..."
 scp $SSHOPTS backend/.env "$HOST:$REMOTE_DIR/backend/.env"
 
 echo "==> Restarting service..."
-ssh $SSHOPTS "$HOST" "systemctl daemon-reload; systemctl restart $SERVICE; sleep 3"
+ssh $SSHOPTS "$HOST" "systemctl daemon-reload; systemctl restart $SERVICE"
 
-echo ""
-echo "==> Deploy complete. Testing API..."
-ssh $SSHOPTS "$HOST" "curl -sm 5 http://127.0.0.1:5001/api/sessions || echo '(API did not respond)'"
+echo "==> Waiting for API..."
+for i in $(seq 1 15); do
+  RESULT=$(ssh $SSHOPTS "$HOST" "curl -sm 2 http://127.0.0.1:5001/api/sessions" 2>/dev/null)
+  if [ $? -eq 0 ]; then
+    echo "  API OK (${i}s)"
+    break
+  fi
+  if [ $i -eq 15 ]; then
+    echo "ERROR: API did not respond after 15s" >&2
+    exit 1
+  fi
+  sleep 1
+done
 
 echo ""
 echo "==> Done! http://menu2.highhopesma.com"
