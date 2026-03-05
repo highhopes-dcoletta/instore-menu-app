@@ -35,6 +35,7 @@ const submitting = ref(false)
 const orderNumber = ref(null)
 const countdown = ref(0)
 let countdownTimer = null
+const previousOrder = ref(null) // snapshot before submit
 
 function startCountdown() {
   countdown.value = 15
@@ -51,13 +52,34 @@ function startCountdown() {
 async function sendToBudtender() {
   if (submitting.value || isEmpty.value) return
   dismissToast()
+  const snapshot = { selections: { ...session.selections }, sessionId: session.sessionId }
   submitting.value = true
   const num = await session.submitOrder()
   submitting.value = false
   if (num != null) {
+    previousOrder.value = snapshot
     orderNumber.value = num
     startCountdown()
   }
+}
+
+async function goBackToPreviousOrder() {
+  clearInterval(countdownTimer)
+  const { selections, sessionId } = previousOrder.value
+  previousOrder.value = null
+  orderNumber.value = null
+  await session.restoreSession(selections, sessionId)
+}
+
+function decreaseQty(id, item) {
+  if ((item.qty ?? 1) > 1) {
+    session.updateQuantity(id, item, -1)
+    return
+  }
+  const el = document.querySelector(`[data-cart-item="${id}"]`)
+  if (!el) { session.updateQuantity(id, item, -1); return }
+  el.style.animation = 'poof 0.4s ease-out forwards'
+  setTimeout(() => session.updateQuantity(id, item, -1), 380)
 }
 
 function resetToMenu() {
@@ -170,7 +192,7 @@ onUnmounted(() => {
             </span>
             <div class="flex items-center gap-1">
               <button
-                @click="session.updateQuantity(id, item, -1)"
+                @click="decreaseQty(id, item)"
                 class="w-6 h-6 rounded-full border border-gray-300 text-gray-600 hover:border-teal-500 hover:text-teal-600 transition-colors text-sm flex items-center justify-center"
               >−</button>
               <span class="w-5 text-center text-sm font-semibold tabular-nums text-gray-800">{{ item.qty }}</span>
@@ -218,6 +240,12 @@ onUnmounted(() => {
         >
           Start a new order!
         </button>
+        <button
+          @click="goBackToPreviousOrder"
+          class="shrink-0 px-8 py-3 border border-gray-600 hover:border-gray-400 text-gray-400 hover:text-gray-200 font-semibold rounded-xl text-base transition-colors"
+        >
+          Go Back to Previous Order
+        </button>
       </div>
     </Transition>
   </Teleport>
@@ -249,5 +277,13 @@ onUnmounted(() => {
 }
 .wiggle {
   animation: wiggle 1.2s ease-out;
+}
+</style>
+
+<style>
+@keyframes poof {
+  0%   { transform: scale(1);    opacity: 1; filter: blur(0); }
+  20%  { transform: scale(1.08); opacity: 1; filter: blur(0); }
+  100% { transform: scale(0.1);  opacity: 0; filter: blur(8px); }
 }
 </style>

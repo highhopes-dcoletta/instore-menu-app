@@ -41,6 +41,7 @@ function _launchBubble(sx, sy, ex, ey, imageUrl) {
     el.src = imageUrl
     Object.assign(el.style, {
       objectFit: 'cover',
+      background: 'white',
       boxShadow: '0 2px 12px rgba(0,0,0,0.35)',
     })
   } else {
@@ -105,7 +106,7 @@ function _launchBubble(sx, sy, ex, ey, imageUrl) {
       x = midX + (ex - midX) * e
       y = midY + (ey - midY) * e
       scale = 1 - 0.8 * e
-      opacity = t < 0.4 ? 1 : 1 - (t - 0.4) / 0.6
+      opacity = 1
     } else {
       el.remove()
       return

@@ -150,6 +150,24 @@ export const useSessionStore = defineStore('session', () => {
     }
   }
 
+  /**
+   * Restore a previously saved selections snapshot (e.g. after cancelling a submit).
+   * Also deletes a previously submitted session from the backend if an id is provided.
+   */
+  async function restoreSession(savedSelections, submittedSessionId) {
+    if (submittedSessionId) await _delete(submittedSessionId)
+
+    const newId = crypto.randomUUID?.() ??
+      'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+        const r = Math.random() * 16 | 0
+        return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16)
+      })
+    sessionId.value = newId
+    localStorage.setItem('sessionId', newId)
+    selections.value = { ...savedSelections }
+    await _post()
+  }
+
   return {
     sessionId,
     selections,
@@ -159,5 +177,6 @@ export const useSessionStore = defineStore('session', () => {
     removeSelections,
     clearSession,
     submitOrder,
+    restoreSession,
   }
 })

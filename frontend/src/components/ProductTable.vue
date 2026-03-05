@@ -191,7 +191,14 @@ function potency(product) {
             class="py-4 pr-6 cursor-pointer hover:text-teal-600 transition-colors text-slate-800"
             @click="modalProduct = product"
           >
-            {{ product.Name }}<span v-if="product['Unit Weight']" class="ml-1.5 font-bold"> {{ product['Unit Weight'] }}</span>
+            <div class="flex items-center gap-3">
+              <img
+                v-if="product.Image"
+                :src="product.Image"
+                class="w-10 h-10 rounded-lg object-cover shrink-0 bg-white"
+              />
+              <span>{{ product.Name }}<span v-if="product['Unit Weight']" class="ml-1.5 font-bold"> {{ product['Unit Weight'] }}</span></span>
+            </div>
           </td>
 
           <td v-if="columns.includes('strain')" class="py-4 pr-6 text-slate-500">
