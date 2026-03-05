@@ -57,7 +57,7 @@ onUnmounted(() => clearInterval(pollTimer))
       <button
         v-if="sessions.length > 0"
         @click="clearAll"
-        class="text-sm font-semibold text-red-500 hover:text-red-700 transition-colors"
+        class="text-sm font-semibold text-red-500 [@media(hover:hover)]:hover:text-red-700 active:text-red-700 transition-colors"
       >Clear All</button>
     </div>
 
@@ -93,7 +93,7 @@ onUnmounted(() => clearInterval(pollTimer))
           <!-- Close button -->
           <button
             @click="deleteSession(s.sessionId)"
-            class="shrink-0 w-7 h-7 flex items-center justify-center rounded-full text-gray-400 hover:bg-red-100 hover:text-red-500 transition-colors text-lg leading-none"
+            class="shrink-0 w-7 h-7 flex items-center justify-center rounded-full text-gray-400 [@media(hover:hover)]:hover:bg-red-100 [@media(hover:hover)]:hover:text-red-500 active:bg-red-100 active:text-red-500 transition-colors text-lg leading-none"
             title="Dismiss order"
           >×</button>
         </div>
