@@ -64,6 +64,12 @@ def submit_session(session_id):
     return jsonify({"orderNumber": order_counter})
 
 
+@app.route("/api/sessions", methods=["DELETE"])
+def delete_all_sessions():
+    sessions.clear()
+    return "", 200
+
+
 @app.route("/api/sessions", methods=["GET"])
 def get_sessions():
     _purge_expired()

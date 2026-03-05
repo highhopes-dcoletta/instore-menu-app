@@ -17,6 +17,16 @@ async function fetchSessions() {
   }
 }
 
+async function deleteSession(sessionId) {
+  await fetch(`/api/session/${sessionId}`, { method: 'DELETE' })
+  sessions.value = sessions.value.filter(s => s.sessionId !== sessionId)
+}
+
+async function clearAll() {
+  await fetch('/api/sessions', { method: 'DELETE' })
+  sessions.value = []
+}
+
 function timeSince(iso) {
   const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
   if (diff < 60) return `${diff}s ago`
@@ -42,7 +52,14 @@ onUnmounted(() => clearInterval(pollTimer))
 
 <template>
   <main class="p-8 max-w-3xl mx-auto">
-    <h1 class="mb-6 text-2xl font-black tracking-wide">Budtender Dashboard</h1>
+    <div class="flex items-center justify-between mb-6">
+      <h1 class="text-2xl font-black tracking-wide">Budtender Dashboard</h1>
+      <button
+        v-if="sessions.length > 0"
+        @click="clearAll"
+        class="text-sm font-semibold text-red-500 hover:text-red-700 transition-colors"
+      >Clear All</button>
+    </div>
 
     <p v-if="sessions.length === 0" class="text-gray-400 text-lg">
       No active sessions.
@@ -72,6 +89,13 @@ onUnmounted(() => clearInterval(pollTimer))
               {{ s.ready ? 'Submitted' : 'Last updated' }} {{ timeSince(s.updatedAt) }}
             </div>
           </div>
+
+          <!-- Close button -->
+          <button
+            @click="deleteSession(s.sessionId)"
+            class="shrink-0 w-7 h-7 flex items-center justify-center rounded-full text-gray-400 hover:bg-red-100 hover:text-red-500 transition-colors text-lg leading-none"
+            title="Dismiss order"
+          >×</button>
         </div>
 
         <!-- Item list -->
