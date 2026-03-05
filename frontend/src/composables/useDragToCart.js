@@ -5,14 +5,19 @@ const isDragging = ref(false)
 const isOverCart = ref(false)
 
 export function useDragToCart() {
-  // Call on pointerdown — sets up the long-press drag gesture for one row
+  // Call on touchstart — sets up the long-press drag gesture for one row
   function startDrag(e, product, addToCart) {
     const trEl = e.currentTarget
-    const pointerId = e.pointerId
-    const startX = e.clientX
-    const startY = e.clientY
+    const touch = e.changedTouches[0]
+    const touchId = touch.identifier
+    const startX = touch.clientX
+    const startY = touch.clientY
     let activated = false
     let ghost = null
+
+    function findTouch(touchList) {
+      return Array.from(touchList).find(t => t.identifier === touchId)
+    }
 
     function createGhost(x, y) {
       const el = document.createElement('div')
@@ -51,32 +56,30 @@ export function useDragToCart() {
       isDragging.value = false
       isOverCart.value = false
       activated = false
-      document.body.style.touchAction = ''
       document.body.style.userSelect = ''
       document.body.style.webkitUserSelect = ''
-      trEl.removeEventListener('pointermove', onMoveEarly)
-      document.removeEventListener('pointermove', onMove)
-      document.removeEventListener('pointerup', onUp)
-      document.removeEventListener('pointercancel', onCancel)
+      trEl.removeEventListener('touchmove', onMoveEarly)
+      document.removeEventListener('touchmove', onMove)
+      document.removeEventListener('touchend', onEnd)
+      document.removeEventListener('touchcancel', onCancel)
     }
 
     // 300ms hold activates drag
     const activationTimer = setTimeout(() => {
       activated = true
       isDragging.value = true
-      document.body.style.touchAction = 'none'
       ghost = createGhost(startX, startY)
-      trEl.removeEventListener('pointermove', onMoveEarly)
-      // Listen on document so events keep firing as finger moves across the screen
-      document.addEventListener('pointermove', onMove, { passive: false })
-      document.addEventListener('pointerup', onUp)
-      document.addEventListener('pointercancel', onCancel)
+      // Switch from element-level early-detection to document-level tracking
+      trEl.removeEventListener('touchmove', onMoveEarly)
+      document.addEventListener('touchmove', onMove, { passive: false })
     }, 300)
 
     // Before activation: cancel if finger moves > 8px (user is scrolling)
-    function onMoveEarly(e) {
-      const dx = e.clientX - startX
-      const dy = e.clientY - startY
+    function onMoveEarly(ev) {
+      const t = findTouch(ev.changedTouches)
+      if (!t) return
+      const dx = t.clientX - startX
+      const dy = t.clientY - startY
       if (Math.hypot(dx, dy) > 8) {
         clearTimeout(activationTimer)
         cleanup()
@@ -84,13 +87,17 @@ export function useDragToCart() {
     }
 
     // After activation: move ghost, detect cart overlap
-    function onMove(e) {
-      e.preventDefault()
-      if (ghost) ghost.style.transform = `translate(${e.clientX - 40}px,${e.clientY - 40}px)`
-      isOverCart.value = e.clientX > window.innerWidth - 288
+    function onMove(ev) {
+      const t = findTouch(ev.changedTouches)
+      if (!t) return
+      ev.preventDefault()
+      if (ghost) ghost.style.transform = `translate(${t.clientX - 40}px,${t.clientY - 40}px)`
+      isOverCart.value = t.clientX > window.innerWidth - 288
     }
 
-    function onUp() {
+    function onEnd(ev) {
+      const t = findTouch(ev.changedTouches)
+      if (!t) return
       clearTimeout(activationTimer)
       if (activated && isOverCart.value) addToCart()
       cleanup()
@@ -101,10 +108,11 @@ export function useDragToCart() {
       cleanup()
     }
 
-    trEl.addEventListener('pointermove', onMoveEarly, { passive: false })
-    // pointerup/pointercancel before activation — still on trEl
-    trEl.addEventListener('pointerup', onUp)
-    trEl.addEventListener('pointercancel', onCancel)
+    // Pre-activation: watch for scroll intent on the element (passive — don't block scroll)
+    trEl.addEventListener('touchmove', onMoveEarly, { passive: true })
+    // touchend/touchcancel on document from the start so a quick lift always cleans up
+    document.addEventListener('touchend', onEnd)
+    document.addEventListener('touchcancel', onCancel)
   }
 
   return { isDragging, isOverCart, startDrag }

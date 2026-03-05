@@ -183,8 +183,8 @@ function potency(product) {
             'border-b border-gray-100 transition-colors',
             qty(product.id) > 0 ? 'bg-teal-50' : '',
           ]"
-          style="touch-action: pan-y; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none"
-          @pointerdown="onRowPointerDown(product, $event)"
+          style="user-select: none; -webkit-user-select: none; -webkit-touch-callout: none"
+          @touchstart="onRowPointerDown(product, $event)"
         >
           <!-- Cart control -->
           <td class="py-4 pr-3">
