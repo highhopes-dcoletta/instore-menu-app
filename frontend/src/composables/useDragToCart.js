@@ -55,9 +55,9 @@ export function useDragToCart() {
       document.body.style.userSelect = ''
       document.body.style.webkitUserSelect = ''
       trEl.removeEventListener('pointermove', onMoveEarly)
-      trEl.removeEventListener('pointermove', onMove)
-      trEl.removeEventListener('pointerup', onUp)
-      trEl.removeEventListener('pointercancel', onCancel)
+      document.removeEventListener('pointermove', onMove)
+      document.removeEventListener('pointerup', onUp)
+      document.removeEventListener('pointercancel', onCancel)
     }
 
     // 300ms hold activates drag
@@ -65,10 +65,12 @@ export function useDragToCart() {
       activated = true
       isDragging.value = true
       document.body.style.touchAction = 'none'
-      trEl.setPointerCapture(pointerId)
       ghost = createGhost(startX, startY)
       trEl.removeEventListener('pointermove', onMoveEarly)
-      trEl.addEventListener('pointermove', onMove, { passive: false })
+      // Listen on document so events keep firing as finger moves across the screen
+      document.addEventListener('pointermove', onMove, { passive: false })
+      document.addEventListener('pointerup', onUp)
+      document.addEventListener('pointercancel', onCancel)
     }, 300)
 
     // Before activation: cancel if finger moves > 8px (user is scrolling)
@@ -100,6 +102,7 @@ export function useDragToCart() {
     }
 
     trEl.addEventListener('pointermove', onMoveEarly, { passive: false })
+    // pointerup/pointercancel before activation — still on trEl
     trEl.addEventListener('pointerup', onUp)
     trEl.addEventListener('pointercancel', onCancel)
   }
