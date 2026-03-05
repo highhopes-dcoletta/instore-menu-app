@@ -15,7 +15,7 @@ const { filtered, categoryProducts } = useProductFilters((p) => p.Category === '
       <ProductTable :products="filtered" />
     </div>
     <aside class="w-40 shrink-0 pt-14">
-      <FilterPanel :filters="['brand', 'strain', 'packaging', 'size', 'infused']" :products="categoryProducts" />
+      <FilterPanel :filters="['brand', 'strain', 'packaging', 'size', 'infused']" :products="filtered" />
     </aside>
   </main>
 </template>
