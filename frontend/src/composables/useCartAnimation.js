@@ -2,6 +2,7 @@ import { ref, nextTick } from 'vue'
 
 const toastTrigger = ref(0)
 const toastVisible = ref(false)
+const toastMessage = ref('')
 let toastTimer = null
 
 export function useCartAnimation() {
@@ -13,7 +14,8 @@ export function useCartAnimation() {
     _launchBubble(x, y, rect.left + rect.width / 2, rect.top + rect.height / 2)
   }
 
-  function fireToast() {
+  function fireToast(message = 'You just started a shopping cart!') {
+    toastMessage.value = message
     clearTimeout(toastTimer)
     toastVisible.value = true
     toastTimer = setTimeout(() => (toastVisible.value = false), 3500)
@@ -24,7 +26,7 @@ export function useCartAnimation() {
     toastVisible.value = false
   }
 
-  return { toastTrigger, toastVisible, fire, fireToast, dismissToast }
+  return { toastTrigger, toastVisible, toastMessage, fire, fireToast, dismissToast, BUBBLE_DURATION: 1100 }
 }
 
 function _launchBubble(sx, sy, ex, ey) {
@@ -54,13 +56,13 @@ function _launchBubble(sx, sy, ex, ey) {
   const cx = (sx + ex) / 2
   const cy = (sy + ey) / 2 - 80
 
-  const duration = 680
+  const duration = 1100
   const start = performance.now()
 
   function frame(now) {
     const t = Math.min((now - start) / duration, 1)
-    // Ease-in along the bezier parameter
-    const e = t * t
+    // Ease-in-out along the bezier parameter
+    const e = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2
     // Quadratic bezier position
     const bx = (1 - e) * (1 - e) * sx + 2 * (1 - e) * e * cx + e * e * ex
     const by = (1 - e) * (1 - e) * sy + 2 * (1 - e) * e * cy + e * e * ey

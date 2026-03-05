@@ -1,12 +1,12 @@
 <script setup>
-import { computed, ref, watch, nextTick, onUnmounted } from 'vue'
+import { computed, ref, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useSessionStore } from '@/stores/session'
 import { useCartAnimation } from '@/composables/useCartAnimation'
 
 const session = useSessionStore()
 const router = useRouter()
-const { dismissToast } = useCartAnimation()
+const { dismissToast, fireToast, BUBBLE_DURATION } = useCartAnimation()
 
 const subtotal = computed(() =>
   Object.values(session.selections).reduce(
@@ -23,10 +23,10 @@ let wiggleTimer = null
 watch(() => session.selectionCount, () => {
   clearTimeout(wiggleTimer)
   wiggle.value = false
-  nextTick(() => {
+  wiggleTimer = setTimeout(() => {
     wiggle.value = true
-    wiggleTimer = setTimeout(() => (wiggle.value = false), 1200)
-  })
+    setTimeout(() => (wiggle.value = false), 1200)
+  }, BUBBLE_DURATION)
 })
 
 // ── Submit ────────────────────────────────────────────────────────────────────
@@ -66,7 +66,39 @@ function resetToMenu() {
   router.push('/')
 }
 
-onUnmounted(() => clearInterval(countdownTimer))
+// ── Inactivity reminder ───────────────────────────────────────────────────────
+
+const REMINDER_MS = 20 * 1000
+let reminderTimer = null
+
+function resetReminderTimer() {
+  clearTimeout(reminderTimer)
+  if (!isEmpty.value && orderNumber.value == null) {
+    reminderTimer = setTimeout(() => {
+      fireToast("When you're done, tap Send to Budtender")
+      clearTimeout(wiggleTimer)
+      wiggle.value = false
+      nextTick(() => {
+        wiggle.value = true
+        wiggleTimer = setTimeout(() => (wiggle.value = false), 1200)
+      })
+    }, REMINDER_MS)
+  }
+}
+
+watch(isEmpty, resetReminderTimer)
+
+const REMINDER_EVENTS = ['click', 'touchstart', 'keydown', 'scroll']
+
+onMounted(() => {
+  for (const evt of REMINDER_EVENTS) window.addEventListener(evt, resetReminderTimer, { passive: true })
+})
+
+onUnmounted(() => {
+  clearInterval(countdownTimer)
+  clearTimeout(reminderTimer)
+  for (const evt of REMINDER_EVENTS) window.removeEventListener(evt, resetReminderTimer)
+})
 </script>
 
 <template>
@@ -169,7 +201,7 @@ onUnmounted(() => clearInterval(countdownTimer))
           #{{ String(orderNumber).padStart(2, '0') }}
         </div>
         <p class="text-gray-300 font-semibold text-lg text-center leading-snug">
-          Please give your order number to the bartender!
+          Please give your order number to the budtender!
         </p>
         <p class="text-gray-500 text-sm tabular-nums">
           Returning to menu in {{ countdown }}…

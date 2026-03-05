@@ -1,14 +1,14 @@
 <script setup>
 import { useCartAnimation } from '@/composables/useCartAnimation'
 
-const { toastVisible } = useCartAnimation()
+const { toastVisible, toastMessage } = useCartAnimation()
 </script>
 
 <template>
   <Teleport to="body">
     <Transition name="toast">
       <div v-if="toastVisible" class="toast-wrap">
-        <div class="toast-inner">You just started a shopping cart!</div>
+        <div class="toast-inner">{{ toastMessage }}</div>
       </div>
     </Transition>
   </Teleport>
@@ -17,7 +17,7 @@ const { toastVisible } = useCartAnimation()
 <style scoped>
 .toast-wrap {
   position: fixed;
-  bottom: 2rem;
+  top: 2rem;
   left: 50%;
   transform: translateX(-50%);
   pointer-events: none;
@@ -42,6 +42,10 @@ const { toastVisible } = useCartAnimation()
 .toast-enter-from,
 .toast-leave-to {
   opacity: 0;
-  transform: translateY(8px);
+  transform: translateX(-50%) translateY(-8px);
+}
+.toast-enter-to,
+.toast-leave-from {
+  transform: translateX(-50%) translateY(0);
 }
 </style>
