@@ -1,6 +1,8 @@
 import { ref, nextTick } from 'vue'
 
 const toastTrigger = ref(0)
+const toastVisible = ref(false)
+let toastTimer = null
 
 export function useCartAnimation() {
   async function fire(x, y) {
@@ -12,10 +14,17 @@ export function useCartAnimation() {
   }
 
   function fireToast() {
-    toastTrigger.value++
+    clearTimeout(toastTimer)
+    toastVisible.value = true
+    toastTimer = setTimeout(() => (toastVisible.value = false), 3500)
   }
 
-  return { toastTrigger, fire, fireToast }
+  function dismissToast() {
+    clearTimeout(toastTimer)
+    toastVisible.value = false
+  }
+
+  return { toastTrigger, toastVisible, fire, fireToast, dismissToast }
 }
 
 function _launchBubble(sx, sy, ex, ey) {

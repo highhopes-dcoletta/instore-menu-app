@@ -1,16 +1,7 @@
 <script setup>
-import { ref, watch } from 'vue'
 import { useCartAnimation } from '@/composables/useCartAnimation'
 
-const { toastTrigger } = useCartAnimation()
-const toastVisible = ref(false)
-let toastTimer = null
-
-watch(toastTrigger, () => {
-  clearTimeout(toastTimer)
-  toastVisible.value = true
-  toastTimer = setTimeout(() => (toastVisible.value = false), 3500)
-})
+const { toastVisible } = useCartAnimation()
 </script>
 
 <template>

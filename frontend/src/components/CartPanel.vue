@@ -2,9 +2,11 @@
 import { computed, ref, watch, nextTick, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useSessionStore } from '@/stores/session'
+import { useCartAnimation } from '@/composables/useCartAnimation'
 
 const session = useSessionStore()
 const router = useRouter()
+const { dismissToast } = useCartAnimation()
 
 const subtotal = computed(() =>
   Object.values(session.selections).reduce(
@@ -48,6 +50,7 @@ function startCountdown() {
 
 async function sendToBudtender() {
   if (submitting.value || isEmpty.value) return
+  dismissToast()
   submitting.value = true
   const num = await session.submitOrder()
   submitting.value = false
@@ -55,6 +58,12 @@ async function sendToBudtender() {
     orderNumber.value = num
     startCountdown()
   }
+}
+
+function resetToMenu() {
+  clearInterval(countdownTimer)
+  orderNumber.value = null
+  router.push('/')
 }
 
 onUnmounted(() => clearInterval(countdownTimer))
@@ -154,17 +163,23 @@ onUnmounted(() => clearInterval(countdownTimer))
   <!-- Order confirmation overlay -->
   <Teleport to="body">
     <Transition name="confirm">
-      <div v-if="orderNumber != null" class="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 bg-gray-950 text-white">
+      <div v-if="orderNumber != null" class="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 bg-gray-950 text-white overflow-y-auto py-8">
         <div class="text-xs font-bold uppercase tracking-widest text-teal-400">Order submitted</div>
-        <div class="text-[10rem] font-black text-teal-400 tabular-nums leading-none">
+        <div class="text-[7rem] font-black text-teal-400 tabular-nums leading-none">
           #{{ String(orderNumber).padStart(2, '0') }}
         </div>
         <p class="text-gray-300 font-semibold text-lg text-center leading-snug">
-          A budtender will call your number shortly.
+          Please give your order number to the bartender!
         </p>
-        <p class="text-gray-500 text-sm tabular-nums mt-4">
+        <p class="text-gray-500 text-sm tabular-nums">
           Returning to menu in {{ countdown }}…
         </p>
+        <button
+          @click="resetToMenu"
+          class="shrink-0 px-8 py-4 bg-teal-500 hover:bg-teal-400 text-white font-bold rounded-xl text-lg transition-colors"
+        >
+          Start a new order!
+        </button>
       </div>
     </Transition>
   </Teleport>
