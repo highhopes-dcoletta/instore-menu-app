@@ -125,6 +125,16 @@ export const useProductsStore = defineStore('products', () => {
         all.push(normalizeVariant(product, variant))
       }
     }
+
+    // Pre-cache product images
+    const seen = new Set()
+    for (const p of all) {
+      if (p.Image && !seen.has(p.Image)) {
+        seen.add(p.Image)
+        new Image().src = p.Image
+      }
+    }
+
     return all
   }
 

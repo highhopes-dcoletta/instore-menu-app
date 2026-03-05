@@ -15,7 +15,7 @@ const props = defineProps({
 const route  = useRoute()
 const router = useRouter()
 const session = useSessionStore()
-const { fire: fireCartAnimation, fireToast } = useCartAnimation()
+const { fire: fireCartAnimation, fireToast, BUBBLE_DURATION } = useCartAnimation()
 
 // ── Modal ─────────────────────────────────────────────────────────────────────
 
@@ -49,15 +49,44 @@ function qty(id) {
   return session.selections[id]?.qty ?? 0
 }
 
+function cartDest(productId) {
+  // Existing item in cart — target its row
+  const row = document.querySelector(`[data-cart-item="${productId}"]`)
+  if (row) {
+    const r = row.getBoundingClientRect()
+    return [r.left + r.width / 2, r.top + r.height / 2]
+  }
+  // New item — target after the last cart row, or the cart list container
+  const list = document.querySelector('[data-cart-list]')
+  if (list) {
+    const last = list.lastElementChild
+    const r = last ? last.getBoundingClientRect() : list.getBoundingClientRect()
+    return [r.left + r.width / 2, last ? r.bottom + 28 : r.top + 28]
+  }
+  // Empty cart — fall back to cart header (fire() will handle null)
+  return [null, null]
+}
+
 function updateQty(product, delta, event) {
-  const wasEmpty = delta > 0 && session.selectionCount === 0
-  session.updateQuantity(product.id, {
-    name: product.Name ?? '',
-    unitWeight: product['Unit Weight'] ?? '',
-    price: product.Price ?? 0,
-  }, delta)
-  if (delta > 0 && event) fireCartAnimation(event.clientX, event.clientY)
-  if (wasEmpty) fireToast()
+  if (delta > 0) {
+    const wasEmpty = session.selectionCount === 0
+    const [dx, dy] = cartDest(product.id)
+    fireCartAnimation(event.clientX, event.clientY, product.Image, dx, dy)
+    if (wasEmpty) fireToast()
+    setTimeout(() => session.updateQuantity(product.id, {
+      name: product.Name ?? '',
+      unitWeight: product['Unit Weight'] ?? '',
+      price: product.Price ?? 0,
+      image: product.Image ?? null,
+    }, delta), BUBBLE_DURATION)
+  } else {
+    session.updateQuantity(product.id, {
+      name: product.Name ?? '',
+      unitWeight: product['Unit Weight'] ?? '',
+      price: product.Price ?? 0,
+      image: product.Image ?? null,
+    }, delta)
+  }
 }
 
 // ── Stock signal bars ─────────────────────────────────────────────────────────

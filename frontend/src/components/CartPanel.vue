@@ -6,7 +6,7 @@ import { useCartAnimation } from '@/composables/useCartAnimation'
 
 const session = useSessionStore()
 const router = useRouter()
-const { dismissToast, fireToast, BUBBLE_DURATION } = useCartAnimation()
+const { dismissToast, fireToast } = useCartAnimation()
 
 const subtotal = computed(() =>
   Object.values(session.selections).reduce(
@@ -23,10 +23,10 @@ let wiggleTimer = null
 watch(() => session.selectionCount, () => {
   clearTimeout(wiggleTimer)
   wiggle.value = false
-  wiggleTimer = setTimeout(() => {
+  nextTick(() => {
     wiggle.value = true
-    setTimeout(() => (wiggle.value = false), 1200)
-  }, BUBBLE_DURATION)
+    wiggleTimer = setTimeout(() => (wiggle.value = false), 1200)
+  })
 })
 
 // ── Submit ────────────────────────────────────────────────────────────────────
@@ -148,12 +148,18 @@ onUnmounted(() => {
       </div>
 
       <!-- Items -->
-      <ul v-else class="flex-1 overflow-y-auto divide-y divide-gray-100">
+      <ul v-else data-cart-list class="flex-1 overflow-y-auto divide-y divide-gray-100">
         <li
           v-for="(item, id) in session.selections"
           :key="id"
-          class="flex items-start justify-between px-4 py-3 gap-2"
+          :data-cart-item="id"
+          class="flex items-center justify-between px-4 py-3 gap-2"
         >
+          <img
+            v-if="item.image"
+            :src="item.image"
+            class="w-10 h-10 rounded-lg object-cover shrink-0"
+          />
           <span class="text-sm text-gray-800 leading-snug flex-1 min-w-0">
             {{ item.name }}
             <span v-if="item.unitWeight" class="text-gray-500"> {{ item.unitWeight }}</span>
