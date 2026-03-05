@@ -218,6 +218,6 @@ const CATEGORY_OPTS = [
   @apply border-teal-500 bg-white text-teal-500;
 }
 .chip-off {
-  @apply border-gray-800 bg-white text-gray-800 hover:border-teal-500 hover:text-teal-500;
+  @apply border-gray-800 bg-white text-gray-800;
 }
 </style>
