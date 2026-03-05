@@ -6,7 +6,7 @@ import ProductTable from '@/components/ProductTable.vue'
 
 const COLUMNS = ['name', 'potency', 'strain', 'price', 'stock']
 
-const { filtered, categoryProducts } = useProductFilters(
+const { filtered, categoryProducts, facets } = useProductFilters(
   (p) => Array.isArray(p.Tags) && p.Tags.includes('Pain')
 )
 </script>
@@ -19,7 +19,7 @@ const { filtered, categoryProducts } = useProductFilters(
       <ProductTable :products="filtered" :columns="COLUMNS" />
     </div>
     <aside class="w-40 shrink-0 pt-14">
-      <FilterPanel :filters="['brand', 'category']" :products="filtered" />
+      <FilterPanel :filters="['brand', 'category']" :products="categoryProducts" :facets="facets" />
     </aside>
   </main>
 </template>

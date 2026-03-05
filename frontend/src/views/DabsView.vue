@@ -22,7 +22,7 @@ const TABS = [
 
 const COLUMNS = ['name', 'strain', 'potency', 'stock']
 
-const { filtered, categoryProducts } = useProductFilters((p) => p.Category === 'CONCENTRATES')
+const { filtered, categoryProducts, facets } = useProductFilters((p) => p.Category === 'CONCENTRATES')
 </script>
 
 <template>
@@ -34,7 +34,7 @@ const { filtered, categoryProducts } = useProductFilters((p) => p.Category === '
       <ProductTable :products="filtered" :columns="COLUMNS" />
     </div>
     <aside class="w-40 shrink-0 pt-14">
-      <FilterPanel :filters="['strain', 'size']" :products="filtered" />
+      <FilterPanel :filters="['strain', 'size']" :products="categoryProducts" :facets="facets" />
     </aside>
   </main>
 </template>

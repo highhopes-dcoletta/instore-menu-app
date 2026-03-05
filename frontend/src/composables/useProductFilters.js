@@ -3,12 +3,12 @@
  *
  * @param {(product: object) => boolean} categoryFn
  *   Predicate that selects the category for this view.
- *   e.g. p => p.Category === 'FLOWER'
- *   e.g. p => Array.isArray(p.Tags) && p.Tags.includes('Sleep')
  *
  * Returns:
  *   filtered          — reactive: category-filtered + URL-param-filtered + sorted
- *   categoryProducts  — reactive: category-filtered only (use to derive filter chip options)
+ *   categoryProducts  — reactive: category-filtered only
+ *   facets            — reactive: per-dimension lists for filter option derivation
+ *                       { strain, size } each filtered by everything except that dimension
  */
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
@@ -19,93 +19,112 @@ function toArray(val) {
   return Array.isArray(val) ? val : [val]
 }
 
-export function useProductFilters(categoryFn) {
-  const store = useProductsStore()
-  const route = useRoute()
+// Apply all URL-driven filters to `list`, optionally skipping named dimensions.
+function applyFilters(list, query, skip = []) {
+  let result = list
 
-  // Category slice — stable source for deriving dynamic filter options.
-  const categoryProducts = computed(() => store.products.filter(categoryFn))
+  const search = query['search-for']
+  if (search) {
+    const q = search.toLowerCase()
+    result = result.filter((p) => (p.Name ?? '').toLowerCase().includes(q))
+  }
 
-  const filtered = computed(() => {
-    let list = categoryProducts.value
+  if (!skip.includes('brand')) {
+    const brand = query.brand
+    if (brand) result = result.filter((p) => p.Brand === brand)
+  }
 
-    // ── Text search ─────────────────────────────────────────────────────────
-    const search = route.query['search-for']
-    if (search) {
-      const q = search.toLowerCase()
-      list = list.filter((p) => (p.Name ?? '').toLowerCase().includes(q))
-    }
+  if (!skip.includes('preground')) {
+    const preground = query.preground
+    if (preground === 'yes') result = result.filter((p) => p['Pre-Ground?'] === 'Yes')
+    else if (preground === 'no') result = result.filter((p) => p['Pre-Ground?'] !== 'Yes')
+  }
 
-    // ── Single-select filters ────────────────────────────────────────────────
-    const brand = route.query.brand
-    if (brand) list = list.filter((p) => p.Brand === brand)
+  if (!skip.includes('packaging')) {
+    const packaging = query.packaging
+    if (packaging) result = result.filter((p) => p.Subcategory === packaging)
+  }
 
-    const preground = route.query.preground
-    if (preground === 'yes') list = list.filter((p) => p['Pre-Ground?'] === 'Yes')
-    else if (preground === 'no') list = list.filter((p) => p['Pre-Ground?'] !== 'Yes')
+  if (!skip.includes('infused')) {
+    const infused = query.infused
+    if (infused === 'yes') result = result.filter((p) => p['Infused Preroll?'] === 'Yes')
+    else if (infused === 'no') result = result.filter((p) => p['Infused Preroll?'] !== 'Yes')
+  }
 
-    const packaging = route.query.packaging
-    if (packaging) list = list.filter((p) => p.Subcategory === packaging)
+  if (!skip.includes('subcategory')) {
+    const subcategory = query.subcategory
+    if (subcategory) result = result.filter((p) => p.Subcategory === subcategory)
+  }
 
-    const infused = route.query.infused
-    if (infused === 'yes') list = list.filter((p) => p['Infused Preroll?'] === 'Yes')
-    else if (infused === 'no') list = list.filter((p) => p['Infused Preroll?'] !== 'Yes')
+  if (!skip.includes('strain')) {
+    const strains = toArray(query.strain)
+    if (strains.length) result = result.filter((p) => strains.includes(p.Strain))
+  }
 
-    const subcategory = route.query.subcategory
-    if (subcategory) list = list.filter((p) => p.Subcategory === subcategory)
+  if (!skip.includes('size')) {
+    const sizes = toArray(query.size)
+    if (sizes.length) result = result.filter((p) => sizes.includes(p['Unit Weight']))
+  }
 
-    // ── Multi-select filters ─────────────────────────────────────────────────
-    const strains = toArray(route.query.strain)
-    if (strains.length) list = list.filter((p) => strains.includes(p.Strain))
-
-    const sizes = toArray(route.query.size)
-    if (sizes.length) list = list.filter((p) => sizes.includes(p['Unit Weight']))
-
-    const tags = toArray(route.query.tag)
+  if (!skip.includes('tag')) {
+    const tags = toArray(query.tag)
     if (tags.length) {
-      list = list.filter((p) => {
+      result = result.filter((p) => {
         const ptags = Array.isArray(p.Tags) ? p.Tags : []
         return tags.some((t) => ptags.includes(t))
       })
     }
+  }
 
-    const categories = toArray(route.query.category)
-    if (categories.length) list = list.filter((p) => categories.includes(p.Category))
+  if (!skip.includes('category')) {
+    const categories = toArray(query.category)
+    if (categories.length) result = result.filter((p) => categories.includes(p.Category))
+  }
+
+  return result
+}
+
+export function useProductFilters(categoryFn) {
+  const store = useProductsStore()
+  const route = useRoute()
+
+  const categoryProducts = computed(() => store.products.filter(categoryFn))
+
+  const filtered = computed(() => {
+    let list = applyFilters(categoryProducts.value, route.query)
 
     // ── Sort ─────────────────────────────────────────────────────────────────
-    // sort + dir are set by clicking column headers in ProductTable.
-    // No sort param → use server order (popularity from Airtable).
     const sort = route.query.sort
-    const dir  = route.query.dir   // 'asc' | 'desc' | undefined
+    const dir  = route.query.dir
 
     if (sort === 'name') {
-      const asc = dir !== 'desc'   // default first click: A-Z (asc)
+      const asc = dir !== 'desc'
       list = [...list].sort((a, b) => {
         const cmp = (a.Name ?? '').localeCompare(b.Name ?? '')
         return asc ? cmp : -cmp
       })
     } else if (sort === 'strain') {
-      const asc = dir !== 'desc'   // default first click: A-Z (asc)
+      const asc = dir !== 'desc'
       list = [...list].sort((a, b) => {
         const cmp = (a.Strain ?? '').localeCompare(b.Strain ?? '')
         return asc ? cmp : -cmp
       })
     } else if (sort === 'potency') {
-      const asc = dir === 'asc'    // default first click: high-low (desc)
+      const asc = dir === 'asc'
       list = [...list].sort((a, b) => {
         const av = parseFloat(a.Potency) || 0
         const bv = parseFloat(b.Potency) || 0
         return asc ? av - bv : bv - av
       })
     } else if (sort === 'price') {
-      const asc = dir !== 'desc'   // default first click: low-high (asc)
+      const asc = dir !== 'desc'
       list = [...list].sort((a, b) => {
         const av = parseFloat(a.Price) || 0
         const bv = parseFloat(b.Price) || 0
         return asc ? av - bv : bv - av
       })
     } else if (sort === 'stock') {
-      const asc = dir !== 'desc'   // default first click: low-high (asc)
+      const asc = dir !== 'desc'
       list = [...list].sort((a, b) => {
         const an = a.Quantity == null
         const bn = b.Quantity == null
@@ -115,10 +134,16 @@ export function useProductFilters(categoryFn) {
         return asc ? a.Quantity - b.Quantity : b.Quantity - a.Quantity
       })
     }
-    // else: no sort param → leave in server/store order
 
     return list
   })
 
-  return { filtered, categoryProducts }
+  // Per-dimension facets: each list is filtered by everything EXCEPT that dimension,
+  // so filter chips for that dimension always show options compatible with other active filters.
+  const facets = computed(() => ({
+    strain: applyFilters(categoryProducts.value, route.query, ['strain']),
+    size:   applyFilters(categoryProducts.value, route.query, ['size']),
+  }))
+
+  return { filtered, categoryProducts, facets }
 }

@@ -22,6 +22,7 @@ import { strainLabel } from '@/utils/strainLabels'
 const props = defineProps({
   filters: { type: Array, default: () => [] },
   products: { type: Array, default: () => [] },
+  facets:   { type: Object, default: () => ({}) },
 })
 
 const route = useRoute()
@@ -68,9 +69,10 @@ function isMultiActive(key, value) {
 const brandOptions = computed(() =>
   [...new Set(props.products.map((p) => p.Brand).filter(Boolean))].sort()
 )
-const strainOptions = computed(() =>
-  [...new Set(props.products.map((p) => p.Strain).filter(Boolean))].sort()
-)
+const strainOptions = computed(() => {
+  const list = props.facets.strain ?? props.products
+  return [...new Set(list.map((p) => p.Strain).filter(Boolean))].sort()
+})
 // Parse "1/8oz", "1/4oz", "1oz", "3.5g", etc. to a numeric grams value for sorting
 function parseWeight(str) {
   const s = str.replace(/oz$/i, '').replace(/g$/i, '').trim()
@@ -82,7 +84,8 @@ function parseWeight(str) {
 }
 
 const sizeOptions = computed(() => {
-  const unique = [...new Set(props.products.map((p) => p['Unit Weight']).filter(Boolean))]
+  const list = props.facets.size ?? props.products
+  const unique = [...new Set(list.map((p) => p['Unit Weight']).filter(Boolean))]
   return unique.sort((a, b) => parseWeight(a) - parseWeight(b))
 })
 

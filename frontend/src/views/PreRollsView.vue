@@ -4,7 +4,7 @@ import FilterPanel from '@/components/FilterPanel.vue'
 import ProductControls from '@/components/ProductControls.vue'
 import ProductTable from '@/components/ProductTable.vue'
 
-const { filtered, categoryProducts } = useProductFilters((p) => p.Category === 'PRE_ROLLS')
+const { filtered, categoryProducts, facets } = useProductFilters((p) => p.Category === 'PRE_ROLLS')
 </script>
 
 <template>
@@ -15,7 +15,7 @@ const { filtered, categoryProducts } = useProductFilters((p) => p.Category === '
       <ProductTable :products="filtered" />
     </div>
     <aside class="w-40 shrink-0 pt-14">
-      <FilterPanel :filters="['brand', 'strain', 'packaging', 'size', 'infused']" :products="filtered" />
+      <FilterPanel :filters="['brand', 'strain', 'packaging', 'size', 'infused']" :products="categoryProducts" :facets="facets" />
     </aside>
   </main>
 </template>
