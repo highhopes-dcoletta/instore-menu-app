@@ -183,7 +183,7 @@ function potency(product) {
             'border-b border-gray-100 transition-colors',
             qty(product.id) > 0 ? 'bg-teal-50' : '',
           ]"
-          style="touch-action: pan-y"
+          style="touch-action: pan-y; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none"
           @pointerdown="onRowPointerDown(product, $event)"
         >
           <!-- Cart control -->

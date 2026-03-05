@@ -43,12 +43,17 @@ export function useDragToCart() {
       return el
     }
 
+    document.body.style.userSelect = 'none'
+    document.body.style.webkitUserSelect = 'none'
+
     function cleanup() {
       if (ghost) { ghost.remove(); ghost = null }
       isDragging.value = false
       isOverCart.value = false
       activated = false
       document.body.style.touchAction = ''
+      document.body.style.userSelect = ''
+      document.body.style.webkitUserSelect = ''
       trEl.removeEventListener('pointermove', onMoveEarly)
       trEl.removeEventListener('pointermove', onMove)
       trEl.removeEventListener('pointerup', onUp)
