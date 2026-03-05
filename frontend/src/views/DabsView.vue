@@ -33,7 +33,7 @@ const { filtered, categoryProducts } = useProductFilters((p) => p.Category === '
       <ProductControls />
       <ProductTable :products="filtered" :columns="COLUMNS" />
     </div>
-    <aside class="w-56 shrink-0 pt-14">
+    <aside class="w-40 shrink-0 pt-14">
       <FilterPanel :filters="['strain', 'size']" :products="categoryProducts" />
     </aside>
   </main>
