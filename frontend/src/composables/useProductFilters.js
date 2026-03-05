@@ -104,6 +104,13 @@ export function useProductFilters(categoryFn) {
         const bv = parseFloat(b.Price) || 0
         return asc ? av - bv : bv - av
       })
+    } else if (sort === 'stock') {
+      const asc = dir !== 'desc'   // default first click: low-high (asc)
+      list = [...list].sort((a, b) => {
+        const av = a.Quantity ?? -1
+        const bv = b.Quantity ?? -1
+        return asc ? av - bv : bv - av
+      })
     }
     // else: no sort param → leave in server/store order
 

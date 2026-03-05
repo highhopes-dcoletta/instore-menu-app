@@ -25,7 +25,7 @@ const modalProduct = ref(null)
 
 // ── Sorting ───────────────────────────────────────────────────────────────────
 
-const SORT_DEFAULTS = { name: 'asc', strain: 'asc', potency: 'desc', price: 'asc' }
+const SORT_DEFAULTS = { name: 'asc', strain: 'asc', potency: 'desc', price: 'asc', stock: 'asc' }
 
 function sortBy(col) {
   if (!props.sortable || !(col in SORT_DEFAULTS)) return
@@ -164,7 +164,14 @@ function potency(product) {
             <span v-else>Price</span>
           </th>
 
-          <th v-if="columns.includes('stock')" class="pb-3 pl-4">Stock</th>
+          <th v-if="columns.includes('stock')" class="pb-3 pl-4">
+            <button
+              v-if="sortable"
+              @click="sortBy('stock')"
+              :class="['hover:text-teal-600 transition-colors', isActiveSort('stock') && 'text-teal-600']"
+            >Stock{{ sortIcon('stock') }}</button>
+            <span v-else>Stock</span>
+          </th>
         </tr>
       </thead>
 
