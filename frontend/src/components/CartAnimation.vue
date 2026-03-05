@@ -26,8 +26,9 @@ watch(toastTrigger, () => {
 <style scoped>
 .toast-wrap {
   position: fixed;
-  top: 3.5rem;
-  right: 1rem;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
   pointer-events: none;
   z-index: 9999;
 }
@@ -50,6 +51,6 @@ watch(toastTrigger, () => {
 .toast-enter-from,
 .toast-leave-to {
   opacity: 0;
-  transform: translateX(12px);
+  transform: translateY(8px);
 }
 </style>

@@ -1,8 +1,10 @@
 <script setup>
-import { computed, ref, watch, nextTick } from 'vue'
+import { computed, ref, watch, nextTick, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useSessionStore } from '@/stores/session'
 
 const session = useSessionStore()
+const router = useRouter()
 
 const subtotal = computed(() =>
   Object.values(session.selections).reduce(
@@ -21,7 +23,7 @@ watch(() => session.selectionCount, () => {
   wiggle.value = false
   nextTick(() => {
     wiggle.value = true
-    wiggleTimer = setTimeout(() => (wiggle.value = false), 600)
+    wiggleTimer = setTimeout(() => (wiggle.value = false), 1200)
   })
 })
 
@@ -29,14 +31,33 @@ watch(() => session.selectionCount, () => {
 
 const submitting = ref(false)
 const orderNumber = ref(null)
+const countdown = ref(0)
+let countdownTimer = null
+
+function startCountdown() {
+  countdown.value = 15
+  countdownTimer = setInterval(() => {
+    countdown.value--
+    if (countdown.value <= 0) {
+      clearInterval(countdownTimer)
+      orderNumber.value = null
+      router.push('/')
+    }
+  }, 1000)
+}
 
 async function sendToBudtender() {
   if (submitting.value || isEmpty.value) return
   submitting.value = true
   const num = await session.submitOrder()
   submitting.value = false
-  if (num != null) orderNumber.value = num
+  if (num != null) {
+    orderNumber.value = num
+    startCountdown()
+  }
 }
+
+onUnmounted(() => clearInterval(countdownTimer))
 </script>
 
 <template>
@@ -129,20 +150,51 @@ async function sendToBudtender() {
 
     </template>
   </div>
+
+  <!-- Order confirmation overlay -->
+  <Teleport to="body">
+    <Transition name="confirm">
+      <div v-if="orderNumber != null" class="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 bg-gray-950 text-white">
+        <div class="text-xs font-bold uppercase tracking-widest text-teal-400">Order submitted</div>
+        <div class="text-[10rem] font-black text-teal-400 tabular-nums leading-none">
+          #{{ String(orderNumber).padStart(2, '0') }}
+        </div>
+        <p class="text-gray-300 font-semibold text-lg text-center leading-snug">
+          A budtender will call your number shortly.
+        </p>
+        <p class="text-gray-500 text-sm tabular-nums mt-4">
+          Returning to menu in {{ countdown }}…
+        </p>
+      </div>
+    </Transition>
+  </Teleport>
 </template>
 
 <style scoped>
+.confirm-enter-active,
+.confirm-leave-active {
+  transition: opacity 0.4s ease;
+}
+.confirm-enter-from,
+.confirm-leave-to {
+  opacity: 0;
+}
+
 @keyframes wiggle {
   0%   { transform: translateX(0); }
-  15%  { transform: translateX(-5px) rotate(-1deg); }
-  30%  { transform: translateX(5px) rotate(1deg); }
-  45%  { transform: translateX(-4px); }
-  60%  { transform: translateX(4px); }
-  75%  { transform: translateX(-2px); }
-  90%  { transform: translateX(2px); }
+  8%   { transform: translateX(-5px) rotate(-1deg); }
+  16%  { transform: translateX(5px) rotate(1deg); }
+  24%  { transform: translateX(-4px) rotate(-0.75deg); }
+  32%  { transform: translateX(4px) rotate(0.75deg); }
+  42%  { transform: translateX(-3px) rotate(-0.5deg); }
+  52%  { transform: translateX(3px) rotate(0.5deg); }
+  63%  { transform: translateX(-2px); }
+  74%  { transform: translateX(2px); }
+  84%  { transform: translateX(-1px); }
+  93%  { transform: translateX(1px); }
   100% { transform: translateX(0); }
 }
 .wiggle {
-  animation: wiggle 0.6s ease-in-out;
+  animation: wiggle 1.2s ease-out;
 }
 </style>
