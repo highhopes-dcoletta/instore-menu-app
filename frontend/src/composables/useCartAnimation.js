@@ -30,7 +30,7 @@ export function useCartAnimation() {
     toastVisible.value = false
   }
 
-  return { toastTrigger, toastVisible, toastMessage, fire, fireToast, dismissToast, BUBBLE_DURATION: 2000 }
+  return { toastTrigger, toastVisible, toastMessage, fire, fireToast, dismissToast, BUBBLE_DURATION: 1600 }
 }
 
 function _launchBubble(sx, sy, ex, ey, imageUrl) {
@@ -77,7 +77,7 @@ function _launchBubble(sx, sy, ex, ey, imageUrl) {
   const midY = window.innerHeight / 2
 
   const P1 = 700   // ms: travel to center, growing to full size
-  const REST = 650 // ms: hold at full size at center
+  const REST = 250 // ms: hold at full size at center
   const P2 = 650   // ms: travel to cart, shrink + fade
 
   const start = performance.now()

@@ -3,10 +3,12 @@ import { computed, ref, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useSessionStore } from '@/stores/session'
 import { useCartAnimation } from '@/composables/useCartAnimation'
+import { useDragToCart } from '@/composables/useDragToCart'
 
 const session = useSessionStore()
 const router = useRouter()
 const { dismissToast, fireToast } = useCartAnimation()
+const { isDragging, isOverCart } = useDragToCart()
 
 const subtotal = computed(() =>
   Object.values(session.selections).reduce(
@@ -124,14 +126,19 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="fixed top-9 right-0 bottom-0 w-72 bg-white border-l border-gray-200 flex flex-col z-40 shadow-xl">
+  <div :class="[
+    'fixed top-9 right-0 bottom-0 w-72 bg-white border-l border-gray-200 flex flex-col z-40 shadow-xl',
+    isDragging ? (isOverCart ? 'ring-2 ring-teal-400 ring-inset' : 'ring-2 ring-gray-300 ring-inset') : '',
+  ]">
 
     <!-- Header -->
     <div
       data-cart-counter
-      class="px-4 py-3 border-b border-gray-100 text-xs font-bold uppercase tracking-widest text-gray-400 shrink-0"
+      class="px-4 py-3 border-b border-gray-100 text-xs font-bold uppercase tracking-widest shrink-0 flex items-center justify-between"
+      :class="isOverCart ? 'text-teal-500' : 'text-gray-400'"
     >
       Your Cart
+      <span v-if="isOverCart" class="normal-case tracking-normal font-semibold text-teal-500">Drop to add</span>
     </div>
 
     <!-- Order confirmed view -->

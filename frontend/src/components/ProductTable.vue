@@ -5,6 +5,7 @@ import { useSessionStore } from '@/stores/session'
 import ProductModal from './ProductModal.vue'
 import { strainLabel } from '@/utils/strainLabels'
 import { useCartAnimation } from '@/composables/useCartAnimation'
+import { useDragToCart } from '@/composables/useDragToCart'
 
 const props = defineProps({
   products:  { type: Array,   required: true },
@@ -16,6 +17,7 @@ const route  = useRoute()
 const router = useRouter()
 const session = useSessionStore()
 const { fire: fireCartAnimation, fireToast, BUBBLE_DURATION } = useCartAnimation()
+const { startDrag } = useDragToCart()
 
 // ── Modal ─────────────────────────────────────────────────────────────────────
 
@@ -87,6 +89,19 @@ function updateQty(product, delta, event) {
       image: product.Image ?? null,
     }, delta)
   }
+}
+
+// ── Drag to cart ──────────────────────────────────────────────────────────────
+
+function onRowPointerDown(product, e) {
+  startDrag(e, product, () => {
+    session.updateQuantity(product.id, {
+      name: product.Name ?? '',
+      unitWeight: product['Unit Weight'] ?? '',
+      price: product.Price ?? 0,
+      image: product.Image ?? null,
+    }, 1)
+  })
 }
 
 // ── Stock signal bars ─────────────────────────────────────────────────────────
@@ -161,6 +176,8 @@ function potency(product) {
             'border-b border-gray-100 transition-colors',
             qty(product.id) > 0 ? 'bg-teal-50' : '',
           ]"
+          style="touch-action: pan-y"
+          @pointerdown="onRowPointerDown(product, $event)"
         >
           <!-- Cart control -->
           <td class="py-4 pr-3">
