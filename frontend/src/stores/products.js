@@ -63,9 +63,16 @@ function normalizeVariant(product, variant) {
     ['INFUSED', 'INFUSED_PRE_ROLL_PACKS'].includes(product.subcategory) ||
     (product.category === 'PRE_ROLLS' && /infused/i.test(product.name))
 
-  // Tags: map Dutchie effects to app tag names used by Sleep/Pain views
+  // Tags: map Dutchie effects and subcategory to app tag names
   const tags = []
   if (effects.includes('SLEEPY')) tags.push('Sleep')
+  if (product.category === 'VAPORIZERS') {
+    if (product.subcategory === 'DISPOSABLE' || /disposable/i.test(product.name)) {
+      tags.push('Disposable')
+    } else {
+      tags.push('510')
+    }
+  }
 
   return {
     id: variant.id,

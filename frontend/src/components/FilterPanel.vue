@@ -91,7 +91,7 @@ const sizeOptions = computed(() => {
 
 // ── Hardcoded option sets ──────────────────────────────────────────────────────
 
-const VAPE_TAGS = ['510', 'Airo', 'Disposable', 'Live Rosin/Resin', 'Pax']
+const VAPE_TAGS = ['510', 'Disposable', 'Live Rosin/Resin', 'Pax']
 const CATEGORY_OPTS = [
   { value: 'EDIBLES', label: 'Edibles' },
   { value: 'VAPORIZERS', label: 'Vaporizers' },
