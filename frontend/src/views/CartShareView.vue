@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
+import { calcQuota } from '@/utils/quotaCalc'
 
 const route = useRoute()
 const session = ref(null)
@@ -30,6 +31,8 @@ const subtotal = computed(() => {
     (sum, item) => sum + (item.price ?? 0) * (item.qty ?? 1), 0
   )
 })
+
+const quota = computed(() => session.value ? calcQuota(session.value.selections) : null)
 
 </script>
 
@@ -92,6 +95,15 @@ const subtotal = computed(() => {
             </div>
           </li>
         </ul>
+
+        <!-- Over-limit warning -->
+        <div v-if="quota?.overLimit" class="mt-4 rounded-2xl bg-red-500 text-white px-4 py-3 flex items-start gap-3">
+          <span class="text-xl leading-none shrink-0">⚠️</span>
+          <div>
+            <p class="text-sm font-black uppercase tracking-wide leading-none mb-1">Over Daily Limit</p>
+            <p class="text-sm leading-snug opacity-90">This cart exceeds the 28g daily limit. A budtender will help you adjust your order when you visit.</p>
+          </div>
+        </div>
 
         <!-- Totals -->
         <div class="mt-6 bg-white rounded-2xl shadow-sm px-5 py-4 flex flex-col gap-2">

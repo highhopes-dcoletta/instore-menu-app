@@ -77,7 +77,10 @@ async function generateQrWithIcon(url) {
 
 watch(() => session.sessionId, async (id) => {
   if (!id) { qrDataUrl.value = null; return }
-  const url = `${window.location.origin}/cart/${id}`
+  const origin = window.location.hostname === 'localhost'
+    ? 'http://100.67.159.25:5173'
+    : window.location.origin
+  const url = `${origin}/cart/${id}`
   qrDataUrl.value = await generateQrWithIcon(url)
 }, { immediate: true })
 
