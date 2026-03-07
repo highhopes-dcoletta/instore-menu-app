@@ -24,10 +24,61 @@ const quota = computed(() => calcQuota(session.selections))
 
 const qrDataUrl = ref(null)
 
+const PHONE_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 24">
+  <!-- Shopping cart -->
+  <path d="M0.5 2h2.5l2.5 8h7.5" stroke="#134e4a" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="3.5" y="5" width="8" height="5" rx="1" fill="#134e4a"/>
+  <circle cx="5.5" cy="12.5" r="1.5" fill="#134e4a"/>
+  <circle cx="10" cy="12.5" r="1.5" fill="#134e4a"/>
+  <!-- Arrow right -->
+  <path d="M14 7.5h3.5" stroke="#134e4a" stroke-width="1.8" stroke-linecap="round"/>
+  <path d="M15.8 5.8l1.7 1.7-1.7 1.7" stroke="#134e4a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <!-- Phone -->
+  <rect x="19.5" y="0.5" width="12" height="23" rx="2.5" fill="#134e4a"/>
+  <rect x="21.5" y="3" width="8" height="16" fill="white"/>
+  <circle cx="25.5" cy="21.5" r="1.2" fill="white"/>
+</svg>`
+
+async function generateQrWithIcon(url) {
+  const SIZE = 200
+  const canvas = document.createElement('canvas')
+  canvas.width = SIZE
+  canvas.height = SIZE
+  await QRCode.toCanvas(canvas, url, { width: SIZE, margin: 1, color: { dark: '#134e4a', light: '#ffffff' } })
+
+  const ctx = canvas.getContext('2d')
+  const iconW = 48
+  const iconH = 36
+  const cx = SIZE / 2
+  const cy = SIZE / 2
+
+  // White rounded-rect behind icon
+  ctx.fillStyle = 'white'
+  ctx.beginPath()
+  ctx.roundRect(cx - iconW / 2 - 5, cy - iconH / 2 - 5, iconW + 10, iconH + 10, 8)
+  ctx.fill()
+
+  // Draw cart→phone icon
+  const blob = new Blob([PHONE_ICON_SVG], { type: 'image/svg+xml' })
+  const svgUrl = URL.createObjectURL(blob)
+  await new Promise((resolve, reject) => {
+    const img = new Image()
+    img.onload = () => {
+      ctx.drawImage(img, cx - iconW / 2, cy - iconH / 2, iconW, iconH)
+      URL.revokeObjectURL(svgUrl)
+      resolve()
+    }
+    img.onerror = reject
+    img.src = svgUrl
+  })
+
+  return canvas.toDataURL('image/png')
+}
+
 watch(() => session.sessionId, async (id) => {
   if (!id) { qrDataUrl.value = null; return }
   const url = `${window.location.origin}/cart/${id}`
-  qrDataUrl.value = await QRCode.toDataURL(url, { width: 160, margin: 1, color: { dark: '#134e4a' } })
+  qrDataUrl.value = await generateQrWithIcon(url)
 }, { immediate: true })
 
 // ── Wiggle on cart change ─────────────────────────────────────────────────────
@@ -194,9 +245,14 @@ onUnmounted(() => {
       </div>
 
       <!-- QR code -->
-      <div v-if="qrDataUrl && !isEmpty" class="px-4 py-3 border-b border-gray-100 shrink-0 flex flex-col items-center gap-2">
-        <img :src="qrDataUrl" width="160" height="160" alt="Cart QR code" class="rounded-lg" />
-        <p class="text-center text-xs text-gray-400 leading-snug">Not ready to order?<br><span class="font-semibold text-gray-500">Copy your cart to your phone!</span></p>
+      <div v-if="qrDataUrl && !isEmpty" class="px-4 pt-1 pb-3 border-b border-gray-100 shrink-0 flex flex-col items-center gap-2">
+        <div class="flex items-center gap-2 w-full">
+          <div class="flex-1 h-px bg-gray-200"></div>
+          <span class="text-xs font-bold text-gray-400 uppercase tracking-widest">or</span>
+          <div class="flex-1 h-px bg-gray-200"></div>
+        </div>
+        <p class="text-center text-xs font-semibold text-gray-500">Copy your cart to your phone!</p>
+        <img :src="qrDataUrl" width="200" height="200" alt="Cart QR code" class="rounded-lg" />
       </div>
 
       <!-- Empty state -->
