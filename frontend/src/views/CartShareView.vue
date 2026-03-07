@@ -71,7 +71,7 @@ const quota = computed(() => session.value ? calcQuota(session.value.selections)
       <!-- Cart items -->
       <template v-else-if="session">
         <p class="text-sm text-gray-400 mb-5">
-          Here's what was in the cart when you scanned. Visit us to place your order!
+          Here's what was in the cart when you scanned. See the budtender to place your order!
         </p>
 
         <ul class="flex flex-col gap-4">
