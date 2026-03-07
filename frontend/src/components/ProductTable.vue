@@ -80,6 +80,7 @@ function updateQty(product, delta, event) {
       unitWeight: product['Unit Weight'] ?? '',
       price: product.Price ?? 0,
       image: product.Image ?? null,
+      category: product.Category ?? '',
     }, delta), BUBBLE_DURATION)
   } else {
     session.updateQuantity(product.id, {
@@ -87,6 +88,7 @@ function updateQty(product, delta, event) {
       unitWeight: product['Unit Weight'] ?? '',
       price: product.Price ?? 0,
       image: product.Image ?? null,
+      category: product.Category ?? '',
     }, delta)
   }
 }
@@ -100,6 +102,7 @@ function onRowPointerDown(product, e) {
       unitWeight: product['Unit Weight'] ?? '',
       price: product.Price ?? 0,
       image: product.Image ?? null,
+      category: product.Category ?? '',
     }, 1)
   })
 }

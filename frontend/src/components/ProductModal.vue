@@ -23,6 +23,7 @@ function updateQty(delta, event) {
       unitWeight: props.product['Unit Weight'] ?? '',
       price: props.product.Price ?? 0,
       image: props.product.Image ?? null,
+      category: props.product.Category ?? '',
     }, delta), BUBBLE_DURATION)
   } else {
     session.updateQuantity(props.product.id, {
@@ -30,6 +31,7 @@ function updateQty(delta, event) {
       unitWeight: props.product['Unit Weight'] ?? '',
       price: props.product.Price ?? 0,
       image: props.product.Image ?? null,
+      category: props.product.Category ?? '',
     }, delta)
   }
 }

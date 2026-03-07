@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { useSessionStore } from '@/stores/session'
 import { useCartAnimation } from '@/composables/useCartAnimation'
 import { useDragToCart } from '@/composables/useDragToCart'
+import { calcQuota } from '@/utils/quotaCalc'
 
 const session = useSessionStore()
 const router = useRouter()
@@ -16,6 +17,7 @@ const subtotal = computed(() =>
   )
 )
 const isEmpty = computed(() => Object.keys(session.selections).length === 0)
+const quota = computed(() => calcQuota(session.selections))
 
 // ── Wiggle on cart change ─────────────────────────────────────────────────────
 
@@ -211,6 +213,23 @@ onUnmounted(() => {
           </div>
         </li>
       </ul>
+
+      <!-- Quota bar -->
+      <div v-if="!isEmpty" class="px-4 py-3 border-t border-gray-100 shrink-0">
+        <div class="flex items-center justify-between mb-1.5">
+          <span class="text-xs text-gray-400">Daily limit</span>
+          <span :class="['text-xs font-semibold tabular-nums', quota.pct >= 1 ? 'text-red-500' : quota.pct >= 0.7 ? 'text-amber-500' : 'text-gray-500']">
+            {{ quota.usedGrams.toFixed(1) }} / 28g
+          </span>
+        </div>
+        <div class="h-1.5 rounded-full bg-gray-100 overflow-hidden">
+          <div
+            :class="['h-full rounded-full transition-all duration-500', quota.pct >= 1 ? 'bg-red-500' : quota.pct >= 0.7 ? 'bg-amber-400' : 'bg-teal-500']"
+            :style="{ width: (quota.pct * 100).toFixed(1) + '%' }"
+          ></div>
+        </div>
+        <p v-if="quota.pct >= 1" class="mt-1.5 text-xs text-red-500 font-semibold">Daily limit reached</p>
+      </div>
 
       <!-- Totals -->
       <div v-if="!isEmpty" class="border-t border-gray-100 shrink-0">
