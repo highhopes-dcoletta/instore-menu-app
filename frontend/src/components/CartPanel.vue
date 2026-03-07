@@ -5,6 +5,7 @@ import { useSessionStore } from '@/stores/session'
 import { useCartAnimation } from '@/composables/useCartAnimation'
 import { useDragToCart } from '@/composables/useDragToCart'
 import { calcQuota } from '@/utils/quotaCalc'
+import QRCode from 'qrcode'
 
 const session = useSessionStore()
 const router = useRouter()
@@ -18,6 +19,16 @@ const subtotal = computed(() =>
 )
 const isEmpty = computed(() => Object.keys(session.selections).length === 0)
 const quota = computed(() => calcQuota(session.selections))
+
+// ── QR code ───────────────────────────────────────────────────────────────────
+
+const qrDataUrl = ref(null)
+
+watch(() => session.sessionId, async (id) => {
+  if (!id) { qrDataUrl.value = null; return }
+  const url = `${window.location.origin}/cart/${id}`
+  qrDataUrl.value = await QRCode.toDataURL(url, { width: 160, margin: 1, color: { dark: '#134e4a' } })
+}, { immediate: true })
 
 // ── Wiggle on cart change ─────────────────────────────────────────────────────
 
@@ -180,6 +191,12 @@ onUnmounted(() => {
             <p class="text-xs leading-snug opacity-90">Your cart exceeds the 28g daily limit. A budtender will assist you.</p>
           </div>
         </div>
+      </div>
+
+      <!-- QR code -->
+      <div v-if="qrDataUrl && !isEmpty" class="px-4 py-3 border-b border-gray-100 shrink-0 flex flex-col items-center gap-2">
+        <img :src="qrDataUrl" width="160" height="160" alt="Cart QR code" class="rounded-lg" />
+        <p class="text-center text-xs text-gray-400 leading-snug">Not ready to order?<br><span class="font-semibold text-gray-500">Copy your cart to your phone!</span></p>
       </div>
 
       <!-- Empty state -->

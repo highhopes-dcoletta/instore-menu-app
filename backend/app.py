@@ -44,6 +44,20 @@ def create_or_update_session():
     return "", 200
 
 
+@app.route("/api/session/<session_id>", methods=["GET"])
+def get_session(session_id):
+    s = sessions.get(session_id)
+    if not s or not s["selections"]:
+        return jsonify({"error": "not found"}), 404
+    return jsonify({
+        "sessionId": session_id,
+        "updatedAt": s["updatedAt"].isoformat(),
+        "selections": s["selections"],
+        "ready": s.get("ready", False),
+        "orderNumber": s.get("orderNumber"),
+    })
+
+
 @app.route("/api/session/<session_id>", methods=["DELETE"])
 def delete_session(session_id):
     sessions.pop(session_id, None)

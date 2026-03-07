@@ -12,7 +12,8 @@ const router = useRouter()
 const sessionStore = useSessionStore()
 const productsStore = useProductsStore()
 
-const showNavBar = computed(() => route.path !== '/budtender')
+const isKioskFree = computed(() => route.path === '/budtender' || route.path.startsWith('/cart/'))
+const showNavBar = computed(() => !isKioskFree.value)
 
 // ─── Inactivity timeout (2 minutes) ─────────────────────────────────────────
 
@@ -36,9 +37,7 @@ onMounted(async () => {
   // It must NOT run initialize() — that would delete the kiosk's active session
   // from Flask (localStorage is shared across same-origin tabs).
   // It also doesn't need the inactivity timer.
-  const isBudtender = route.path === '/budtender'
-
-  if (!isBudtender) {
+  if (!isKioskFree.value) {
     await sessionStore.initialize()
     for (const evt of ACTIVITY_EVENTS) {
       window.addEventListener(evt, resetTimer, { passive: true })
@@ -62,8 +61,8 @@ onUnmounted(() => {
   <CartPanel v-if="showNavBar" />
   <CartAnimation />
 
-  <!-- /budtender never needs product data -->
-  <template v-if="route.path === '/budtender'">
+  <!-- /budtender and /cart/:id never need kiosk chrome or product data -->
+  <template v-if="isKioskFree">
     <router-view />
   </template>
   <template v-else>
