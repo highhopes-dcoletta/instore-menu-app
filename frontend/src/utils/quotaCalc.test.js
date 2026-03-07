@@ -72,19 +72,26 @@ describe('calcQuota', () => {
     expect(usedGrams).toBeCloseTo(7)
   })
 
-  it('applies concentrate conversion factor', () => {
+  it('applies concentrate conversion factor — 1g = 5.6g flower', () => {
     const { usedGrams } = calcQuota({
       p1: { category: 'CONCENTRATES', unitWeight: '1g', qty: 1 },
     })
-    expect(usedGrams).toBeCloseTo(CATEGORY_FACTORS.CONCENTRATES)
+    expect(usedGrams).toBeCloseTo(5.6)
+  })
+
+  it('applies edibles conversion — 100mg THC = 5.6g flower', () => {
+    const { usedGrams } = calcQuota({
+      p1: { category: 'EDIBLES', unitWeight: '100mg', qty: 1 },
+    })
+    expect(usedGrams).toBeCloseTo(5.6)
   })
 
   it('sums multiple items across categories', () => {
     const { usedGrams } = calcQuota({
       p1: { category: 'FLOWER',       unitWeight: '3.5g', qty: 1 },  // 3.5g
-      p2: { category: 'CONCENTRATES', unitWeight: '1g',   qty: 1 },  // 7g
+      p2: { category: 'CONCENTRATES', unitWeight: '1g',   qty: 1 },  // 5.6g
     })
-    expect(usedGrams).toBeCloseTo(10.5)
+    expect(usedGrams).toBeCloseTo(9.1)
   })
 
   it('skips items with unparseable weights', () => {

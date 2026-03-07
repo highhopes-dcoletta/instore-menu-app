@@ -8,12 +8,14 @@
 export const DAILY_LIMIT_G = 28
 
 // Flower-equivalent grams per 1g of product, by Dutchie category.
+// Edibles: unit weight is THC content in mg. parseWeightToGrams converts mg→g,
+// so factor must be 56 to get: 0.1g (100mg) × 56 = 5.6g flower equiv.
 export const CATEGORY_FACTORS = {
   FLOWER:       1,
   PRE_ROLLS:    1,
-  CONCENTRATES: 7,  // 1g concentrate = 7g flower equiv (MA CCC estimate)
-  VAPORIZERS:   7,  // 1g oil = 7g flower equiv
-  EDIBLES:      1,  // weight-based approximation — THC-mg basis would be more accurate
+  CONCENTRATES: 5.6,  // 1g concentrate = 5.6g flower equiv
+  VAPORIZERS:   5.6,  // 1g oil = 5.6g flower equiv
+  EDIBLES:      56,   // unit weight is mg THC; 100mg THC = 5.6g flower equiv
   TINCTURES:    1,
 }
 

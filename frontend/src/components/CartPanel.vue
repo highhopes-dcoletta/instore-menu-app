@@ -171,6 +171,15 @@ onUnmounted(() => {
         >
           {{ submitting ? 'Sending…' : 'Send to Budtender' }}
         </button>
+
+        <!-- Over-limit warning -->
+        <div v-if="quota.pct >= 1 && !isEmpty" class="mt-2 rounded-lg bg-red-500 text-white px-3 py-2.5 flex items-start gap-2">
+          <span class="text-lg leading-none shrink-0">⚠️</span>
+          <div>
+            <p class="text-xs font-black uppercase tracking-wide leading-none mb-0.5">Over Daily Limit</p>
+            <p class="text-xs leading-snug opacity-90">Your cart exceeds the 28g daily limit. A budtender will assist you.</p>
+          </div>
+        </div>
       </div>
 
       <!-- Empty state -->
