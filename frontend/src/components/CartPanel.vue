@@ -173,7 +173,7 @@ onUnmounted(() => {
         </button>
 
         <!-- Over-limit warning -->
-        <div v-if="quota.pct >= 1 && !isEmpty" class="mt-2 rounded-lg bg-red-500 text-white px-3 py-2.5 flex items-start gap-2">
+        <div v-if="quota.overLimit && !isEmpty" class="mt-2 rounded-lg bg-red-500 text-white px-3 py-2.5 flex items-start gap-2">
           <span class="text-lg leading-none shrink-0">⚠️</span>
           <div>
             <p class="text-xs font-black uppercase tracking-wide leading-none mb-0.5">Over Daily Limit</p>
@@ -227,17 +227,17 @@ onUnmounted(() => {
       <div v-if="!isEmpty" class="px-4 py-3 border-t border-gray-100 shrink-0">
         <div class="flex items-center justify-between mb-1.5">
           <span class="text-xs text-gray-400">Daily limit</span>
-          <span :class="['text-xs font-semibold tabular-nums', quota.pct >= 1 ? 'text-red-500' : quota.pct >= 0.7 ? 'text-amber-500' : 'text-gray-500']">
+          <span :class="['text-xs font-semibold tabular-nums', quota.overLimit ? 'text-red-500' : quota.pct >= 0.7 ? 'text-amber-500' : 'text-gray-500']">
             {{ quota.usedGrams.toFixed(1) }} / 28g
           </span>
         </div>
         <div class="h-1.5 rounded-full bg-gray-100 overflow-hidden">
           <div
-            :class="['h-full rounded-full transition-all duration-500', quota.pct >= 1 ? 'bg-red-500' : quota.pct >= 0.7 ? 'bg-amber-400' : 'bg-teal-500']"
+            :class="['h-full rounded-full transition-all duration-500', quota.overLimit ? 'bg-red-500' : quota.pct >= 0.7 ? 'bg-amber-400' : 'bg-teal-500']"
             :style="{ width: (quota.pct * 100).toFixed(1) + '%' }"
           ></div>
         </div>
-        <p v-if="quota.pct >= 1" class="mt-1.5 text-xs text-red-500 font-semibold">Daily limit reached</p>
+        <p v-if="quota.overLimit" class="mt-1.5 text-xs text-red-500 font-semibold">Daily limit reached</p>
       </div>
 
       <!-- Totals -->

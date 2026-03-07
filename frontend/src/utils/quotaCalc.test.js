@@ -14,14 +14,14 @@ describe('parseWeightToGrams', () => {
   })
 
   it('parses fractional oz', () => {
-    expect(parseWeightToGrams('1/8oz')).toBeCloseTo(3.54, 1)
-    expect(parseWeightToGrams('1/4oz')).toBeCloseTo(7.09, 1)
-    expect(parseWeightToGrams('1/2oz')).toBeCloseTo(14.18, 1)
+    expect(parseWeightToGrams('1/8oz')).toBeCloseTo(3.5)
+    expect(parseWeightToGrams('1/4oz')).toBeCloseTo(7)
+    expect(parseWeightToGrams('1/2oz')).toBeCloseTo(14)
   })
 
   it('parses whole oz', () => {
-    expect(parseWeightToGrams('1oz')).toBeCloseTo(28.35)
-    expect(parseWeightToGrams('0.5oz')).toBeCloseTo(14.175)
+    expect(parseWeightToGrams('1oz')).toBeCloseTo(28)
+    expect(parseWeightToGrams('0.5oz')).toBeCloseTo(14)
   })
 
   it('handles whitespace and case', () => {
@@ -107,6 +107,21 @@ describe('calcQuota', () => {
       p1: { category: 'FLOWER', unitWeight: '1oz', qty: 2 },
     })
     expect(pct).toBe(1)
+  })
+
+  it('overLimit is false at exactly 28g', () => {
+    const { overLimit } = calcQuota({
+      p1: { category: 'FLOWER', unitWeight: '7g', qty: 4 },
+    })
+    expect(overLimit).toBe(false)
+  })
+
+  it('overLimit is true above 28g', () => {
+    const { overLimit } = calcQuota({
+      p1: { category: 'FLOWER', unitWeight: '7g', qty: 4 },
+      p2: { category: 'FLOWER', unitWeight: '1g', qty: 1 },
+    })
+    expect(overLimit).toBe(true)
   })
 
   it('reports limitGrams as the MA daily limit', () => {

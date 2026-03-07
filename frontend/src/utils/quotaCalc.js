@@ -39,11 +39,11 @@ export function parseWeightToGrams(str) {
 
   // fractional oz — "1/8oz", "1/4oz", "1/2oz"
   const fracOz = s.match(/^(\d+)\/(\d+)\s*oz$/)
-  if (fracOz) return (parseFloat(fracOz[1]) / parseFloat(fracOz[2])) * 28.35
+  if (fracOz) return (parseFloat(fracOz[1]) / parseFloat(fracOz[2])) * 28
 
   // decimal oz — "1oz", "0.5oz"
   const oz = s.match(/^([\d.]+)\s*oz$/)
-  if (oz) return parseFloat(oz[1]) * 28.35
+  if (oz) return parseFloat(oz[1]) * 28
 
   return null
 }
@@ -66,5 +66,6 @@ export function calcQuota(selections) {
     usedGrams,
     limitGrams: DAILY_LIMIT_G,
     pct: Math.min(usedGrams / DAILY_LIMIT_G, 1),
+    overLimit: usedGrams > DAILY_LIMIT_G,
   }
 }
