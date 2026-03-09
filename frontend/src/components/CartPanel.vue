@@ -2,15 +2,18 @@
 import { computed, ref, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useSessionStore } from '@/stores/session'
+import { useProductsStore } from '@/stores/products'
 import { useCartAnimation } from '@/composables/useCartAnimation'
 import { useDragToCart } from '@/composables/useDragToCart'
 import { calcQuota } from '@/utils/quotaCalc'
 import { useAnalytics } from '@/composables/useAnalytics'
+import ProductModal from '@/components/ProductModal.vue'
 import QRCode from 'qrcode'
 
 const { track } = useAnalytics()
 
 const session = useSessionStore()
+const productsStore = useProductsStore()
 const router = useRouter()
 const { dismissToast, fireToast } = useCartAnimation()
 const { isDragging, isOverCart } = useDragToCart()
@@ -22,6 +25,52 @@ const subtotal = computed(() =>
 )
 const isEmpty = computed(() => Object.keys(session.selections).length === 0)
 const quota = computed(() => calcQuota(session.selections))
+
+// ── Cross-sell suggestions ────────────────────────────────────────────────────
+
+const COMPLEMENTS = {
+  FLOWER:       ['EDIBLES', 'VAPORIZERS'],
+  PRE_ROLLS:    ['EDIBLES', 'VAPORIZERS'],
+  EDIBLES:      ['FLOWER', 'VAPORIZERS'],
+  VAPORIZERS:   ['EDIBLES', 'FLOWER'],
+  CONCENTRATES: ['EDIBLES', 'FLOWER'],
+  TINCTURES:    ['EDIBLES', 'FLOWER'],
+  TOPICALS:     ['EDIBLES', 'FLOWER'],
+}
+
+const crossSellProducts = computed(() => {
+  if (isEmpty.value) return []
+  const cartIds = new Set(Object.keys(session.selections))
+  const cartCategories = new Set(Object.values(session.selections).map(i => i.category))
+  // Collect complement categories not already in cart
+  const targets = new Set()
+  for (const cat of cartCategories) {
+    for (const c of (COMPLEMENTS[cat] ?? [])) {
+      if (!cartCategories.has(c)) targets.add(c)
+    }
+  }
+  if (!targets.size) return []
+  // Pick top 2 by popularity (products array is already in Dutchie/popularity order)
+  const picks = []
+  for (const p of productsStore.products) {
+    if (picks.length >= 2) break
+    if (targets.has(p.Category) && !cartIds.has(p.id)) picks.push(p)
+  }
+  return picks
+})
+
+const modalProduct = ref(null)
+
+function addCrossSell(product) {
+  session.updateQuantity(product.id, {
+    name: product.Name,
+    unitWeight: product['Unit Weight'] ?? '',
+    price: product.Price ?? 0,
+    image: product.Image ?? null,
+    category: product.Category ?? '',
+  }, 1)
+  track('add_to_cart', { source: 'cross_sell', product_id: product.id, product_name: product.Name, category: product.Category })
+}
 
 // ── QR code ───────────────────────────────────────────────────────────────────
 
@@ -334,10 +383,47 @@ onUnmounted(() => {
             <span class="text-base font-black text-gray-800 tabular-nums">${{ (subtotal * 1.2).toFixed(2) }}</span>
           </div>
         </div>
+
+        <!-- Cross-sell suggestions -->
+        <div v-if="crossSellProducts.length" class="border-t border-gray-100 px-4 py-3">
+          <p class="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">You might also like</p>
+          <div class="flex flex-col gap-2">
+            <div
+              v-for="p in crossSellProducts"
+              :key="p.id"
+              class="flex items-center gap-2.5 cursor-pointer"
+              @click="modalProduct = p"
+            >
+              <img
+                v-if="p.Image"
+                :src="p.Image"
+                class="w-10 h-10 rounded-lg object-cover shrink-0 bg-gray-100"
+              />
+              <div v-else class="w-10 h-10 rounded-lg bg-gray-100 shrink-0" />
+              <div class="flex-1 min-w-0">
+                <p class="text-xs font-semibold text-gray-800 leading-snug truncate">{{ p.Name }}</p>
+                <p class="text-xs text-gray-400">{{ p['Unit Weight'] || p.Category?.toLowerCase().replace('_', ' ') }}</p>
+              </div>
+              <div class="flex items-center gap-1.5 shrink-0">
+                <span v-if="p.Price != null" class="text-xs font-semibold text-gray-600 tabular-nums">${{ p.Price }}</span>
+                <button
+                  @click.stop="addCrossSell(p)"
+                  class="w-6 h-6 rounded-full bg-teal-500 text-white hover:bg-teal-600 transition-colors text-sm flex items-center justify-center leading-none"
+                >+</button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
     </template>
   </div>
+
+  <ProductModal
+    v-if="modalProduct"
+    :product="modalProduct"
+    @close="modalProduct = null"
+  />
 
   <!-- Order confirmation overlay -->
   <Teleport to="body">

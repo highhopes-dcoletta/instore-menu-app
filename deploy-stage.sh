@@ -80,15 +80,16 @@ EOF
 
 echo "==> Restarting staging service..."
 ssh $SSHOPTS "$HOST" "systemctl restart $SERVICE"
+sleep 8
 
 echo "==> Waiting for staging API..."
-for i in $(seq 1 60); do
+for i in $(seq 1 30); do
   if ssh $SSHOPTS "$HOST" "curl -sm 2 http://127.0.0.1:5002/api/sessions" 2>/dev/null; then
     echo "  API OK (${i}s)"
     break
   fi
-  if [ $i -eq 60 ]; then
-    echo "ERROR: Staging API did not respond after 60s" >&2
+  if [ $i -eq 30 ]; then
+    echo "ERROR: Staging API did not respond after 38s" >&2
     exit 1
   fi
   sleep 1

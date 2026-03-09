@@ -22,6 +22,7 @@ const SOURCE_LABELS = {
   guided:     'Guided view',
   group_card: 'Group cards',
   drag:       'Drag to cart',
+  cross_sell: 'Cross-sell',
 }
 
 function pct(n, total) {
