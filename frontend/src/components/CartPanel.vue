@@ -263,68 +263,70 @@ onUnmounted(() => {
         <p class="text-gray-300 text-sm">Cart is empty</p>
       </div>
 
-      <!-- Items -->
-      <ul v-else data-cart-list class="flex-1 overflow-y-auto divide-y divide-gray-100">
-        <li
-          v-for="(item, id) in session.selections"
-          :key="id"
-          :data-cart-item="id"
-          class="flex items-center justify-between px-4 py-3 gap-2"
-        >
-          <img
-            v-if="item.image"
-            :src="item.image"
-            class="w-10 h-10 rounded-lg object-cover shrink-0"
-          />
-          <span class="text-sm text-gray-800 leading-snug flex-1 min-w-0">
-            {{ item.name }}
-            <span v-if="item.unitWeight" class="text-gray-500"> {{ item.unitWeight }}</span>
-          </span>
-          <div class="flex flex-col items-end gap-1.5 shrink-0">
-            <span v-if="item.price != null" class="text-sm font-semibold text-gray-700 tabular-nums">
-              ${{ item.price }}
+      <!-- Items + quota + totals scroll together -->
+      <div v-else class="flex-1 overflow-y-auto">
+        <ul data-cart-list class="divide-y divide-gray-100">
+          <li
+            v-for="(item, id) in session.selections"
+            :key="id"
+            :data-cart-item="id"
+            class="flex items-center justify-between px-4 py-3 gap-2"
+          >
+            <img
+              v-if="item.image"
+              :src="item.image"
+              class="w-10 h-10 rounded-lg object-cover shrink-0"
+            />
+            <span class="text-sm text-gray-800 leading-snug flex-1 min-w-0">
+              {{ item.name }}
+              <span v-if="item.unitWeight" class="text-gray-500"> {{ item.unitWeight }}</span>
             </span>
-            <div class="flex items-center gap-1">
-              <button
-                @click="decreaseQty(id, item)"
-                class="w-6 h-6 rounded-full border border-gray-300 text-gray-600 hover:border-teal-500 hover:text-teal-600 transition-colors text-sm flex items-center justify-center"
-              >−</button>
-              <span class="w-5 text-center text-sm font-semibold tabular-nums text-gray-800">{{ item.qty }}</span>
-              <button
-                @click="session.updateQuantity(id, item, 1)"
-                class="w-6 h-6 rounded-full bg-teal-500 text-white hover:bg-teal-600 transition-colors text-sm flex items-center justify-center"
-              >+</button>
+            <div class="flex flex-col items-end gap-1.5 shrink-0">
+              <span v-if="item.price != null" class="text-sm font-semibold text-gray-700 tabular-nums">
+                ${{ item.price }}
+              </span>
+              <div class="flex items-center gap-1">
+                <button
+                  @click="decreaseQty(id, item)"
+                  class="w-6 h-6 rounded-full border border-gray-300 text-gray-600 hover:border-teal-500 hover:text-teal-600 transition-colors text-sm flex items-center justify-center"
+                >−</button>
+                <span class="w-5 text-center text-sm font-semibold tabular-nums text-gray-800">{{ item.qty }}</span>
+                <button
+                  @click="session.updateQuantity(id, item, 1)"
+                  class="w-6 h-6 rounded-full bg-teal-500 text-white hover:bg-teal-600 transition-colors text-sm flex items-center justify-center"
+                >+</button>
+              </div>
             </div>
+          </li>
+        </ul>
+
+        <!-- Quota bar — anchored directly below items -->
+        <div class="px-4 py-3 border-t border-gray-100">
+          <div class="flex items-center justify-between mb-1.5">
+            <span class="text-xs text-gray-400">Daily limit</span>
+            <span :class="['text-xs font-semibold tabular-nums', quota.overLimit ? 'text-red-500' : quota.pct >= 0.7 ? 'text-amber-500' : 'text-gray-500']">
+              {{ quota.usedGrams.toFixed(1) }} / 28g
+            </span>
           </div>
-        </li>
-      </ul>
+          <div class="h-1.5 rounded-full bg-gray-100 overflow-hidden">
+            <div
+              :class="['h-full rounded-full transition-all duration-500', quota.overLimit ? 'bg-red-500' : quota.pct >= 0.7 ? 'bg-amber-400' : 'bg-teal-500']"
+              :style="{ width: (quota.pct * 100).toFixed(1) + '%' }"
+            ></div>
+          </div>
+          <p v-if="quota.overLimit" class="mt-1.5 text-xs text-red-500 font-semibold">Daily limit reached</p>
+        </div>
 
-      <!-- Quota bar -->
-      <div v-if="!isEmpty" class="px-4 py-3 border-t border-gray-100 shrink-0">
-        <div class="flex items-center justify-between mb-1.5">
-          <span class="text-xs text-gray-400">Daily limit</span>
-          <span :class="['text-xs font-semibold tabular-nums', quota.overLimit ? 'text-red-500' : quota.pct >= 0.7 ? 'text-amber-500' : 'text-gray-500']">
-            {{ quota.usedGrams.toFixed(1) }} / 28g
-          </span>
-        </div>
-        <div class="h-1.5 rounded-full bg-gray-100 overflow-hidden">
-          <div
-            :class="['h-full rounded-full transition-all duration-500', quota.overLimit ? 'bg-red-500' : quota.pct >= 0.7 ? 'bg-amber-400' : 'bg-teal-500']"
-            :style="{ width: (quota.pct * 100).toFixed(1) + '%' }"
-          ></div>
-        </div>
-        <p v-if="quota.overLimit" class="mt-1.5 text-xs text-red-500 font-semibold">Daily limit reached</p>
-      </div>
-
-      <!-- Totals -->
-      <div v-if="!isEmpty" class="border-t border-gray-100 shrink-0">
-        <div class="px-4 pt-3 pb-1 flex items-center justify-between">
-          <span class="text-xs text-gray-400">before tax</span>
-          <span class="text-sm font-semibold text-gray-600 tabular-nums">${{ subtotal.toFixed(2) }}</span>
-        </div>
-        <div class="px-4 pb-4 flex items-center justify-between">
-          <span class="text-xs text-gray-500">after tax (20%)</span>
-          <span class="text-base font-black text-gray-800 tabular-nums">${{ (subtotal * 1.2).toFixed(2) }}</span>
+        <!-- Totals — anchored directly below quota bar -->
+        <div class="border-t border-gray-100">
+          <div class="px-4 pt-3 pb-1 flex items-center justify-between">
+            <span class="text-xs text-gray-400">before tax</span>
+            <span class="text-sm font-semibold text-gray-600 tabular-nums">${{ subtotal.toFixed(2) }}</span>
+          </div>
+          <div class="px-4 pb-4 flex items-center justify-between">
+            <span class="text-xs text-gray-500">after tax (20%)</span>
+            <span class="text-base font-black text-gray-800 tabular-nums">${{ (subtotal * 1.2).toFixed(2) }}</span>
+          </div>
         </div>
       </div>
 
