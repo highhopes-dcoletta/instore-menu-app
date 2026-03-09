@@ -81,14 +81,13 @@ echo "==> Restarting service..."
 ssh $SSHOPTS "$HOST" "systemctl daemon-reload; systemctl restart $SERVICE"
 
 echo "==> Waiting for API..."
-for i in $(seq 1 15); do
-  RESULT=$(ssh $SSHOPTS "$HOST" "curl -sm 2 http://127.0.0.1:5001/api/sessions" 2>/dev/null)
-  if [ $? -eq 0 ]; then
+for i in $(seq 1 30); do
+  if ssh $SSHOPTS "$HOST" "curl -sm 2 http://127.0.0.1:5001/api/sessions" 2>/dev/null; then
     echo "  API OK (${i}s)"
     break
   fi
-  if [ $i -eq 15 ]; then
-    echo "ERROR: API did not respond after 15s" >&2
+  if [ $i -eq 30 ]; then
+    echo "ERROR: API did not respond after 30s" >&2
     exit 1
   fi
   sleep 1
