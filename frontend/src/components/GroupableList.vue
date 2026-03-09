@@ -130,6 +130,17 @@ function strainColor(strain) {
   return 'bg-gray-100 text-gray-500'
 }
 
+// Lock the card's current size/position before it's pulled out of the grid flow
+function onCardLeave(el) {
+  const { left, top, width, height } = el.getBoundingClientRect()
+  const parentRect = el.parentElement.getBoundingClientRect()
+  el.style.position = 'absolute'
+  el.style.left     = `${left - parentRect.left}px`
+  el.style.top      = `${top  - parentRect.top}px`
+  el.style.width    = `${width}px`
+  el.style.height   = `${height}px`
+}
+
 function displayPrice(p) {
   const price = p.SalePrice ?? p.Price
   return price ? `$${price}` : null
@@ -446,10 +457,17 @@ async function exitGroupView() {
     </div>
 
     <!-- Product cards — shown when count is low enough (or at deepest drill level) -->
-    <div v-else-if="showCards" class="grid grid-cols-4 gap-4 mt-2">
+    <TransitionGroup
+      v-else-if="showCards"
+      tag="div"
+      name="card"
+      class="grid grid-cols-4 gap-4 mt-2 relative"
+      @leave="onCardLeave"
+    >
       <div
-        v-for="p in cardProducts"
+        v-for="(p, i) in cardProducts"
         :key="p.id"
+        :style="`--card-i:${i}`"
         class="rounded-xl border border-gray-200 bg-white overflow-hidden flex flex-col cursor-pointer active:opacity-75 transition-opacity"
         @click="modalProduct = p"
       >
@@ -509,7 +527,7 @@ async function exitGroupView() {
           </div>
         </div>
       </div>
-    </div>
+    </TransitionGroup>
 
     <!-- List during enter/exit animation (shifted) -->
     <div
@@ -615,5 +633,26 @@ async function exitGroupView() {
 @keyframes badge-pop {
   from { transform: scale(0.4); }
   to   { transform: scale(1); }
+}
+
+/* Product card TransitionGroup */
+.card-move {
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.card-enter-active {
+  transition:
+    opacity    0.3s ease                   calc(var(--card-i, 0) * 45ms),
+    transform  0.35s cubic-bezier(0.34, 1.3, 0.64, 1) calc(var(--card-i, 0) * 45ms);
+}
+.card-leave-active {
+  transition: opacity 0.25s ease, transform 0.25s cubic-bezier(0.4, 0, 1, 1);
+}
+.card-enter-from {
+  opacity: 0;
+  transform: translateY(18px) scale(0.92);
+}
+.card-leave-to {
+  opacity: 0;
+  transform: translateY(-16px) scale(0.88);
 }
 </style>
