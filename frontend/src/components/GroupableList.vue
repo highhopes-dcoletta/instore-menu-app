@@ -36,10 +36,11 @@ const expandedProducts = computed(() =>
 
 // ── Animation state ────────────────────────────────────────────────────────
 
-const animating   = ref(false)
-const listShifted = ref(false)
-const shiftPx     = ref(0)
-const pileCounts  = ref({})
+const animating     = ref(false)
+const exitAnimating = ref(false)
+const listShifted   = ref(false)
+const shiftPx       = ref(0)
+const pileCounts    = ref({})
 
 const sleep = ms => new Promise(r => setTimeout(r, ms))
 
@@ -111,7 +112,7 @@ async function enterGroupView() {
       ghost.getBoundingClientRect()
       requestAnimationFrame(() => {
         ghost.style.transition = `transform 0.7s cubic-bezier(0.4,0,0.6,1) ${delay}ms, opacity 0.2s ease ${delay + 500}ms`
-        ghost.style.transform  = `translate(${dx}px,${dy}px) scale(0.15)`
+        ghost.style.transform  = `translate(${dx}px,${dy}px) scale(1.8)`
         ghost.style.opacity    = '0'
         setTimeout(() => ghost.remove(), 800 + delay)
       })
@@ -126,9 +127,93 @@ async function enterGroupView() {
   grouped.value     = true
 }
 
-function exitGroupView() {
+async function exitGroupView() {
   expandedKey.value = null
-  grouped.value     = false
+
+  // Capture pile positions and shift amount before any state changes
+  const pileRects = {}
+  for (const g of pileGroups.value) {
+    const el = document.querySelector(`[data-pile="${g.key}"]`)
+    if (el) pileRects[g.key] = el.getBoundingClientRect()
+  }
+  const pileRow = document.querySelector('.pile-anim-row')
+  shiftPx.value = pileRow ? Math.round(pileRow.offsetHeight * 0.5) : 150
+  listShifted.value = true
+  exitAnimating.value = true
+
+  await nextTick()
+  await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))
+
+  // Hide all rows before we start flying
+  const rows = Array.from(document.querySelectorAll('[data-product-id]'))
+  rows.forEach(row => { row.style.opacity = '0'; row.style.transition = '' })
+
+  const snapshots = rows
+    .map(row => {
+      const product = props.products.find(p => String(p.id) === row.dataset.productId)
+      if (!product) return null
+      const img = row.querySelector('img')
+      if (!img) return null
+      return {
+        rect:     img.getBoundingClientRect(),
+        groupKey: activeGrouper.value.groupFn(product),
+        src:      product.Image,
+        row,
+      }
+    })
+    .filter(s => s && s.rect.width > 0)
+
+  // Fly each icon from its pile back to its row
+  snapshots.forEach(({ rect, groupKey, src, row }, i) => {
+    const pileRect = pileRects[groupKey]
+    if (!pileRect) return
+
+    const delay = Math.min(i * 15, 500)
+    const dx = pileRect.left + pileRect.width  / 2 - (rect.left + rect.width  / 2)
+    const dy = pileRect.top  + pileRect.height / 2 - (rect.top  + rect.height / 2)
+
+    // Ghost starts at pile center (large), flies back to row (normal size)
+    const ghost = document.createElement('div')
+    ghost.style.cssText = `
+      position:fixed;
+      left:${rect.left}px; top:${rect.top}px;
+      width:${rect.width}px; height:${rect.height}px;
+      background-image:url(${src}); background-size:cover; background-color:#d1fae5;
+      border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.3);
+      pointer-events:none; z-index:200;
+      transform: translate(${dx}px,${dy}px) scale(1.8);
+      opacity: 1;
+    `
+    document.body.appendChild(ghost)
+
+    requestAnimationFrame(() => {
+      ghost.getBoundingClientRect()
+      requestAnimationFrame(() => {
+        ghost.style.transition = `transform 0.7s cubic-bezier(0.4,0,0.6,1) ${delay}ms`
+        ghost.style.transform  = `translate(0,0) scale(1)`
+
+        // When icon lands: fade row in, fade ghost out
+        setTimeout(() => {
+          row.style.transition = 'opacity 0.3s ease'
+          row.style.opacity = '1'
+          ghost.style.transition = 'opacity 0.2s ease'
+          ghost.style.opacity = '0'
+          setTimeout(() => ghost.remove(), 200)
+        }, delay + 700)
+      })
+    })
+  })
+
+  // Slide list back up
+  await sleep(200)
+  listShifted.value = false
+
+  // Wait for last icon to land, then clean up
+  const lastDelay = Math.min((snapshots.length - 1) * 15, 500)
+  await sleep(lastDelay + 800)
+
+  exitAnimating.value = false
+  grouped.value       = false
 }
 </script>
 
@@ -159,7 +244,7 @@ function exitGroupView() {
       >← All piles</button>
 
       <button
-        v-if="!animating"
+        v-if="!animating && !exitAnimating"
         @click="grouped ? exitGroupView() : enterGroupView()"
         class="px-4 py-2 rounded-xl text-sm font-bold transition-colors"
         :class="grouped
@@ -168,8 +253,8 @@ function exitGroupView() {
       >{{ grouped ? '☰ Show list' : '🃏 Group' }}</button>
     </div>
 
-    <!-- Pile cards — shown during animation AND as the final pile view (same DOM, no swap) -->
-    <div v-if="(animating || grouped) && !expandedKey" class="pile-anim-row">
+    <!-- Pile cards — shown during enter/exit animation and while grouped -->
+    <div v-if="(animating || grouped || exitAnimating) && !expandedKey" class="pile-anim-row">
       <div
         v-for="(g, i) in pileGroups"
         :key="g.key"
@@ -205,9 +290,9 @@ function exitGroupView() {
       </div>
     </div>
 
-    <!-- List during animation (shifted down) -->
+    <!-- List during enter/exit animation (shifted) -->
     <div
-      v-if="animating"
+      v-if="animating || exitAnimating"
       :style="{
         transform: listShifted ? `translateY(${shiftPx}px)` : 'translateY(0)',
         transition: 'transform 0.45s cubic-bezier(0.4,0,0.2,1)',
@@ -218,7 +303,7 @@ function exitGroupView() {
 
     <!-- Normal list -->
     <ProductTable
-      v-else-if="!grouped && !expandedKey"
+      v-else-if="!grouped && !expandedKey && !exitAnimating"
       :products="products"
       :columns="columns"
       :sortable="sortable"
