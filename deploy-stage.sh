@@ -82,18 +82,21 @@ echo "==> Restarting staging service..."
 ssh $SSHOPTS "$HOST" "systemctl restart $SERVICE"
 
 echo "==> Waiting for staging API..."
-for i in $(seq 1 30); do
+for i in $(seq 1 60); do
   if ssh $SSHOPTS "$HOST" "curl -sm 2 http://127.0.0.1:5002/api/sessions" 2>/dev/null; then
     echo "  API OK (${i}s)"
     break
   fi
-  if [ $i -eq 30 ]; then
-    echo "ERROR: Staging API did not respond after 30s" >&2
+  if [ $i -eq 60 ]; then
+    echo "ERROR: Staging API did not respond after 60s" >&2
     exit 1
   fi
   sleep 1
 done
 
+echo "==> Provisioning SSL certificate..."
+ssh $SSHOPTS "$HOST" "certbot --nginx -d menu2-stage.highhopesma.com -n --redirect 2>&1" || \
+  echo "  WARNING: certbot failed — DNS may not be propagated yet. Re-run deploy-stage.sh once DNS is set."
+
 echo ""
-echo "==> Done! http://menu2-stage.highhopesma.com"
-echo "    (Run 'sudo certbot --nginx -d menu2-stage.highhopesma.com' on the server to add SSL)"
+echo "==> Done! https://menu2-stage.highhopesma.com"
