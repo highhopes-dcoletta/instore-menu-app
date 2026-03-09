@@ -6,6 +6,7 @@ import { useSessionStore } from '@/stores/session'
 import { useCartAnimation } from '@/composables/useCartAnimation'
 import { strainLabel } from '@/utils/strainLabels'
 import { getPotencyLevel } from '@/utils/potencyLevel'
+import ProductModal from '@/components/ProductModal.vue'
 
 const router = useRouter()
 const productsStore = useProductsStore()
@@ -132,6 +133,10 @@ const recommendations = computed(() => {
     .slice(0, 8)
 })
 
+// ── Modal ─────────────────────────────────────────────────────────────────────
+
+const modalProduct = ref(null)
+
 // ── Cart helpers ──────────────────────────────────────────────────────────────
 
 function qty(id) {
@@ -254,7 +259,8 @@ function displayPrice(p) {
         <div
           v-for="p in recommendations"
           :key="p.id"
-          class="rounded-2xl bg-gray-800 overflow-hidden flex flex-col"
+          class="rounded-2xl bg-gray-800 overflow-hidden flex flex-col cursor-pointer active:opacity-80 transition-opacity"
+          @click="modalProduct = p"
         >
           <!-- Image -->
           <div class="aspect-square bg-gray-700 overflow-hidden">
@@ -300,18 +306,18 @@ function displayPrice(p) {
               <!-- +/- controls -->
               <div v-if="qty(p.id) > 0" class="flex items-center gap-2">
                 <button
-                  @click="remove(p)"
+                  @click.stop="remove(p)"
                   class="w-7 h-7 rounded-full bg-gray-700 text-white font-black flex items-center justify-center active:bg-teal-600 transition-colors text-lg leading-none"
                 >−</button>
                 <span class="text-white font-bold text-sm tabular-nums">{{ qty(p.id) }}</span>
                 <button
-                  @click="add(p, $event)"
+                  @click.stop="add(p, $event)"
                   class="w-7 h-7 rounded-full bg-teal-600 text-white font-black flex items-center justify-center active:bg-teal-500 transition-colors text-lg leading-none"
                 >+</button>
               </div>
               <button
                 v-else
-                @click="add(p, $event)"
+                @click.stop="add(p, $event)"
                 class="w-7 h-7 rounded-full bg-teal-600 text-white font-black flex items-center justify-center active:bg-teal-500 transition-colors text-lg leading-none"
               >+</button>
             </div>
@@ -325,4 +331,10 @@ function displayPrice(p) {
       >← Change my answers</button>
     </div>
   </main>
+
+  <ProductModal
+    v-if="modalProduct"
+    :product="modalProduct"
+    @close="modalProduct = null"
+  />
 </template>
