@@ -1,39 +1,366 @@
 const { test, expect } = require('@playwright/test')
 
 const BASE = process.env.E2E_BASE_URL ?? 'https://menu2.highhopesma.com'
-const MENU_PAGE = `${BASE}/flower`
+
+// Wait for the product table to have at least one row (Dutchie fetch ~5-15s)
+async function waitForProducts(page) {
+  await expect(page.locator('table tbody tr').first()).toBeVisible({ timeout: 25000 })
+}
+
+// Wait for the home view content (only renders after products finish loading)
+async function waitForHomeView(page) {
+  await expect(page.getByText('Not sure where to start?')).toBeVisible({ timeout: 25000 })
+}
+
+// ─── Group 1: Navigation & entry points ──────────────────────────────────────
+
+test.describe('home page', () => {
+  test('renders category buttons and guided CTA', async ({ page }) => {
+    await page.goto(BASE)
+    await waitForHomeView(page)
+
+    await expect(page.getByText('Not sure where to start?')).toBeVisible()
+    for (const label of ['FLOWER', 'PRE-ROLLS', 'EDIBLES', 'VAPES', 'DABS', 'TINCS & TOPS', 'SLEEP', 'PAIN']) {
+      await expect(page.getByRole('link', { name: label }).first()).toBeVisible()
+    }
+  })
+
+  test('guided CTA navigates to /guide', async ({ page }) => {
+    await page.goto(BASE)
+    await waitForHomeView(page)
+    await page.getByText('Not sure where to start?').click()
+    await expect(page).toHaveURL(`${BASE}/guide`)
+  })
+
+  test('category buttons navigate to correct routes', async ({ page }) => {
+    const routes = [
+      ['FLOWER',      '/flower'],
+      ['PRE-ROLLS',   '/pre-rolls'],
+      ['EDIBLES',     '/edibles'],
+      ['VAPES',       '/vapes'],
+      ['DABS',        '/concentrates'],
+      ['SLEEP',       '/sleep'],
+      ['PAIN',        '/pain'],
+    ]
+    for (const [label, path] of routes) {
+      await page.goto(BASE)
+      await waitForHomeView(page)
+      // Click the home-grid link (not the navbar link) using the main element
+      await page.locator('main').getByRole('link', { name: label }).click()
+      await expect(page).toHaveURL(`${BASE}${path}`)
+    }
+  })
+})
+
+test.describe('navbar', () => {
+  test('all nav links navigate correctly', async ({ page }) => {
+    await page.goto(`${BASE}/flower`)
+    await waitForProducts(page)
+    const links = [
+      ['HOME',          '/'],
+      ['FLOWER',        '/flower'],
+      ['PRE-ROLLS',     '/pre-rolls'],
+      ['EDIBLES',       '/edibles'],
+      ['VAPES',         '/vapes'],
+      ['DABS',          '/concentrates'],
+      ['SLEEP',         '/sleep'],
+      ['PAIN',          '/pain'],
+    ]
+    for (const [name, path] of links) {
+      await page.locator('nav').getByRole('link', { name, exact: true }).click()
+      await expect(page).toHaveURL(`${BASE}${path}`)
+    }
+  })
+})
+
+// ─── Group 2: Guided flow ─────────────────────────────────────────────────────
+
+test.describe('guided flow', () => {
+  test('all 3 steps advance and results appear', async ({ page }) => {
+    await page.goto(`${BASE}/guide`)
+
+    // Step 1: experience
+    await expect(page.getByText('How familiar are you with cannabis?')).toBeVisible()
+    await page.getByRole('button', { name: /occasional user/i }).click()
+
+    // Step 2: effect
+    await expect(page.getByText('What are you looking for today?')).toBeVisible()
+    await page.getByRole('button', { name: /relax.*unwind/i }).click()
+
+    // Step 3: method — use role=button to avoid matching the navbar "FLOWER" link
+    await expect(page.getByText('How do you prefer to consume?')).toBeVisible()
+    await page.getByRole('button', { name: /Flower/i }).click()
+
+    await expect(page.getByText('Our top picks for you')).toBeVisible()
+  })
+
+  test('back button is hidden on step 1, visible on step 2+', async ({ page }) => {
+    await page.goto(`${BASE}/guide`)
+    await expect(page.getByRole('button', { name: /back/i })).not.toBeVisible()
+    await page.getByRole('button', { name: /occasional user/i }).click()
+    await expect(page.getByRole('button', { name: /back/i })).toBeVisible()
+  })
+
+  test('back button returns to previous step', async ({ page }) => {
+    await page.goto(`${BASE}/guide`)
+    await page.getByRole('button', { name: /occasional user/i }).click()
+    await expect(page.getByText('What are you looking for today?')).toBeVisible()
+    await page.getByRole('button', { name: /back/i }).click()
+    await expect(page.getByText('How familiar are you with cannabis?')).toBeVisible()
+  })
+
+  test('"Browse full menu" exits to home', async ({ page }) => {
+    await page.goto(`${BASE}/guide`)
+    await page.getByRole('button', { name: /browse full menu/i }).click()
+    await expect(page).toHaveURL(BASE + '/')
+  })
+
+  test('"Change my answers" returns to step 3 from results', async ({ page }) => {
+    await page.goto(`${BASE}/guide`)
+    await page.getByRole('button', { name: /new to this/i }).click()
+    await page.getByRole('button', { name: /help me sleep/i }).click()
+    // Step 3: Edibles option — getByRole('button') won't match the navbar <a> links
+    await page.getByRole('button', { name: /Edibles/i }).click()
+    await expect(page.getByText('Our top picks for you')).toBeVisible()
+    await page.getByRole('button', { name: /change my answers/i }).click()
+    await expect(page.getByText('How do you prefer to consume?')).toBeVisible()
+  })
+
+  test('results show product cards with add buttons', async ({ page }) => {
+    await page.goto(`${BASE}/guide`)
+    await page.getByRole('button', { name: /regular user/i }).click()
+    await page.getByRole('button', { name: /energy.*focus/i }).click()
+    await page.getByRole('button', { name: /no preference/i }).click()
+    await expect(page.getByText('Our top picks for you')).toBeVisible()
+    await expect(page.locator('main').getByRole('button', { name: '+' }).first()).toBeVisible({ timeout: 10000 })
+  })
+
+  test('adding a product from results enables Send to Budtender', async ({ page }) => {
+    await page.goto(`${BASE}/guide`)
+    await page.getByRole('button', { name: /regular user/i }).click()
+    await page.getByRole('button', { name: /relax.*unwind/i }).click()
+    await page.getByRole('button', { name: /no preference/i }).click()
+    await expect(page.getByText('Our top picks for you')).toBeVisible()
+
+    await expect(page.getByRole('button', { name: 'Send to Budtender' })).toBeDisabled()
+    await page.locator('main').getByRole('button', { name: '+' }).first().click()
+    await expect(page.getByRole('button', { name: 'Send to Budtender' })).toBeEnabled({ timeout: 5000 })
+  })
+})
+
+// ─── Group 3: Filtering ───────────────────────────────────────────────────────
+
+test.describe('filtering on /flower', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto(`${BASE}/flower`)
+    await waitForProducts(page)
+  })
+
+  test('search box filters rows by name', async ({ page }) => {
+    const allRows = page.locator('table tbody tr')
+    const initialCount = await allRows.count()
+
+    await page.getByPlaceholder(/search/i).fill('og')
+    await page.waitForTimeout(300)
+    const filteredCount = await allRows.count()
+    expect(filteredCount).toBeLessThanOrEqual(initialCount)
+
+    await page.getByPlaceholder(/search/i).clear()
+    await page.waitForTimeout(300)
+    expect(await allRows.count()).toBeGreaterThanOrEqual(filteredCount)
+  })
+
+  test('strain filter reduces product list', async ({ page }) => {
+    const allRows = page.locator('table tbody tr')
+    const initialCount = await allRows.count()
+
+    const firstChip = page.locator('button.chip-off').first()
+    const strainLabel = (await firstChip.textContent()).trim()
+    await firstChip.click()
+    await page.waitForTimeout(300)
+    const filteredCount = await allRows.count()
+    expect(filteredCount).toBeLessThanOrEqual(initialCount)
+
+    // Deactivate
+    await page.locator('button.chip-on').filter({ hasText: strainLabel }).click()
+    await page.waitForTimeout(300)
+    expect(await allRows.count()).toBeGreaterThanOrEqual(filteredCount)
+  })
+
+  test('multiple strain filters stack (more filters = same or fewer results)', async ({ page }) => {
+    const chips = page.locator('button.chip-off')
+    if (await chips.count() < 2) return
+
+    await chips.nth(0).click()
+    await page.waitForTimeout(200)
+    const firstCount = await page.locator('table tbody tr').count()
+
+    await chips.nth(1).click()
+    await page.waitForTimeout(200)
+    expect(await page.locator('table tbody tr').count()).toBeLessThanOrEqual(firstCount)
+  })
+
+  test('"No products match your filters" appears when no results', async ({ page }) => {
+    await page.getByPlaceholder(/search/i).fill('xxxxxxxxxxx_no_match')
+    await page.waitForTimeout(300)
+    await expect(page.getByText(/no products match/i)).toBeVisible()
+  })
+
+  test('High Hopes Only brand filter reduces results', async ({ page }) => {
+    const allRows = page.locator('table tbody tr')
+    const initialCount = await allRows.count()
+
+    await page.getByRole('button', { name: 'High Hopes Only' }).click()
+    await page.waitForTimeout(300)
+    expect(await allRows.count()).toBeLessThanOrEqual(initialCount)
+
+    await page.getByRole('button', { name: 'High Hopes Only' }).click()
+    await page.waitForTimeout(300)
+    expect(await allRows.count()).toBeGreaterThanOrEqual(1)
+  })
+})
+
+// ─── Group 4: Sorting ─────────────────────────────────────────────────────────
+
+test.describe('sorting on /flower', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto(`${BASE}/flower`)
+    await waitForProducts(page)
+  })
+
+  test('clicking Name header sets sort=name in URL', async ({ page }) => {
+    // The column header is a <button> inside a <th>
+    await page.getByRole('button', { name: 'Name' }).click()
+    await page.waitForTimeout(300)
+    expect(page.url()).toContain('sort=name')
+  })
+
+  test('clicking Name header twice sets dir=desc', async ({ page }) => {
+    const btn = page.getByRole('button', { name: 'Name' })
+    await btn.click()
+    await page.waitForTimeout(200)
+    await btn.click()
+    await page.waitForTimeout(300)
+    expect(page.url()).toContain('dir=desc')
+  })
+
+  test('Popularity button appears after sorting and clears sort on click', async ({ page }) => {
+    await page.getByRole('button', { name: 'Name' }).click()
+    await page.waitForTimeout(200)
+    const popBtn = page.getByRole('button', { name: /popularity/i })
+    await expect(popBtn).toBeVisible()
+    await popBtn.click()
+    await page.waitForTimeout(200)
+    expect(page.url()).not.toContain('sort=')
+    await expect(popBtn).not.toBeVisible()
+  })
+
+  test('sort params persist after page refresh', async ({ page }) => {
+    await page.getByRole('button', { name: 'Name' }).click()
+    await page.waitForTimeout(200)
+    const url = page.url()
+    await page.reload()
+    await waitForProducts(page)
+    expect(page.url()).toBe(url)
+  })
+
+  test('Price header sets sort=price', async ({ page }) => {
+    // Scope to thead to avoid matching GroupableList grouper buttons (💰 Price)
+    await page.locator('thead').getByRole('button', { name: 'Price', exact: true }).click()
+    await page.waitForTimeout(300)
+    expect(page.url()).toContain('sort=price')
+  })
+
+  test('Potency header sets sort=potency', async ({ page }) => {
+    // Scope to thead to avoid matching GroupableList grouper buttons (⚡ Potency)
+    await page.locator('thead').getByRole('button', { name: 'Potency (TAC)', exact: true }).click()
+    await page.waitForTimeout(300)
+    expect(page.url()).toContain('sort=potency')
+  })
+})
+
+// ─── Group 5: Product modal ───────────────────────────────────────────────────
+
+test.describe('product modal on /flower', () => {
+  // Helper: open the first product's modal
+  async function openModal(page) {
+    // The name column <td> has @click="modalProduct = product"
+    await page.locator('table tbody tr').first().locator('td').nth(1).click()
+    // Modal close button has aria-label="Close"
+    await expect(page.getByRole('button', { name: 'Close' })).toBeVisible({ timeout: 5000 })
+  }
+
+  test.beforeEach(async ({ page }) => {
+    await page.goto(`${BASE}/flower`)
+    await waitForProducts(page)
+  })
+
+  test('clicking product name column opens modal', async ({ page }) => {
+    await openModal(page)
+    // Modal is open — close button visible
+    await expect(page.getByRole('button', { name: 'Close' })).toBeVisible()
+  })
+
+  test('Escape key closes the modal', async ({ page }) => {
+    await openModal(page)
+    await page.keyboard.press('Escape')
+    await expect(page.getByRole('button', { name: 'Close' })).not.toBeVisible({ timeout: 3000 })
+  })
+
+  test('Close button closes the modal', async ({ page }) => {
+    await openModal(page)
+    await page.getByRole('button', { name: 'Close' }).click()
+    await expect(page.getByRole('button', { name: 'Close' })).not.toBeVisible({ timeout: 3000 })
+  })
+
+  test('backdrop click closes the modal', async ({ page }) => {
+    await openModal(page)
+    // Click the fixed backdrop (top-left corner is outside the card)
+    await page.mouse.click(10, 10)
+    await expect(page.getByRole('button', { name: 'Close' })).not.toBeVisible({ timeout: 3000 })
+  })
+
+  test('Add to Cart button in modal adds item to cart', async ({ page }) => {
+    await expect(page.getByRole('button', { name: 'Send to Budtender' })).toBeDisabled()
+    await openModal(page)
+    await page.getByRole('button', { name: 'Add to Cart' }).click()
+    // Cart animation delay — wait for session to update
+    await expect(page.getByRole('button', { name: 'Send to Budtender' })).toBeEnabled({ timeout: 8000 })
+  })
+
+  test('modal qty controls increment and decrement', async ({ page }) => {
+    await openModal(page)
+    await page.getByRole('button', { name: 'Add to Cart' }).click()
+
+    // After add, the modal now shows − qty + controls
+    const modal = page.locator('.fixed.inset-0 .bg-white')
+    await expect(modal.getByRole('button', { name: '+' })).toBeVisible({ timeout: 5000 })
+    await modal.getByRole('button', { name: '+' }).click()
+
+    // Cart should now show qty 2
+    await expect(page.locator('[data-cart-list] li').first().getByText('2')).toBeVisible({ timeout: 5000 })
+  })
+})
+
+// ─── Existing tests (preserved) ──────────────────────────────────────────────
 
 test('products load from Dutchie', async ({ page }) => {
-  await page.goto(MENU_PAGE, { waitUntil: 'domcontentloaded' })
-
-  // At least one product row must appear within 20s (Dutchie fetch)
-  await expect(page.locator('table tbody tr').first()).toBeVisible({ timeout: 20000 })
+  await page.goto(`${BASE}/flower`, { waitUntil: 'domcontentloaded' })
+  await expect(page.locator('table tbody tr').first()).toBeVisible({ timeout: 25000 })
 })
 
 test('add to cart and send-to-budtender button activates', async ({ page }) => {
-  await page.goto(MENU_PAGE, { waitUntil: 'domcontentloaded' })
-
-  // Wait for product table
+  await page.goto(`${BASE}/flower`, { waitUntil: 'domcontentloaded' })
   const firstRow = page.locator('table tbody tr').first()
-  await expect(firstRow).toBeVisible({ timeout: 20000 })
-
-  // Cart should be empty — button disabled
+  await expect(firstRow).toBeVisible({ timeout: 25000 })
   await expect(page.getByRole('button', { name: 'Send to Budtender' })).toBeDisabled()
-
-  // Click the first product's + button
   await firstRow.getByRole('button', { name: '+' }).click()
-
-  // Cart panel should show the item
   await expect(page.locator('[data-cart-list] li').first()).toBeVisible({ timeout: 5000 })
-
-  // Send to Budtender button should now be enabled
   await expect(page.getByRole('button', { name: 'Send to Budtender' })).toBeEnabled()
 })
 
 test('budtender view shows and dismisses an order', async ({ page, request }) => {
   const sessionId = `e2e-budtender-${Date.now()}`
-
-  // Create a test session
   const post = await request.post(`${BASE}/api/session`, {
     data: {
       sessionId,
@@ -43,26 +370,16 @@ test('budtender view shows and dismisses an order', async ({ page, request }) =>
     },
   })
   expect(post.ok()).toBeTruthy()
-
-  // Budtender view should show the order card
   await page.goto(`${BASE}/budtender`)
   await expect(page.getByText('Budtender Test Product').first()).toBeVisible({ timeout: 10000 })
-
-  // Dismiss the order — find the card by its data attribute
   const card = page.locator(`[data-session-id="${sessionId}"]`)
-  const dismissBtn = card.locator('[title="Dismiss order"]')
-  await expect(dismissBtn).toBeVisible()
-  await dismissBtn.click()
-
-  // Our specific card should be gone
+  await expect(card.locator('[title="Dismiss order"]')).toBeVisible()
+  await card.locator('[title="Dismiss order"]').click()
   await expect(card).not.toBeVisible({ timeout: 5000 })
-
-  // Clean up (in case dismiss didn't delete server-side)
   await request.delete(`${BASE}/api/session/${sessionId}`)
 })
 
 test('cart share page loads for a valid session', async ({ page, request }) => {
-  // Create a real session via the API
   const sessionId = `e2e-monitor-${Date.now()}`
   const post = await request.post(`${BASE}/api/session`, {
     data: {
@@ -73,11 +390,12 @@ test('cart share page loads for a valid session', async ({ page, request }) => {
     },
   })
   expect(post.ok()).toBeTruthy()
-
-  // Cart share page should render the item
   await page.goto(`${BASE}/cart/${sessionId}`)
   await expect(page.getByText('E2E Test Product')).toBeVisible({ timeout: 10000 })
-
-  // Clean up
   await request.delete(`${BASE}/api/session/${sessionId}`)
+})
+
+test('cart share page shows expired message for unknown session', async ({ page }) => {
+  await page.goto(`${BASE}/cart/non-existent-session-id-xyz`)
+  await expect(page.getByText(/expired/i)).toBeVisible({ timeout: 10000 })
 })
