@@ -6,6 +6,7 @@ import { useSessionStore } from '@/stores/session'
 import { useCartAnimation } from '@/composables/useCartAnimation'
 import { strainLabel } from '@/utils/strainLabels'
 import { getPotencyLevel } from '@/utils/potencyLevel'
+import { scoreProduct, getRecommendations } from '@/utils/recommendations'
 import ProductModal from '@/components/ProductModal.vue'
 
 const router = useRouter()
@@ -65,73 +66,9 @@ function back() {
 
 // ── Scoring ───────────────────────────────────────────────────────────────────
 
-function scoreProduct(p) {
-  let score = 0
-  const strain  = (p.Strain ?? '').toUpperCase()
-  const cat     = p.Category ?? ''
-  const potency = p.Potency ?? 0
-  const tags    = p.Tags ?? []
-  const { effect, experience } = answers.value
-
-  if (effect === 'relax') {
-    if (strain === 'INDICA') score += 4
-    else if (strain === 'HYBRID') score += 2
-    else if (strain === 'SATIVA') score -= 1
-  } else if (effect === 'sleep') {
-    if (strain === 'INDICA') score += 4
-    else if (strain === 'HYBRID') score += 1
-    else if (strain === 'SATIVA') score -= 2
-    if (tags.includes('Sleep')) score += 5
-  } else if (effect === 'energize') {
-    if (strain === 'SATIVA') score += 4
-    else if (strain === 'HYBRID') score += 2
-    else if (strain === 'INDICA') score -= 1
-  } else if (effect === 'social') {
-    if (strain === 'HYBRID') score += 4
-    else if (strain === 'SATIVA') score += 3
-    else if (strain === 'INDICA') score += 1
-    if (cat === 'EDIBLES') score += 2
-  } else if (effect === 'pain') {
-    if (strain === 'INDICA') score += 3
-    else if (strain === 'HYBRID') score += 1
-    if (['TINCTURE', 'TOPICAL'].includes(cat)) score += 4
-    if (potency >= 20) score += 2
-  }
-
-  if (experience === 'new') {
-    if (potency > 0 && potency <= 12) score += 3
-    else if (potency >= 20) score -= 3
-    if (cat === 'EDIBLES') score += 1
-  } else if (experience === 'regular') {
-    if (potency >= 25) score += 2
-  }
-
-  return score
-}
-
-const recommendations = computed(() => {
-  if (!showResults.value) return []
-
-  let pool = productsStore.products
-
-  const { method } = answers.value
-  if (method === 'flower')  pool = pool.filter(p => p.Category === 'FLOWER' || p.Category === 'PRE_ROLLS')
-  else if (method === 'edibles') pool = pool.filter(p => p.Category === 'EDIBLES')
-  else if (method === 'vape')    pool = pool.filter(p => p.Category === 'VAPORIZERS')
-
-  // Score and deduplicate by name (best variant per product)
-  const byName = new Map()
-  for (const p of pool) {
-    const score = scoreProduct(p)
-    if (!byName.has(p.Name) || score > byName.get(p.Name)._score) {
-      byName.set(p.Name, { ...p, _score: score })
-    }
-  }
-
-  return [...byName.values()]
-    .sort((a, b) => b._score - a._score)
-    .slice(0, 8)
-})
+const recommendations = computed(() =>
+  showResults.value ? getRecommendations(productsStore.products, answers.value) : []
+)
 
 // ── Modal ─────────────────────────────────────────────────────────────────────
 
