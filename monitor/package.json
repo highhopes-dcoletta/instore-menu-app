@@ -2,7 +2,9 @@
   "name": "highhopes-monitor",
   "private": true,
   "scripts": {
-    "test": "playwright test --config=playwright.config.js"
+    "test": "playwright test --config=playwright.config.js",
+    "test:ui": "playwright test --config=playwright.config.js --ui",
+    "test:headed": "playwright test --config=playwright.config.js --headed"
   },
   "devDependencies": {
     "@playwright/test": "^1.42.0"
