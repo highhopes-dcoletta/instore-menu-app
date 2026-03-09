@@ -5,7 +5,6 @@ import { GROUPERS, computeGroups } from '@/composables/useProductGrouping'
 import FilterPanel from '@/components/FilterPanel.vue'
 import ProductControls from '@/components/ProductControls.vue'
 import ProductTable from '@/components/ProductTable.vue'
-import PotencyPiles from '@/components/PotencyPiles.vue'
 
 const { filtered, categoryProducts, facets } = useProductFilters((p) => p.Category === 'FLOWER')
 
@@ -35,6 +34,7 @@ const expandedProducts = computed(() =>
 const animating   = ref(false)
 const listShifted = ref(false)
 const shiftPx     = ref(0)
+const pileCounts  = ref({})
 
 const sleep = ms => new Promise(r => setTimeout(r, ms))
 
@@ -54,7 +54,7 @@ async function enterGroupView() {
 
   // Step 2 — measure placeholder row height, slide list down
   const placeholderRow = document.querySelector('.pile-anim-row')
-  shiftPx.value = placeholderRow ? placeholderRow.offsetHeight + 16 : 280
+  shiftPx.value = placeholderRow ? Math.round(placeholderRow.offsetHeight * 0.5) : 150
   listShifted.value = true
   await sleep(450)
 
@@ -74,6 +74,9 @@ async function enterGroupView() {
       }
     })
     .filter(s => s && s.rect.width > 0)
+
+  // Init pile counts to 0 for badge animation
+  pileCounts.value = Object.fromEntries(pileGroups.value.map(g => [g.key, 0]))
 
   snapshots.forEach(({ rect, groupKey, src, row }, i) => {
     const target = pileRects[groupKey]
@@ -100,6 +103,11 @@ async function enterGroupView() {
       row.style.opacity = '0'
     }, delay)
 
+    // Increment badge count when icon lands
+    setTimeout(() => {
+      if (pileCounts.value[groupKey] !== undefined) pileCounts.value[groupKey]++
+    }, delay + 700)
+
     requestAnimationFrame(() => {
       ghost.getBoundingClientRect()
       requestAnimationFrame(() => {
@@ -111,9 +119,11 @@ async function enterGroupView() {
     })
   })
 
-  // Step 4 — wait for last icon to finish flying
+  // Step 4 — wait for last icon to land, then drop the list and go interactive
+  // Pile cards stay in place — no component swap, no flash
   const lastDelay = Math.min((snapshots.length - 1) * 15, 500)
   await sleep(lastDelay + 800)
+
   animating.value   = false
   listShifted.value = false
   grouped.value     = true
@@ -165,48 +175,63 @@ function exitGroupView() {
         </div>
       </div>
 
-      <!-- ① Animation in progress -->
-      <div v-if="animating">
-        <!-- Pile label placeholders slide in from above -->
-        <div class="pile-anim-row">
-          <div
-            v-for="(g, i) in pileGroups"
-            :key="g.key"
-            :data-pile="g.key"
-            class="ph-card"
-            :style="`--i:${i}`"
-          >
-            <div class="ph-back ph-back-2" :style="{ background: g.bg }"></div>
-            <div class="ph-back ph-back-1" :style="{ background: g.bg }"></div>
-            <div class="ph-front" :style="{ background: g.bg }">
+      <!-- ① & ③ Pile cards — shown during animation AND as the final pile view -->
+      <!--     Same DOM, no swap → no flash                                      -->
+      <div v-if="(animating || grouped) && !expandedKey" class="pile-anim-row">
+        <div
+          v-for="(g, i) in pileGroups"
+          :key="g.key"
+          :data-pile="g.key"
+          class="ph-card"
+          :class="{ 'ph-card--active': grouped }"
+          :style="`--i:${i}`"
+          @click="grouped ? expandedKey = g.key : undefined"
+        >
+          <div class="ph-back ph-back-2" :style="{ background: g.bg }">
+            <img v-if="g.products[2]?.Image" :src="g.products[2].Image" class="ph-back-img" />
+          </div>
+          <div class="ph-back ph-back-1" :style="{ background: g.bg }">
+            <img v-if="g.products[1]?.Image" :src="g.products[1].Image" class="ph-back-img" />
+          </div>
+          <div class="ph-front" :style="{ background: g.bg }">
+            <div class="ph-image">
+              <img v-if="g.products[0]?.Image" :src="g.products[0].Image" :alt="g.label" />
+              <span v-else class="text-5xl">🌿</span>
+            </div>
+            <div class="ph-info">
               <p class="ph-label">{{ g.label }}</p>
               <p class="ph-sub" :style="{ color: g.accent }">{{ g.sub }}</p>
+              <p v-if="grouped" class="ph-hint">Tap to browse →</p>
             </div>
           </div>
-        </div>
-
-        <!-- List slides down while icons fly -->
-        <div
-          :style="{
-            transform: listShifted ? `translateY(${shiftPx}px)` : 'translateY(0)',
-            transition: 'transform 0.45s cubic-bezier(0.4,0,0.2,1)',
-          }"
-        >
-          <ProductTable :products="filtered" />
+          <div
+            v-if="animating ? pileCounts[g.key] > 0 : true"
+            class="ph-badge"
+            :key="animating ? pileCounts[g.key] : g.key"
+            :style="{ background: g.accent }"
+          >{{ animating ? pileCounts[g.key] : g.products.length }}</div>
         </div>
       </div>
 
-      <!-- ② Normal list -->
-      <template v-else-if="!grouped">
+      <!-- ② List (slides down during animation) -->
+      <div
+        v-if="animating"
+        :style="{
+          transform: listShifted ? `translateY(${shiftPx}px)` : 'translateY(0)',
+          transition: 'transform 0.45s cubic-bezier(0.4,0,0.2,1)',
+        }"
+      >
+        <ProductTable :products="filtered" />
+      </div>
+
+      <!-- ② Normal list (no animation, not grouped) -->
+      <template v-else-if="!grouped && !expandedKey">
         <ProductControls />
         <ProductTable :products="filtered" />
       </template>
 
-      <!-- ③ Pile view -->
-      <PotencyPiles v-else-if="!expandedKey" :groups="pileGroups" @expand="k => expandedKey = k" />
-
       <!-- ④ Expanded pile → filtered list -->
-      <ProductTable v-else :products="expandedProducts" />
+      <ProductTable v-else-if="expandedKey" :products="expandedProducts" />
 
     </div>
     <aside class="w-40 shrink-0 pt-14">
@@ -216,14 +241,14 @@ function exitGroupView() {
 </template>
 
 <style scoped>
-/* ── Pile placeholder row ─────────────────────────────────────────────────── */
+/* ── Pile card row ────────────────────────────────────────────────────────── */
 .pile-anim-row {
   display: flex;
   gap: 40px;
   justify-content: center;
   align-items: flex-start;
   flex-wrap: wrap;
-  padding: 32px 0 24px;
+  padding: 48px 0;
 }
 
 .ph-card {
@@ -233,6 +258,12 @@ function exitGroupView() {
   animation: ph-in 0.35s cubic-bezier(0.34, 1.4, 0.64, 1) both;
   animation-delay: calc(var(--i) * 70ms);
 }
+.ph-card--active {
+  cursor: pointer;
+  transition: transform 0.12s ease;
+}
+.ph-card--active:active { transform: scale(0.95); }
+
 @keyframes ph-in {
   from { opacity: 0; transform: translateY(-20px) scale(0.9); }
   to   { opacity: 1; transform: translateY(0) scale(1); }
@@ -242,20 +273,49 @@ function exitGroupView() {
   position: absolute;
   inset: 0;
   border-radius: 16px;
+  overflow: hidden;
 }
 .ph-back-2 { transform: rotate(-5deg) translate(-6px, 10px); filter: brightness(0.5); }
 .ph-back-1 { transform: rotate(-2.5deg) translate(-3px, 5px); filter: brightness(0.7); }
+.ph-back-img { width: 100%; height: 100%; object-fit: cover; }
 
 .ph-front {
   position: absolute;
   inset: 0;
   border-radius: 16px;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
+}
+.ph-image {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
 }
-.ph-label { font-weight: 900; font-size: 20px; color: white; }
-.ph-sub   { font-size: 11px; }
+.ph-image img { width: 100%; height: 100%; object-fit: cover; }
+.ph-info    { padding: 12px 12px 10px; }
+.ph-label   { font-weight: 900; font-size: 17px; line-height: 1; color: white; }
+.ph-sub     { font-size: 11px; margin-top: 3px; }
+.ph-hint    { font-size: 10px; color: rgba(255,255,255,0.35); margin-top: 5px; }
+
+.ph-badge {
+  position: absolute;
+  top: -10px; right: -10px;
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  color: white;
+  font-weight: 900;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+  animation: badge-pop 0.3s cubic-bezier(0.34, 1.6, 0.64, 1);
+}
+@keyframes badge-pop {
+  from { transform: scale(0.4); }
+  to   { transform: scale(1); }
+}
 </style>
