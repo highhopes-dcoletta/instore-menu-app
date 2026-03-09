@@ -1,20 +1,17 @@
 const { test, expect } = require('@playwright/test')
 
 const BASE = 'https://menu2.highhopesma.com'
+const MENU_PAGE = `${BASE}/flower`
 
 test('products load from Dutchie', async ({ page }) => {
-  await page.goto(BASE, { waitUntil: 'domcontentloaded' })
-
-  // Loading spinner should appear then disappear
-  const spinner = page.locator('.animate-spin')
-  // Either we catch the spinner, or products already loaded — both are fine.
+  await page.goto(MENU_PAGE, { waitUntil: 'domcontentloaded' })
 
   // At least one product row must appear within 20s (Dutchie fetch)
   await expect(page.locator('table tbody tr').first()).toBeVisible({ timeout: 20000 })
 })
 
 test('add to cart and send-to-budtender button activates', async ({ page }) => {
-  await page.goto(BASE, { waitUntil: 'domcontentloaded' })
+  await page.goto(MENU_PAGE, { waitUntil: 'domcontentloaded' })
 
   // Wait for product table
   const firstRow = page.locator('table tbody tr').first()
