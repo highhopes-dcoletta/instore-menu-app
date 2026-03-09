@@ -129,7 +129,13 @@ function potency(product) {
     <table class="w-full text-base">
       <thead>
         <tr class="border-b border-gray-200 text-left text-sm font-bold text-slate-700">
-          <th class="w-20 pb-3 pr-3"></th>
+          <th class="w-20 pb-3 pr-3">
+            <button
+              v-if="sortable && route.query.sort"
+              @click="router.replace({ query: { ...route.query, sort: undefined, dir: undefined } })"
+              class="text-xs font-semibold text-gray-400 hover:text-teal-600 transition-colors whitespace-nowrap"
+            >↺ Popularity</button>
+          </th>
 
           <th v-if="columns.includes('name')" class="pb-3 pr-6">
             <button

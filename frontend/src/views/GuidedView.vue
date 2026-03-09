@@ -5,6 +5,7 @@ import { useProductsStore } from '@/stores/products'
 import { useSessionStore } from '@/stores/session'
 import { useCartAnimation } from '@/composables/useCartAnimation'
 import { strainLabel } from '@/utils/strainLabels'
+import { getPotencyLevel } from '@/utils/potencyLevel'
 
 const router = useRouter()
 const productsStore = useProductsStore()
@@ -187,27 +188,6 @@ function displayPrice(p) {
   return price ? `$${price}` : null
 }
 
-// ── Potency level ─────────────────────────────────────────────────────────────
-
-function potencyLevel(p) {
-  const val  = p.Potency
-  const unit = p['Potency Unit']
-  if (!val) return null
-
-  if (unit === 'mg') {
-    // Edible dosing
-    if (val <= 5)  return { label: 'Low dose',      dots: 1, color: 'bg-green-400' }
-    if (val <= 10) return { label: 'Medium dose',   dots: 2, color: 'bg-yellow-400' }
-    if (val <= 20) return { label: 'High dose',     dots: 3, color: 'bg-orange-400' }
-    return             { label: 'Very high dose',   dots: 4, color: 'bg-red-400' }
-  }
-
-  // THC %
-  if (val <= 12) return { label: 'Low potency',     dots: 1, color: 'bg-green-400' }
-  if (val <= 20) return { label: 'Mid potency',     dots: 2, color: 'bg-yellow-400' }
-  if (val <= 28) return { label: 'High potency',    dots: 3, color: 'bg-orange-400' }
-  return             { label: 'Very high potency',  dots: 4, color: 'bg-red-400' }
-}
 </script>
 
 <template>
@@ -298,16 +278,16 @@ function potencyLevel(p) {
               >{{ strainLabel(p.Strain) }}</span>
             </div>
             <!-- Potency indicator -->
-            <div v-if="potencyLevel(p)" class="flex items-center gap-1.5 mt-1">
+            <div v-if="getPotencyLevel(p)" class="flex items-center gap-1.5 mt-1">
               <div class="flex gap-0.5">
                 <div
                   v-for="n in 4" :key="n"
                   class="w-2 h-2 rounded-full"
-                  :class="n <= potencyLevel(p).dots ? potencyLevel(p).color : 'bg-gray-600'"
+                  :class="n <= getPotencyLevel(p).dots ? getPotencyLevel(p).color : 'bg-gray-600'"
                 />
               </div>
               <span class="text-xs font-semibold text-gray-300">
-                {{ potencyLevel(p).label }} · {{ p.Potency }}{{ p['Potency Unit'] }}
+                {{ getPotencyLevel(p).label }} · {{ p.Potency }}{{ p['Potency Unit'] }}
               </span>
             </div>
             <div class="flex items-center justify-between mt-auto pt-2">
