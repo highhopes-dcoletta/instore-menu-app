@@ -1,6 +1,6 @@
 const { test, expect } = require('@playwright/test')
 
-const BASE = 'https://menu2.highhopesma.com'
+const BASE = process.env.E2E_BASE_URL ?? 'https://menu2.highhopesma.com'
 const MENU_PAGE = `${BASE}/flower`
 
 test('products load from Dutchie', async ({ page }) => {
