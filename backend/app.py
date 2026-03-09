@@ -10,7 +10,7 @@ from flask_cors import CORS
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app, origins=["https://menu2.highhopesma.com", "http://localhost:5173"])
+CORS(app, origins=["https://menu2.highhopesma.com", "https://menu2-stage.highhopesma.com", "http://localhost:5173"])
 
 SESSION_TIMEOUT_MINUTES = int(os.getenv("SESSION_TIMEOUT_MINUTES", 15))
 
