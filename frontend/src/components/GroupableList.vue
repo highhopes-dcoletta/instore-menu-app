@@ -1,20 +1,25 @@
 <script setup>
 import { ref, computed, nextTick } from 'vue'
 import { GROUPERS, computeGroups } from '@/composables/useProductGrouping'
+import { useSessionStore } from '@/stores/session'
+import { useCartAnimation } from '@/composables/useCartAnimation'
+import { strainLabel } from '@/utils/strainLabels'
+import { getPotencyLevel } from '@/utils/potencyLevel'
 import ProductTable from './ProductTable.vue'
+import ProductModal from './ProductModal.vue'
 
 const props = defineProps({
   products: { type: Array, required: true },
   columns:  { type: Array, default: () => ['name', 'strain', 'potency', 'price', 'stock'] },
   sortable: { type: Boolean, default: true },
-  // subset of grouper keys to offer; defaults to all
   groupers: { type: Array, default: () => ['potency', 'strain', 'price'] },
 })
 
 // ── Grouping ───────────────────────────────────────────────────────────────
 
 const grouped          = ref(false)
-const expandedKey      = ref(null)
+const expandedKey      = ref(null)   // level-1 pile selection
+const subExpandedKey   = ref(null)   // level-2 sub-pile selection
 const activeGrouperKey = ref(null)
 
 const availableGroupers = computed(() =>
@@ -25,24 +30,161 @@ const activeGrouper = computed(() =>
   ?? availableGroupers.value[0]
 )
 const pileGroups = computed(() => computeGroups(activeGrouper.value, props.products))
-const expandedLabel = computed(
-  () => pileGroups.value.find(g => g.key === expandedKey.value)?.label ?? ''
+
+// Sub-grouper: next in list after active, cyclically; null if only 1 grouper
+const subGrouper = computed(() => {
+  if (availableGroupers.value.length <= 1) return null
+  const idx = availableGroupers.value.findIndex(g => g.key === activeGrouper.value.key)
+  return availableGroupers.value[(idx + 1) % availableGroupers.value.length]
+})
+
+// Level-1 labels / products
+const expandedLabel = computed(() =>
+  pileGroups.value.find(g => g.key === expandedKey.value)?.label ?? ''
 )
-const expandedProducts = computed(() =>
+const level1Products = computed(() =>
   expandedKey.value
     ? props.products.filter(p => activeGrouper.value.groupFn(p) === expandedKey.value)
     : props.products
 )
 
+// Level-2 sub-pile groups and labels
+const subPileGroups = computed(() =>
+  expandedKey.value && subGrouper.value
+    ? computeGroups(subGrouper.value, level1Products.value)
+    : []
+)
+const subExpandedLabel = computed(() =>
+  subPileGroups.value.find(g => g.key === subExpandedKey.value)?.label ?? ''
+)
+
+// Level-2 products (within selected sub-pile)
+const level2Products = computed(() =>
+  subExpandedKey.value && subGrouper.value
+    ? level1Products.value.filter(p => subGrouper.value.groupFn(p) === subExpandedKey.value)
+    : level1Products.value
+)
+
+// Drill-down display mode
+// Show sub-piles when: level-1 pile tapped, no sub-pile tapped, sub-grouper exists, and count > threshold
+// Show cards when: level-1 pile tapped AND (no sub-grouper OR count ≤ threshold OR sub-pile tapped)
+const CARD_THRESHOLD = 8
+const showSubPiles = computed(() =>
+  !!(expandedKey.value && !subExpandedKey.value && subGrouper.value && level1Products.value.length > CARD_THRESHOLD)
+)
+const showCards = computed(() =>
+  !!(expandedKey.value && (!subGrouper.value || level1Products.value.length <= CARD_THRESHOLD || subExpandedKey.value))
+)
+const cardProducts = computed(() =>
+  subExpandedKey.value ? level2Products.value : level1Products.value
+)
+
+// ── Cart helpers (for card view) ───────────────────────────────────────────
+
+const session = useSessionStore()
+const { fire: fireCartAnimation, fireToast, BUBBLE_DURATION } = useCartAnimation()
+const modalProduct = ref(null)
+
+function qty(id) { return session.selections[id]?.qty ?? 0 }
+
+function cartDest() {
+  const list = document.querySelector('[data-cart-list]')
+  if (list) {
+    const last = list.lastElementChild
+    const r = last ? last.getBoundingClientRect() : list.getBoundingClientRect()
+    return [r.left + r.width / 2, last ? r.bottom + 28 : r.top + 28]
+  }
+  return [null, null]
+}
+
+function addToCart(product, event) {
+  const wasEmpty = session.selectionCount === 0
+  const [dx, dy] = cartDest()
+  fireCartAnimation(event.clientX, event.clientY, product.Image, dx, dy)
+  if (wasEmpty) fireToast()
+  setTimeout(() => session.updateQuantity(product.id, {
+    name:        product.Name,
+    unitWeight:  product['Unit Weight'] ?? '',
+    price:       product.Price ?? 0,
+    image:       product.Image ?? null,
+    category:    product.Category ?? '',
+  }, 1), BUBBLE_DURATION)
+}
+
+function removeFromCart(product) {
+  session.updateQuantity(product.id, {
+    name:       product.Name,
+    unitWeight: product['Unit Weight'] ?? '',
+    price:      product.Price ?? 0,
+    image:      product.Image ?? null,
+    category:   product.Category ?? '',
+  }, -1)
+}
+
+function strainColor(strain) {
+  const s = (strain ?? '').toUpperCase()
+  if (s === 'INDICA') return 'bg-purple-100 text-purple-700'
+  if (s === 'SATIVA') return 'bg-orange-100 text-orange-700'
+  if (s === 'HYBRID') return 'bg-green-100 text-green-700'
+  if (s === 'CBD')    return 'bg-blue-100 text-blue-700'
+  return 'bg-gray-100 text-gray-500'
+}
+
+function displayPrice(p) {
+  const price = p.SalePrice ?? p.Price
+  return price ? `$${price}` : null
+}
+
 // ── Animation state ────────────────────────────────────────────────────────
 
-const animating     = ref(false)
-const exitAnimating = ref(false)
-const listShifted   = ref(false)
-const shiftPx       = ref(0)
-const pileCounts    = ref({})
+const animating        = ref(false)
+const exitAnimating    = ref(false)
+const pilesCollapsing  = ref(false)
+const listShifted      = ref(false)
+const shiftPx          = ref(0)
+const pileCounts       = ref({})
+const listRef       = ref(null)
 
 const sleep = ms => new Promise(r => setTimeout(r, ms))
+
+const GHOSTS_PER_GROUP = 3
+
+function sampleSnapshots(snapshots) {
+  const seen = {}
+  return snapshots.filter(s => {
+    seen[s.groupKey] = (seen[s.groupKey] ?? 0) + 1
+    return seen[s.groupKey] <= GHOSTS_PER_GROUP
+  })
+}
+
+function spawnGhost(rect, src, extraStyle = '') {
+  const ghost = document.createElement('div')
+  ghost.style.cssText = `
+    position:fixed;
+    left:${rect.left}px; top:${rect.top}px;
+    width:${rect.width}px; height:${rect.height}px;
+    background-image:url(${src}); background-size:cover; background-color:#d1fae5;
+    border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.3);
+    pointer-events:none; z-index:200;
+    will-change:transform,opacity;
+    ${extraStyle}
+  `
+  document.body.appendChild(ghost)
+  return ghost
+}
+
+function animateCounts(flightMs) {
+  const STEPS = 14
+  pileCounts.value = Object.fromEntries(pileGroups.value.map(g => [g.key, 0]))
+  pileGroups.value.forEach(g => {
+    const total = g.products.length
+    for (let step = 1; step <= STEPS; step++) {
+      setTimeout(() => {
+        pileCounts.value[g.key] = Math.round((step / STEPS) * total)
+      }, (step / STEPS) * flightMs)
+    }
+  })
+}
 
 // ── FLIP animation ─────────────────────────────────────────────────────────
 
@@ -63,51 +205,28 @@ async function enterGroupView() {
   await sleep(450)
 
   const rows = Array.from(document.querySelectorAll('[data-product-id]'))
-  const snapshots = rows
+  const allSnapshots = rows
     .map(row => {
       const product = props.products.find(p => String(p.id) === row.dataset.productId)
       if (!product) return null
       const img = row.querySelector('img')
       if (!img) return null
-      return {
-        rect:     img.getBoundingClientRect(),
-        groupKey: activeGrouper.value.groupFn(product),
-        src:      product.Image,
-        row,
-      }
+      return { rect: img.getBoundingClientRect(), groupKey: activeGrouper.value.groupFn(product), src: product.Image }
     })
     .filter(s => s && s.rect.width > 0)
 
-  pileCounts.value = Object.fromEntries(pileGroups.value.map(g => [g.key, 0]))
+  const samples = sampleSnapshots(allSnapshots)
 
-  snapshots.forEach(({ rect, groupKey, src, row }, i) => {
+  const flightMs = samples.length > 0 ? (samples.length - 1) * 35 + 800 : 800
+  animateCounts(flightMs)
+
+  samples.forEach(({ rect, groupKey, src }, i) => {
     const target = pileRects[groupKey]
     if (!target) return
-
-    const ghost = document.createElement('div')
-    ghost.style.cssText = `
-      position:fixed;
-      left:${rect.left}px; top:${rect.top}px;
-      width:${rect.width}px; height:${rect.height}px;
-      background-image:url(${src}); background-size:cover; background-color:#d1fae5;
-      border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.3);
-      pointer-events:none; z-index:200;
-    `
-    document.body.appendChild(ghost)
-
+    const ghost = spawnGhost(rect, src)
     const dx = target.left + target.width  / 2 - (rect.left + rect.width  / 2)
     const dy = target.top  + target.height / 2 - (rect.top  + rect.height / 2)
-    const delay = Math.min(i * 15, 500)
-
-    setTimeout(() => {
-      row.style.transition = 'opacity 0.3s ease'
-      row.style.opacity = '0'
-    }, delay)
-
-    setTimeout(() => {
-      if (pileCounts.value[groupKey] !== undefined) pileCounts.value[groupKey]++
-    }, delay + 700)
-
+    const delay = i * 35
     requestAnimationFrame(() => {
       ghost.getBoundingClientRect()
       requestAnimationFrame(() => {
@@ -119,8 +238,13 @@ async function enterGroupView() {
     })
   })
 
-  const lastDelay = Math.min((snapshots.length - 1) * 15, 500)
-  await sleep(lastDelay + 800)
+  // Wait for icons to land, then fade the list out before switching to grouped state
+  await sleep(flightMs)
+  if (listRef.value) {
+    listRef.value.style.transition = 'opacity 0.3s ease'
+    listRef.value.style.opacity = '0'
+  }
+  await sleep(320)
 
   animating.value   = false
   listShifted.value = false
@@ -128,9 +252,9 @@ async function enterGroupView() {
 }
 
 async function exitGroupView() {
-  expandedKey.value = null
+  expandedKey.value    = null
+  subExpandedKey.value = null
 
-  // Capture pile positions and shift amount before any state changes
   const pileRects = {}
   for (const g of pileGroups.value) {
     const el = document.querySelector(`[data-pile="${g.key}"]`)
@@ -144,58 +268,37 @@ async function exitGroupView() {
   await nextTick()
   await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))
 
-  // Hide all rows before we start flying
-  const rows = Array.from(document.querySelectorAll('[data-product-id]'))
-  rows.forEach(row => { row.style.opacity = '0'; row.style.transition = '' })
+  if (listRef.value) {
+    listRef.value.style.transition = ''
+    listRef.value.style.opacity = '0'
+  }
 
-  const snapshots = rows
+  const rows = Array.from(document.querySelectorAll('[data-product-id]'))
+  const allSnapshots = rows
     .map(row => {
       const product = props.products.find(p => String(p.id) === row.dataset.productId)
       if (!product) return null
       const img = row.querySelector('img')
       if (!img) return null
-      return {
-        rect:     img.getBoundingClientRect(),
-        groupKey: activeGrouper.value.groupFn(product),
-        src:      product.Image,
-        row,
-      }
+      return { rect: img.getBoundingClientRect(), groupKey: activeGrouper.value.groupFn(product), src: product.Image }
     })
     .filter(s => s && s.rect.width > 0)
 
-  // Fly each icon from its pile back to its row
-  snapshots.forEach(({ rect, groupKey, src, row }, i) => {
+  const samples = sampleSnapshots(allSnapshots)
+
+  samples.forEach(({ rect, groupKey, src }, i) => {
     const pileRect = pileRects[groupKey]
     if (!pileRect) return
-
-    const delay = Math.min(i * 15, 500)
+    const delay = i * 35
     const dx = pileRect.left + pileRect.width  / 2 - (rect.left + rect.width  / 2)
     const dy = pileRect.top  + pileRect.height / 2 - (rect.top  + rect.height / 2)
-
-    // Ghost starts at pile center (large), flies back to row (normal size)
-    const ghost = document.createElement('div')
-    ghost.style.cssText = `
-      position:fixed;
-      left:${rect.left}px; top:${rect.top}px;
-      width:${rect.width}px; height:${rect.height}px;
-      background-image:url(${src}); background-size:cover; background-color:#d1fae5;
-      border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.3);
-      pointer-events:none; z-index:200;
-      transform: translate(${dx}px,${dy}px) scale(1.8);
-      opacity: 1;
-    `
-    document.body.appendChild(ghost)
-
+    const ghost = spawnGhost(rect, src, `transform:translate(${dx}px,${dy}px) scale(1.8);opacity:1;`)
     requestAnimationFrame(() => {
       ghost.getBoundingClientRect()
       requestAnimationFrame(() => {
         ghost.style.transition = `transform 0.7s cubic-bezier(0.4,0,0.6,1) ${delay}ms`
-        ghost.style.transform  = `translate(0,0) scale(1)`
-
-        // When icon lands: fade row in, fade ghost out
+        ghost.style.transform  = 'translate(0,0) scale(1)'
         setTimeout(() => {
-          row.style.transition = 'opacity 0.3s ease'
-          row.style.opacity = '1'
           ghost.style.transition = 'opacity 0.2s ease'
           ghost.style.opacity = '0'
           setTimeout(() => ghost.remove(), 200)
@@ -204,16 +307,24 @@ async function exitGroupView() {
     })
   })
 
-  // Slide list back up
   await sleep(200)
   listShifted.value = false
 
-  // Wait for last icon to land, then clean up
-  const lastDelay = Math.min((snapshots.length - 1) * 15, 500)
-  await sleep(lastDelay + 800)
+  const lastDelay = samples.length > 0 ? (samples.length - 1) * 35 : 0
+  await sleep(lastDelay + 700)
 
-  exitAnimating.value = false
-  grouped.value       = false
+  if (listRef.value) {
+    listRef.value.style.transition = 'opacity 0.3s ease'
+    listRef.value.style.opacity = '1'
+  }
+
+  // Slide pile section up before removing it
+  pilesCollapsing.value = true
+  await sleep(380)
+
+  exitAnimating.value   = false
+  grouped.value         = false
+  pilesCollapsing.value = false
 }
 </script>
 
@@ -221,27 +332,37 @@ async function exitGroupView() {
   <div>
     <!-- Controls bar -->
     <div class="flex items-center gap-2 justify-end mb-3">
-      <span
-        v-if="grouped && expandedKey"
-        class="mr-auto text-lg font-black text-gray-400"
-      >· {{ expandedLabel }}</span>
 
-      <template v-if="grouped && !expandedKey">
+      <!-- Breadcrumb when drilled in -->
+      <div v-if="grouped && expandedKey" class="mr-auto flex items-center gap-1.5 font-black text-gray-400 text-sm">
+        <button
+          @click="expandedKey = null; subExpandedKey = null"
+          class="hover:text-gray-700 transition-colors"
+        >All piles</button>
+        <span>›</span>
+        <button
+          v-if="subExpandedKey"
+          @click="subExpandedKey = null"
+          class="hover:text-gray-700 transition-colors"
+        >{{ expandedLabel }}</button>
+        <span v-else class="text-gray-700">{{ expandedLabel }}</span>
+        <template v-if="subExpandedKey">
+          <span>›</span>
+          <span class="text-gray-700">{{ subExpandedLabel }}</span>
+        </template>
+      </div>
+
+      <!-- Grouper switcher (always visible at top level) -->
+      <template v-if="!expandedKey">
         <button
           v-for="g in availableGroupers" :key="g.key"
-          @click="activeGrouperKey = g.key; expandedKey = null"
+          @click="activeGrouperKey = g.key; expandedKey = null; subExpandedKey = null"
           class="px-3 py-1.5 rounded-lg text-sm font-bold transition-colors"
           :class="activeGrouper.key === g.key
             ? 'bg-teal-600 text-white'
             : 'bg-gray-100 text-gray-600 active:bg-gray-200'"
         >{{ g.icon }} {{ g.label }}</button>
       </template>
-
-      <button
-        v-if="expandedKey"
-        @click="expandedKey = null"
-        class="px-4 py-2 rounded-xl bg-gray-100 text-gray-700 text-sm font-bold active:bg-gray-200 transition-colors"
-      >← All piles</button>
 
       <button
         v-if="!animating && !exitAnimating"
@@ -253,8 +374,12 @@ async function exitGroupView() {
       >{{ grouped ? '☰ Show list' : '🃏 Group' }}</button>
     </div>
 
-    <!-- Pile cards — shown during enter/exit animation and while grouped -->
-    <div v-if="(animating || grouped || exitAnimating) && !expandedKey" class="pile-anim-row">
+    <!-- Level-1 pile cards — shown during animation and while grouped (at top level) -->
+    <div
+      v-if="(animating || grouped || exitAnimating) && !expandedKey"
+      class="pile-anim-row"
+      :style="pilesCollapsing ? { transform: 'translateY(-24px)', opacity: '0', transition: 'transform 0.35s ease, opacity 0.35s ease', pointerEvents: 'none' } : {}"
+    >
       <div
         v-for="(g, i) in pileGroups"
         :key="g.key"
@@ -262,7 +387,7 @@ async function exitGroupView() {
         class="ph-card"
         :class="{ 'ph-card--active': grouped }"
         :style="`--i:${i}`"
-        @click="grouped ? expandedKey = g.key : undefined"
+        @click="grouped ? (expandedKey = g.key, subExpandedKey = null) : undefined"
       >
         <div class="ph-back ph-back-2" :style="{ background: g.bg }">
           <img v-if="g.products[2]?.Image" :src="g.products[2].Image" class="ph-back-img" />
@@ -290,9 +415,106 @@ async function exitGroupView() {
       </div>
     </div>
 
+    <!-- Level-2 sub-pile cards — shown when a level-1 pile is tapped and count > threshold -->
+    <div v-else-if="showSubPiles" class="pile-anim-row">
+      <div
+        v-for="(g, i) in subPileGroups"
+        :key="g.key"
+        class="ph-card ph-card--active"
+        :style="`--i:${i}`"
+        @click="subExpandedKey = g.key"
+      >
+        <div class="ph-back ph-back-2" :style="{ background: g.bg }">
+          <img v-if="g.products[2]?.Image" :src="g.products[2].Image" class="ph-back-img" />
+        </div>
+        <div class="ph-back ph-back-1" :style="{ background: g.bg }">
+          <img v-if="g.products[1]?.Image" :src="g.products[1].Image" class="ph-back-img" />
+        </div>
+        <div class="ph-front" :style="{ background: g.bg }">
+          <div class="ph-image">
+            <img v-if="g.products[0]?.Image" :src="g.products[0].Image" :alt="g.label" />
+            <span v-else class="text-5xl">🌿</span>
+          </div>
+          <div class="ph-info">
+            <p class="ph-label">{{ g.label }}</p>
+            <p class="ph-sub" :style="{ color: g.accent }">{{ g.sub }}</p>
+            <p class="ph-hint">Tap to browse →</p>
+          </div>
+        </div>
+        <div class="ph-badge" :style="{ background: g.accent }">{{ g.products.length }}</div>
+      </div>
+    </div>
+
+    <!-- Product cards — shown when count is low enough (or at deepest drill level) -->
+    <div v-else-if="showCards" class="grid grid-cols-4 gap-4 mt-2">
+      <div
+        v-for="p in cardProducts"
+        :key="p.id"
+        class="rounded-xl border border-gray-200 bg-white overflow-hidden flex flex-col cursor-pointer active:opacity-75 transition-opacity"
+        @click="modalProduct = p"
+      >
+        <!-- Image -->
+        <div class="aspect-square bg-gray-100 overflow-hidden">
+          <img v-if="p.Image" :src="p.Image" :alt="p.Name" class="w-full h-full object-cover" />
+          <div v-else class="w-full h-full flex items-center justify-center text-gray-300 text-4xl">🌿</div>
+        </div>
+
+        <!-- Info -->
+        <div class="p-3 flex flex-col gap-1 flex-1">
+          <p class="font-bold text-sm leading-tight line-clamp-2">{{ p.Name }}</p>
+
+          <div class="flex items-center gap-1.5 flex-wrap mt-0.5">
+            <span
+              v-if="p.Strain"
+              class="text-xs font-semibold px-1.5 py-0.5 rounded-full"
+              :class="strainColor(p.Strain)"
+            >{{ strainLabel(p.Strain) }}</span>
+            <span
+              v-if="p['Unit Weight']"
+              class="text-xs font-semibold px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500"
+            >{{ p['Unit Weight'] }}</span>
+          </div>
+
+          <!-- Potency -->
+          <div v-if="getPotencyLevel(p)" class="flex items-center gap-1.5 mt-1">
+            <div class="flex gap-0.5">
+              <div
+                v-for="n in 4" :key="n"
+                class="w-2 h-2 rounded-full"
+                :class="n <= getPotencyLevel(p).dots ? getPotencyLevel(p).color : 'bg-gray-200'"
+              />
+            </div>
+            <span class="text-xs text-gray-500">{{ getPotencyLevel(p).label }}</span>
+          </div>
+
+          <!-- Price + cart -->
+          <div class="flex items-center justify-between mt-auto pt-2">
+            <span class="text-teal-600 font-black text-sm">{{ displayPrice(p) }}</span>
+            <div v-if="qty(p.id) > 0" class="flex items-center gap-1.5">
+              <button
+                @click.stop="removeFromCart(p)"
+                class="w-7 h-7 rounded-full bg-gray-100 text-gray-700 font-black flex items-center justify-center active:bg-gray-200 transition-colors text-lg leading-none"
+              >−</button>
+              <span class="font-bold text-sm tabular-nums">{{ qty(p.id) }}</span>
+              <button
+                @click.stop="addToCart(p, $event)"
+                class="w-7 h-7 rounded-full bg-teal-500 text-white font-black flex items-center justify-center active:bg-teal-400 transition-colors text-lg leading-none"
+              >+</button>
+            </div>
+            <button
+              v-else
+              @click.stop="addToCart(p, $event)"
+              class="w-7 h-7 rounded-full bg-teal-500 text-white font-black flex items-center justify-center active:bg-teal-400 transition-colors text-lg leading-none"
+            >+</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- List during enter/exit animation (shifted) -->
     <div
       v-if="animating || exitAnimating"
+      ref="listRef"
       :style="{
         transform: listShifted ? `translateY(${shiftPx}px)` : 'translateY(0)',
         transition: 'transform 0.45s cubic-bezier(0.4,0,0.2,1)',
@@ -303,20 +525,18 @@ async function exitGroupView() {
 
     <!-- Normal list -->
     <ProductTable
-      v-else-if="!grouped && !expandedKey && !exitAnimating"
+      v-else-if="!grouped && !exitAnimating"
       :products="products"
       :columns="columns"
       :sortable="sortable"
     />
-
-    <!-- Expanded pile list -->
-    <ProductTable
-      v-else-if="expandedKey"
-      :products="expandedProducts"
-      :columns="columns"
-      :sortable="sortable"
-    />
   </div>
+
+  <ProductModal
+    v-if="modalProduct"
+    :product="modalProduct"
+    @close="modalProduct = null"
+  />
 </template>
 
 <style scoped>
