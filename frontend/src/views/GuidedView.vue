@@ -276,6 +276,10 @@ function displayPrice(p) {
                 class="text-xs font-semibold px-1.5 py-0.5 rounded-full"
                 :class="strainColor(p.Strain)"
               >{{ strainLabel(p.Strain) }}</span>
+              <span
+                v-if="p['Unit Weight']"
+                class="text-xs font-semibold px-1.5 py-0.5 rounded-full bg-gray-700 text-gray-300"
+              >{{ p['Unit Weight'] }}</span>
             </div>
             <!-- Potency indicator -->
             <div v-if="getPotencyLevel(p)" class="flex items-center gap-1.5 mt-1">
