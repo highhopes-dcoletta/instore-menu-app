@@ -100,4 +100,12 @@ ssh $SSHOPTS "$HOST" "certbot --nginx -d menu2-stage.highhopesma.com -n --redire
   echo "  WARNING: certbot failed — DNS may not be propagated yet. Re-run deploy-stage.sh once DNS is set."
 
 echo ""
-echo "==> Done! https://menu2-stage.highhopesma.com"
+echo "==> Running e2e tests against staging..."
+if E2E_BASE_URL=https://menu2-stage.highhopesma.com npx --prefix monitor playwright test --reporter=list; then
+  echo ""
+  echo "==> Done! https://menu2-stage.highhopesma.com"
+else
+  echo ""
+  echo "ERROR: e2e tests failed against staging — see above for details." >&2
+  exit 1
+fi
