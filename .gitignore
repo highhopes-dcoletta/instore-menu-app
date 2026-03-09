@@ -15,3 +15,7 @@ frontend/dist/
 # OS
 .DS_Store
 monitor/node_modules/
+
+# Runtime data
+backend/analytics.db
+monitor/test-results/
