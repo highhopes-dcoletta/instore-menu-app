@@ -8,7 +8,7 @@ const props = defineProps({
   columns:  { type: Array, default: () => ['name', 'strain', 'potency', 'price', 'stock'] },
   sortable: { type: Boolean, default: true },
   // subset of grouper keys to offer; defaults to all
-  groupers: { type: Array, default: () => GROUPERS.map(g => g.key) },
+  groupers: { type: Array, default: () => ['potency', 'strain', 'price'] },
 })
 
 // ── Grouping ───────────────────────────────────────────────────────────────
