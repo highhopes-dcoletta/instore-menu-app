@@ -36,18 +36,20 @@ jobs:
       - name: Send alert on failure
         if: steps.e2e.outcome == 'failure'
         run: |
-          curl -sf -X POST "https://api.sendgrid.com/v3/mail/send" \
-            -H "Authorization: Bearer ${{ secrets.SENDGRID_API_KEY }}" \
+          curl -sf -X POST "https://events.pagerduty.com/v2/enqueue" \
             -H "Content-Type: application/json" \
-            -d '{
-              "personalizations": [{"to": [{"email": "david.coletta@high-hopes.biz"}]}],
-              "from": {"email": "david.coletta@high-hopes.biz"},
-              "subject": "[ALERT] menu2.highhopesma.com E2E check failed",
-              "content": [{
-                "type": "text/plain",
-                "value": "The browser-based E2E check for menu2.highhopesma.com failed.\n\nSee the full run at: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-              }]
-            }'
+            -d "{
+              \"routing_key\": \"${{ secrets.PAGERDUTY_ROUTING_KEY }}\",
+              \"event_action\": \"trigger\",
+              \"payload\": {
+                \"summary\": \"menu2.highhopesma.com E2E check failed\",
+                \"source\": \"github-actions\",
+                \"severity\": \"critical\",
+                \"custom_details\": {
+                  \"run_url\": \"https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"
+                }
+              }
+            }"
 
       - name: Upload failure screenshots
         if: steps.e2e.outcome == 'failure'

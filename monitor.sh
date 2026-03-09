@@ -1,12 +1,10 @@
 #!/usr/bin/env bash
 # Synthetic monitor for menu2.highhopesma.com
 #
-# Tests the full session lifecycle. Alerts via Twilio SMS on failure.
+# Tests the full session lifecycle. Alerts via PagerDuty on failure.
 #
 # Environment variables (sourced from /etc/highhopes-monitor.env):
-#   SENDGRID_API_KEY  — SendGrid API key
-#   ALERT_FROM        — from address  (e.g. david.coletta@high-hopes.biz)
-#   ALERT_TO          — to address    (e.g. david.coletta@high-hopes.biz)
+#   PAGERDUTY_ROUTING_KEY  — PagerDuty Events API v2 integration key
 #
 # Cron example (every 5 minutes, on the server):
 #   */5 * * * * . /etc/highhopes-monitor.env && /usr/local/bin/highhopes-monitor \
@@ -15,9 +13,7 @@
 set -uo pipefail
 
 BASE="https://menu2.highhopesma.com"
-SENDGRID_API_KEY="${SENDGRID_API_KEY:-}"
-ALERT_FROM="${ALERT_FROM:-}"
-ALERT_TO="${ALERT_TO:-}"
+PAGERDUTY_ROUTING_KEY="${PAGERDUTY_ROUTING_KEY:-}"
 SESSION_ID="monitor-test-$(date +%s)"
 PASS=0
 FAIL=0
@@ -85,20 +81,27 @@ fi
 TIMESTAMP=$(date -u '+%Y-%m-%d %H:%M UTC')
 
 if [ "$FAIL" -gt 0 ]; then
-  SUBJECT="[ALERT] menu2.highhopesma.com — $FAIL check(s) failed"
-  MSG="${SUBJECT} at ${TIMESTAMP}$(printf '%b' "$ERRORS")"
+  SUMMARY="menu2.highhopesma.com — $FAIL check(s) failed at $TIMESTAMP"
+  DETAILS="$(printf '%b' "$ERRORS")"
 
-  echo "$MSG" >&2
+  echo "[ALERT] $SUMMARY" >&2
+  echo "$DETAILS" >&2
 
-  if [ -n "$SENDGRID_API_KEY" ] && [ -n "$ALERT_FROM" ] && [ -n "$ALERT_TO" ]; then
-    PAYLOAD=$(printf '{"personalizations":[{"to":[{"email":"%s"}]}],"from":{"email":"%s"},"subject":"%s","content":[{"type":"text/plain","value":"%s"}]}' \
-      "$ALERT_TO" "$ALERT_FROM" "$SUBJECT" \
-      "$(printf '%b' "$MSG" | sed 's/\\/\\\\/g; s/"/\\"/g; s/$/\\n/' | tr -d '\n')")
-    curl -sf -X POST "https://api.sendgrid.com/v3/mail/send" \
-      -H "Authorization: Bearer ${SENDGRID_API_KEY}" \
+  if [ -n "$PAGERDUTY_ROUTING_KEY" ]; then
+    curl -sf -X POST "https://events.pagerduty.com/v2/enqueue" \
       -H "Content-Type: application/json" \
-      -d "$PAYLOAD" \
-      >/dev/null 2>&1 || echo "WARNING: SendGrid API call failed"
+      -d "{
+        \"routing_key\": \"${PAGERDUTY_ROUTING_KEY}\",
+        \"event_action\": \"trigger\",
+        \"payload\": {
+          \"summary\": \"${SUMMARY}\",
+          \"source\": \"menu2.highhopesma.com\",
+          \"severity\": \"critical\",
+          \"custom_details\": {
+            \"errors\": \"$(printf '%b' "$DETAILS" | sed 's/"/\\"/g')\"
+          }
+        }
+      }" >/dev/null 2>&1 || echo "WARNING: PagerDuty API call failed"
   fi
 
   exit 1
