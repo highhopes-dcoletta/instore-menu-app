@@ -10,11 +10,13 @@ import SleepView from '@/views/SleepView.vue'
 import PainView from '@/views/PainView.vue'
 import BudtenderView from '@/views/BudtenderView.vue'
 import CartShareView from '@/views/CartShareView.vue'
+import GuidedView from '@/views/GuidedView.vue'
 
 const router = createRouter({
   history: createWebHistory(),
   routes: [
     { path: '/', component: HomeView },
+    { path: '/guide', component: GuidedView },
     { path: '/flower', component: FlowerView },
     { path: '/pre-rolls', component: PreRollsView },
     { path: '/edibles', component: EdiblesView },
