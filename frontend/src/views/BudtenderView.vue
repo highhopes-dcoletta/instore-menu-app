@@ -84,6 +84,7 @@ onUnmounted(() => clearInterval(pollTimer))
           </div>
           <button
             @click="deleteSession(s.sessionId)"
+            title="Dismiss order"
             class="shrink-0 w-7 h-7 flex items-center justify-center rounded-full text-gray-400 [@media(hover:hover)]:hover:bg-red-100 [@media(hover:hover)]:hover:text-red-500 active:bg-red-100 active:text-red-500 transition-colors text-lg leading-none"
           >×</button>
         </div>
