@@ -72,6 +72,7 @@ function pct(n, total) {
         <div class="rounded-xl border border-gray-200 bg-white p-4">
           <p class="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">Total adds</p>
           <p class="text-3xl font-black text-gray-900">{{ analytics.total_adds }}</p>
+          <p v-if="analytics.api_errors > 0" class="text-xs text-red-500 font-semibold mt-0.5">⚠ {{ analytics.api_errors }} API error{{ analytics.api_errors !== 1 ? 's' : '' }}</p>
         </div>
       </div>
 
@@ -97,8 +98,23 @@ function pct(n, total) {
           <h2 class="text-sm font-black uppercase tracking-widest text-gray-500 mb-4">Feature usage</h2>
           <div class="space-y-3">
             <div class="flex items-center justify-between">
+              <span class="text-sm font-semibold text-gray-700">Product modal opens</span>
+              <span class="text-lg font-black text-gray-900">{{ analytics.modal_opens }}</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-sm font-semibold text-gray-700">Guided view starts</span>
+              <span class="text-lg font-black text-gray-900">{{ analytics.guided_starts }}</span>
+            </div>
+            <div class="flex items-center justify-between">
               <span class="text-sm font-semibold text-gray-700">Guided view completions</span>
-              <span class="text-lg font-black text-gray-900">{{ analytics.guided_completions }}</span>
+              <span class="text-lg font-black text-gray-900">
+                {{ analytics.guided_completions }}
+                <span v-if="analytics.guided_completion_rate != null" class="text-sm font-normal text-gray-400">({{ Math.round(analytics.guided_completion_rate * 100) }}%)</span>
+              </span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-sm font-semibold text-gray-700">Cart share views</span>
+              <span class="text-lg font-black text-gray-900">{{ analytics.cart_share_views }}</span>
             </div>
             <div class="flex items-center justify-between">
               <span class="text-sm font-semibold text-gray-700">Group feature uses</span>
@@ -118,6 +134,21 @@ function pct(n, total) {
             <li v-if="!analytics.top_products.length" class="text-gray-400 text-sm">No data yet.</li>
           </ol>
         </div>
+      </div>
+
+      <!-- Top filters -->
+      <div class="rounded-xl border border-gray-200 bg-white p-5">
+        <h2 class="text-sm font-black uppercase tracking-widest text-gray-500 mb-4">Top filters applied</h2>
+        <div v-if="analytics.top_filters?.length" class="space-y-3">
+          <div v-for="f in analytics.top_filters" :key="f.label" class="flex items-center gap-3">
+            <span class="w-48 text-sm font-semibold text-gray-700 shrink-0 truncate">{{ f.label }}</span>
+            <div class="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
+              <div class="h-2 rounded-full bg-indigo-400" :style="`width:${pct(f.count, analytics.top_filters[0].count)}`" />
+            </div>
+            <span class="text-sm font-bold tabular-nums text-gray-700 w-8 text-right">{{ f.count }}</span>
+          </div>
+        </div>
+        <p v-else class="text-gray-400 text-sm">No data yet.</p>
       </div>
 
       <p class="text-xs text-gray-400 text-right">Data from last {{ analytics.period_days }} days.</p>

@@ -260,6 +260,53 @@ def get_analytics():
             for k, v in sorted(product_counts.items(), key=lambda x: -x[1])[:10]
         ]
 
+        # modal_opens
+        modal_opens = con.execute(
+            "SELECT COUNT(*) FROM events WHERE event = 'product_modal_opened' AND ts >= ?",
+            (cutoff,),
+        ).fetchone()[0]
+
+        # guided_view_starts
+        guided_starts = con.execute(
+            "SELECT COUNT(*) FROM events WHERE event = 'guided_view_started' AND ts >= ?",
+            (cutoff,),
+        ).fetchone()[0]
+
+        # guided completion rate
+        guided_completion_rate = (
+            round(guided_completions / guided_starts, 2) if guided_starts else None
+        )
+
+        # cart_share_views
+        cart_share_views = con.execute(
+            "SELECT COUNT(*) FROM events WHERE event = 'cart_share_viewed' AND ts >= ?",
+            (cutoff,),
+        ).fetchone()[0]
+
+        # api_errors
+        api_errors = con.execute(
+            "SELECT COUNT(*) FROM events WHERE event = 'api_error' AND ts >= ?",
+            (cutoff,),
+        ).fetchone()[0]
+
+        # top_filters: most applied filter values
+        filter_rows = con.execute(
+            "SELECT properties FROM events WHERE event = 'filter_applied' AND ts >= ?",
+            (cutoff,),
+        ).fetchall()
+        filter_counts: dict = {}
+        for row in filter_rows:
+            try:
+                props = json.loads(row["properties"]) if row["properties"] else {}
+                key = f"{props.get('filter', '?')}: {props.get('value', '?')}"
+                filter_counts[key] = filter_counts.get(key, 0) + 1
+            except Exception:
+                pass
+        top_filters = [
+            {"label": k, "count": v}
+            for k, v in sorted(filter_counts.items(), key=lambda x: -x[1])[:10]
+        ]
+
         # recent_events: last 20
         recent_rows = con.execute(
             "SELECT ts, event, session_id, properties FROM events ORDER BY id DESC LIMIT 20"
@@ -286,8 +333,14 @@ def get_analytics():
         "avg_value_submitted": avg_value_submitted,
         "abandoned_sessions": abandoned_sessions,
         "avg_items_abandoned": avg_items_abandoned,
+        "modal_opens": modal_opens,
+        "guided_starts": guided_starts,
         "guided_completions": guided_completions,
+        "guided_completion_rate": guided_completion_rate,
         "group_feature_uses": group_feature_uses,
+        "cart_share_views": cart_share_views,
+        "api_errors": api_errors,
+        "top_filters": top_filters,
         "top_products": top_products,
         "recent_events": recent_events,
     })

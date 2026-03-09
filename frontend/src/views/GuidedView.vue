@@ -15,6 +15,7 @@ const productsStore = useProductsStore()
 const session = useSessionStore()
 const { fire: fireCartAnimation, fireToast, BUBBLE_DURATION } = useCartAnimation()
 const { track } = useAnalytics()
+track('guided_view_started')
 
 // ── Wizard state ──────────────────────────────────────────────────────────────
 

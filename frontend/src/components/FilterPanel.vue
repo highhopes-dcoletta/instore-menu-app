@@ -18,6 +18,7 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { strainLabel } from '@/utils/strainLabels'
+import { useAnalytics } from '@/composables/useAnalytics'
 
 const props = defineProps({
   filters: { type: Array, default: () => [] },
@@ -27,6 +28,7 @@ const props = defineProps({
 
 const route = useRoute()
 const router = useRouter()
+const { track } = useAnalytics()
 
 // ── URL helpers ────────────────────────────────────────────────────────────────
 
@@ -36,6 +38,7 @@ function toArray(val) {
 }
 
 function set(key, value) {
+  track('filter_applied', { filter: key, value })
   router.replace({ query: { ...route.query, [key]: value } })
 }
 
@@ -47,6 +50,7 @@ function clear(key) {
 
 function toggleMulti(key, value) {
   const current = toArray(route.query[key])
+  if (!current.includes(value)) track('filter_applied', { filter: key, value })
   const next = current.includes(value)
     ? current.filter((v) => v !== value)
     : [...current, value]

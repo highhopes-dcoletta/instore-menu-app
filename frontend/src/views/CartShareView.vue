@@ -2,8 +2,10 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { calcQuota } from '@/utils/quotaCalc'
+import { useAnalytics } from '@/composables/useAnalytics'
 
 const route = useRoute()
+const { track } = useAnalytics()
 const session = ref(null)
 const notFound = ref(false)
 const loading = ref(true)
@@ -17,6 +19,7 @@ onMounted(async () => {
     const data = await res.json()
     console.log('[CartShare] data:', JSON.stringify(data))
     session.value = data
+    track('cart_share_viewed', { session_id: route.params.sessionId })
   } catch (e) {
     console.error('[CartShare] error:', e)
     notFound.value = true

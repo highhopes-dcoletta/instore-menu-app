@@ -42,7 +42,10 @@ function updateQty(delta, event) {
 function onKey(e) {
   if (e.key === 'Escape') emit('close')
 }
-onMounted(() => window.addEventListener('keydown', onKey))
+onMounted(() => {
+  window.addEventListener('keydown', onKey)
+  track('product_modal_opened', { product_id: props.product.id, product_name: props.product.Name, category: props.product.Category })
+})
 onUnmounted(() => window.removeEventListener('keydown', onKey))
 </script>
 
