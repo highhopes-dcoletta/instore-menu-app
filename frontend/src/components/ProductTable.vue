@@ -182,6 +182,7 @@ function potency(product) {
         <tr
           v-for="product in products"
           :key="product.id"
+          :data-product-id="product.id"
           :class="[
             'border-b border-gray-100 transition-colors',
             qty(product.id) > 0 ? 'bg-teal-50' : '',
