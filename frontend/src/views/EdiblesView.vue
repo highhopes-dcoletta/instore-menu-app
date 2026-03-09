@@ -2,7 +2,7 @@
 import { useProductFilters } from '@/composables/useProductFilters'
 import FilterPanel from '@/components/FilterPanel.vue'
 import ProductControls from '@/components/ProductControls.vue'
-import ProductTable from '@/components/ProductTable.vue'
+import GroupableList from '@/components/GroupableList.vue'
 import SubcategoryTabs from '@/components/SubcategoryTabs.vue'
 
 const TABS = [
@@ -23,7 +23,7 @@ const { filtered, categoryProducts, facets } = useProductFilters((p) => p.Catego
       <h1 class="mb-4 text-2xl font-black tracking-wide">Edibles</h1>
       <SubcategoryTabs :tabs="TABS" />
       <ProductControls />
-      <ProductTable :products="filtered" />
+      <GroupableList :products="filtered" />
     </div>
     <aside class="w-40 shrink-0 pt-14">
       <FilterPanel :filters="['strain']" :products="categoryProducts" :facets="facets" />

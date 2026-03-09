@@ -18,6 +18,24 @@ export const GROUPERS = [
     },
   },
   {
+    key: 'vape-potency',
+    icon: '⚡',
+    label: 'Potency',
+    groupDefs: [
+      { key: 'mild',        label: 'Mild',        sub: 'Under 80%',  bg: '#0d2618', accent: '#22c55e' },
+      { key: 'standard',   label: 'Standard',    sub: '80–85%',     bg: '#2a1f08', accent: '#eab308' },
+      { key: 'strong',     label: 'Strong',      sub: '85–90%',     bg: '#2a0e08', accent: '#f97316' },
+      { key: 'very-strong', label: 'Very Strong', sub: '90%+',      bg: '#1e0808', accent: '#ef4444' },
+    ],
+    groupFn(product) {
+      const p = product.Potency ?? 0
+      if (p < 80) return 'mild'
+      if (p < 85) return 'standard'
+      if (p < 90) return 'strong'
+      return 'very-strong'
+    },
+  },
+  {
     key: 'strain',
     icon: '🌿',
     label: 'Strain',

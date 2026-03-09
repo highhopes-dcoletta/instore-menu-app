@@ -2,7 +2,7 @@
 import { useProductFilters } from '@/composables/useProductFilters'
 import FilterPanel from '@/components/FilterPanel.vue'
 import ProductControls from '@/components/ProductControls.vue'
-import ProductTable from '@/components/ProductTable.vue'
+import GroupableList from '@/components/GroupableList.vue'
 
 const COLUMNS = ['name', 'potency', 'strain', 'price', 'stock']
 
@@ -16,7 +16,7 @@ const { filtered, categoryProducts, facets } = useProductFilters(
     <div class="flex-1 min-w-0">
       <h1 class="mb-4 text-2xl font-black tracking-wide">Sleep</h1>
       <ProductControls />
-      <ProductTable :products="filtered" :columns="COLUMNS" />
+      <GroupableList :products="filtered" :columns="COLUMNS" />
     </div>
     <aside class="w-40 shrink-0 pt-14">
       <FilterPanel :filters="['brand', 'category']" :products="categoryProducts" :facets="facets" />
