@@ -186,6 +186,28 @@ function displayPrice(p) {
   const price = p.SalePrice ?? p.Price
   return price ? `$${price}` : null
 }
+
+// ── Potency level ─────────────────────────────────────────────────────────────
+
+function potencyLevel(p) {
+  const val  = p.Potency
+  const unit = p['Potency Unit']
+  if (!val) return null
+
+  if (unit === 'mg') {
+    // Edible dosing
+    if (val <= 5)  return { label: 'Low dose',      dots: 1, color: 'bg-green-400' }
+    if (val <= 10) return { label: 'Medium dose',   dots: 2, color: 'bg-yellow-400' }
+    if (val <= 20) return { label: 'High dose',     dots: 3, color: 'bg-orange-400' }
+    return             { label: 'Very high dose',   dots: 4, color: 'bg-red-400' }
+  }
+
+  // THC %
+  if (val <= 12) return { label: 'Low potency',     dots: 1, color: 'bg-green-400' }
+  if (val <= 20) return { label: 'Mid potency',     dots: 2, color: 'bg-yellow-400' }
+  if (val <= 28) return { label: 'High potency',    dots: 3, color: 'bg-orange-400' }
+  return             { label: 'Very high potency',  dots: 4, color: 'bg-red-400' }
+}
 </script>
 
 <template>
@@ -223,15 +245,15 @@ function displayPrice(p) {
     </div>
 
     <!-- Back / Skip -->
-    <div class="flex gap-6 mt-10">
+    <div class="flex gap-4 mt-10">
       <button
         v-if="step > 1"
         @click="back"
-        class="text-gray-500 text-sm active:text-white transition-colors"
+        class="px-5 py-3 rounded-xl bg-gray-800 text-white font-bold text-base active:bg-gray-700 transition-colors"
       >← Back</button>
       <button
         @click="router.push('/')"
-        class="text-gray-500 text-sm active:text-white transition-colors"
+        class="px-5 py-3 rounded-xl bg-gray-800 text-white font-bold text-base active:bg-gray-700 transition-colors"
       >Browse full menu</button>
     </div>
   </main>
@@ -241,9 +263,10 @@ function displayPrice(p) {
     <div class="max-w-6xl mx-auto">
       <div class="flex items-center justify-between mb-2">
         <h1 class="text-white text-2xl font-black">Our top picks for you</h1>
-        <button @click="router.push('/')" class="text-gray-500 text-sm active:text-white transition-colors">
-          Browse full menu →
-        </button>
+        <button
+          @click="router.push('/')"
+          class="px-5 py-3 rounded-xl bg-gray-800 text-white font-bold text-base active:bg-gray-700 transition-colors"
+        >Browse full menu →</button>
       </div>
       <p class="text-gray-500 text-sm mb-8">Add items to your cart and show your budtender when you're ready.</p>
 
@@ -273,7 +296,19 @@ function displayPrice(p) {
                 class="text-xs font-semibold px-1.5 py-0.5 rounded-full"
                 :class="strainColor(p.Strain)"
               >{{ strainLabel(p.Strain) }}</span>
-              <span v-if="p.Potency" class="text-xs text-gray-400">{{ p.Potency }}{{ p['Potency Unit'] }}</span>
+            </div>
+            <!-- Potency indicator -->
+            <div v-if="potencyLevel(p)" class="flex items-center gap-1.5 mt-1">
+              <div class="flex gap-0.5">
+                <div
+                  v-for="n in 4" :key="n"
+                  class="w-2 h-2 rounded-full"
+                  :class="n <= potencyLevel(p).dots ? potencyLevel(p).color : 'bg-gray-600'"
+                />
+              </div>
+              <span class="text-xs font-semibold text-gray-300">
+                {{ potencyLevel(p).label }} · {{ p.Potency }}{{ p['Potency Unit'] }}
+              </span>
             </div>
             <div class="flex items-center justify-between mt-auto pt-2">
               <span class="text-teal-400 font-black text-sm">{{ displayPrice(p) }}</span>
@@ -300,9 +335,10 @@ function displayPrice(p) {
         </div>
       </div>
 
-      <button @click="back" class="mt-8 text-gray-500 text-sm active:text-white transition-colors">
-        ← Change my answers
-      </button>
+      <button
+        @click="back"
+        class="mt-8 px-5 py-3 rounded-xl bg-gray-800 text-white font-bold text-base active:bg-gray-700 transition-colors"
+      >← Change my answers</button>
     </div>
   </main>
 </template>
