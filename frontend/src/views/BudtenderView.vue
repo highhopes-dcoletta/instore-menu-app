@@ -69,6 +69,7 @@ onUnmounted(() => clearInterval(pollTimer))
       <div
         v-for="s in sessions"
         :key="s.sessionId"
+        :data-session-id="s.sessionId"
         :class="[
           'rounded-xl border p-5 shadow-sm',
           s.ready ? 'border-teal-400 bg-teal-50' : 'border-gray-200 bg-white',

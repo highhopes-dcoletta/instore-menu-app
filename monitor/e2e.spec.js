@@ -30,6 +30,37 @@ test('add to cart and send-to-budtender button activates', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Send to Budtender' })).toBeEnabled()
 })
 
+test('budtender view shows and dismisses an order', async ({ page, request }) => {
+  const sessionId = `e2e-budtender-${Date.now()}`
+
+  // Create a test session
+  const post = await request.post(`${BASE}/api/session`, {
+    data: {
+      sessionId,
+      selections: {
+        'e2e-bud-sku': { name: 'Budtender Test Product', qty: 1, price: 20, unitWeight: '1g', category: 'FLOWER' },
+      },
+    },
+  })
+  expect(post.ok()).toBeTruthy()
+
+  // Budtender view should show the order card
+  await page.goto(`${BASE}/budtender`)
+  await expect(page.getByText('Budtender Test Product').first()).toBeVisible({ timeout: 10000 })
+
+  // Dismiss the order — find the card by its data attribute
+  const card = page.locator(`[data-session-id="${sessionId}"]`)
+  const dismissBtn = card.locator('[title="Dismiss order"]')
+  await expect(dismissBtn).toBeVisible()
+  await dismissBtn.click()
+
+  // Our specific card should be gone
+  await expect(card).not.toBeVisible({ timeout: 5000 })
+
+  // Clean up (in case dismiss didn't delete server-side)
+  await request.delete(`${BASE}/api/session/${sessionId}`)
+})
+
 test('cart share page loads for a valid session', async ({ page, request }) => {
   // Create a real session via the API
   const sessionId = `e2e-monitor-${Date.now()}`
