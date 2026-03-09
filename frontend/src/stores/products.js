@@ -99,6 +99,7 @@ export const useProductsStore = defineStore('products', () => {
   const products = ref([])
   const loading = ref(false)
   const error = ref(false)
+  const outOfStockNotice = ref([]) // names of items silently removed by background refresh
 
   let refreshTimer = null
 
@@ -180,7 +181,11 @@ export const useProductsStore = defineStore('products', () => {
       const sessionStore = useSessionStore()
       const newIds = new Set(newData.map((p) => p.id))
       const staleIds = Object.keys(sessionStore.selections).filter((id) => !newIds.has(id))
-      if (staleIds.length) await sessionStore.removeSelections(staleIds)
+      if (staleIds.length) {
+        const removedNames = staleIds.map((id) => sessionStore.selections[id]?.name).filter(Boolean)
+        await sessionStore.removeSelections(staleIds)
+        outOfStockNotice.value = removedNames
+      }
 
       products.value = newData
       window.scrollTo({ top: scrollY, behavior: 'instant' })
@@ -200,6 +205,7 @@ export const useProductsStore = defineStore('products', () => {
     products,
     loading,
     error,
+    outOfStockNotice,
     loadProducts,
   }
 })

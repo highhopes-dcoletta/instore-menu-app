@@ -14,6 +14,16 @@ const { track } = useAnalytics()
 
 const session = useSessionStore()
 const productsStore = useProductsStore()
+
+// ── Out-of-stock notifications ────────────────────────────────────────────────
+
+watch(() => productsStore.outOfStockNotice, (names) => {
+  if (!names.length) return
+  const listed = names.slice(0, 2).join(', ')
+  const extra = names.length > 2 ? ` + ${names.length - 2} more` : ''
+  fireToast(`Removed from cart (out of stock): ${listed}${extra}`)
+  productsStore.outOfStockNotice = []
+})
 const router = useRouter()
 const { dismissToast, fireToast } = useCartAnimation()
 const { isDragging, isOverCart } = useDragToCart()
@@ -120,7 +130,7 @@ async function generateQrWithIcon(url) {
       URL.revokeObjectURL(svgUrl)
       resolve()
     }
-    img.onerror = reject
+    img.onerror = (e) => { URL.revokeObjectURL(svgUrl); reject(e) }
     img.src = svgUrl
   })
 
@@ -133,7 +143,19 @@ watch(() => session.sessionId, async (id) => {
     ? 'http://100.67.159.25:5173'
     : window.location.origin
   const url = `${origin}/cart/${id}`
-  qrDataUrl.value = await generateQrWithIcon(url)
+  try {
+    qrDataUrl.value = await generateQrWithIcon(url)
+  } catch (e) {
+    console.error('QR icon generation failed, falling back to plain QR:', e)
+    try {
+      const canvas = document.createElement('canvas')
+      await QRCode.toCanvas(canvas, url, { width: 200, margin: 1, color: { dark: '#134e4a', light: '#ffffff' } })
+      qrDataUrl.value = canvas.toDataURL('image/png')
+    } catch (e2) {
+      console.error('QR code fallback failed:', e2)
+      qrDataUrl.value = null
+    }
+  }
 }, { immediate: true })
 
 // ── Wiggle on cart change ─────────────────────────────────────────────────────
@@ -184,6 +206,8 @@ async function sendToBudtender() {
     previousOrder.value = snapshot
     orderNumber.value = num
     startCountdown()
+  } else {
+    fireToast('Failed to send order — please try again.')
   }
 }
 
