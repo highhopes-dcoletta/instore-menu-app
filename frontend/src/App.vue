@@ -13,7 +13,7 @@ const router = useRouter()
 const sessionStore = useSessionStore()
 const productsStore = useProductsStore()
 
-const isKioskFree = computed(() => route.path === '/budtender' || route.path.startsWith('/cart/'))
+const isKioskFree = computed(() => route.path === '/budtender' || route.path === '/analytics' || route.path.startsWith('/cart/'))
 const { track } = useAnalytics()
 const showNavBar = computed(() => !isKioskFree.value)
 
