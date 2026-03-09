@@ -2,6 +2,7 @@
 import { computed, onMounted, onUnmounted } from 'vue'
 import { useSessionStore } from '@/stores/session'
 import { useCartAnimation } from '@/composables/useCartAnimation'
+import { useAnalytics } from '@/composables/useAnalytics'
 
 const props = defineProps({
   product: { type: Object, required: true },
@@ -10,6 +11,7 @@ const emit = defineEmits(['close'])
 
 const session = useSessionStore()
 const { fire: fireCartAnimation, fireToast, BUBBLE_DURATION } = useCartAnimation()
+const { track } = useAnalytics()
 
 const qty = computed(() => session.selections[props.product.id]?.qty ?? 0)
 
@@ -18,6 +20,7 @@ function updateQty(delta, event) {
     const wasEmpty = session.selectionCount === 0
     fireCartAnimation(event.clientX, event.clientY, props.product.Image, null, null)
     if (wasEmpty) fireToast()
+    track('add_to_cart', { source: 'modal', product_id: props.product.id, product_name: props.product.Name, category: props.product.Category })
     setTimeout(() => session.updateQuantity(props.product.id, {
       name: props.product.Name ?? '',
       unitWeight: props.product['Unit Weight'] ?? '',

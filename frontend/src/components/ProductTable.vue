@@ -6,6 +6,7 @@ import ProductModal from './ProductModal.vue'
 import { strainLabel } from '@/utils/strainLabels'
 import { useCartAnimation } from '@/composables/useCartAnimation'
 import { useDragToCart } from '@/composables/useDragToCart'
+import { useAnalytics } from '@/composables/useAnalytics'
 
 const props = defineProps({
   products:  { type: Array,   required: true },
@@ -18,6 +19,7 @@ const router = useRouter()
 const session = useSessionStore()
 const { fire: fireCartAnimation, fireToast, BUBBLE_DURATION } = useCartAnimation()
 const { startDrag } = useDragToCart()
+const { track } = useAnalytics()
 
 // ── Modal ─────────────────────────────────────────────────────────────────────
 
@@ -75,6 +77,7 @@ function updateQty(product, delta, event) {
     const [dx, dy] = cartDest(product.id)
     fireCartAnimation(event.clientX, event.clientY, product.Image, dx, dy)
     if (wasEmpty) fireToast()
+    track('add_to_cart', { source: 'browse', product_id: product.id, product_name: product.Name, category: product.Category })
     setTimeout(() => session.updateQuantity(product.id, {
       name: product.Name ?? '',
       unitWeight: product['Unit Weight'] ?? '',
@@ -97,6 +100,7 @@ function updateQty(product, delta, event) {
 
 function onRowPointerDown(product, e) {
   startDrag(e, product, () => {
+    track('add_to_cart', { source: 'drag', product_id: product.id, product_name: product.Name, category: product.Category })
     session.updateQuantity(product.id, {
       name: product.Name ?? '',
       unitWeight: product['Unit Weight'] ?? '',

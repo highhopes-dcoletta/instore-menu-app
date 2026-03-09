@@ -3,6 +3,7 @@ import { ref, computed, nextTick } from 'vue'
 import { GROUPERS, computeGroups } from '@/composables/useProductGrouping'
 import { useSessionStore } from '@/stores/session'
 import { useCartAnimation } from '@/composables/useCartAnimation'
+import { useAnalytics } from '@/composables/useAnalytics'
 import { strainLabel } from '@/utils/strainLabels'
 import { getPotencyLevel } from '@/utils/potencyLevel'
 import ProductTable from './ProductTable.vue'
@@ -83,6 +84,7 @@ const cardProducts = computed(() =>
 
 const session = useSessionStore()
 const { fire: fireCartAnimation, fireToast, BUBBLE_DURATION } = useCartAnimation()
+const { track } = useAnalytics()
 const modalProduct = ref(null)
 
 function qty(id) { return session.selections[id]?.qty ?? 0 }
@@ -102,6 +104,7 @@ function addToCart(product, event) {
   const [dx, dy] = cartDest()
   fireCartAnimation(event.clientX, event.clientY, product.Image, dx, dy)
   if (wasEmpty) fireToast()
+  track('add_to_cart', { source: 'group_card', product_id: product.id, product_name: product.Name, category: product.Category })
   setTimeout(() => session.updateQuantity(product.id, {
     name:        product.Name,
     unitWeight:  product['Unit Weight'] ?? '',
@@ -200,6 +203,7 @@ function animateCounts(flightMs) {
 // ── FLIP animation ─────────────────────────────────────────────────────────
 
 async function enterGroupView() {
+  track('group_feature_used', { grouper: activeGrouper.value.key })
   animating.value = true
   await nextTick()
   await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))

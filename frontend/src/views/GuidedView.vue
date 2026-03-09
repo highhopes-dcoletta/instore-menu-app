@@ -7,12 +7,14 @@ import { useCartAnimation } from '@/composables/useCartAnimation'
 import { strainLabel } from '@/utils/strainLabels'
 import { getPotencyLevel } from '@/utils/potencyLevel'
 import { scoreProduct, getRecommendations } from '@/utils/recommendations'
+import { useAnalytics } from '@/composables/useAnalytics'
 import ProductModal from '@/components/ProductModal.vue'
 
 const router = useRouter()
 const productsStore = useProductsStore()
 const session = useSessionStore()
 const { fire: fireCartAnimation, fireToast, BUBBLE_DURATION } = useCartAnimation()
+const { track } = useAnalytics()
 
 // ── Wizard state ──────────────────────────────────────────────────────────────
 
@@ -58,6 +60,9 @@ const showResults = computed(() => step.value > 3)
 function choose(key, value) {
   answers.value[key] = value
   step.value++
+  if (step.value > 3) {
+    track('guided_view_completed', { ...answers.value })
+  }
 }
 
 function back() {
@@ -95,6 +100,7 @@ function add(product, event) {
   const [dx, dy] = cartDest()
   fireCartAnimation(event.clientX, event.clientY, product.Image, dx, dy)
   if (wasEmpty) fireToast()
+  track('add_to_cart', { source: 'guided', product_id: product.id, product_name: product.Name, category: product.Category })
   setTimeout(() => session.updateQuantity(product.id, {
     name: product.Name,
     unitWeight: product['Unit Weight'] ?? '',

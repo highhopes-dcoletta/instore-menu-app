@@ -5,7 +5,10 @@ import { useSessionStore } from '@/stores/session'
 import { useCartAnimation } from '@/composables/useCartAnimation'
 import { useDragToCart } from '@/composables/useDragToCart'
 import { calcQuota } from '@/utils/quotaCalc'
+import { useAnalytics } from '@/composables/useAnalytics'
 import QRCode from 'qrcode'
+
+const { track } = useAnalytics()
 
 const session = useSessionStore()
 const router = useRouter()
@@ -123,9 +126,12 @@ async function sendToBudtender() {
   dismissToast()
   const snapshot = { selections: { ...session.selections }, sessionId: session.sessionId }
   submitting.value = true
+  const itemCount = session.selectionCount
+  const totalValue = Object.values(session.selections).reduce((s, i) => s + (i.price ?? 0) * (i.qty ?? 1), 0)
   const num = await session.submitOrder()
   submitting.value = false
   if (num != null) {
+    track('order_submitted', { item_count: itemCount, total_value: Math.round(totalValue * 100) / 100 })
     previousOrder.value = snapshot
     orderNumber.value = num
     startCountdown()

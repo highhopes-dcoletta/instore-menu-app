@@ -6,6 +6,7 @@ import { useSessionStore } from '@/stores/session'
 import NavBar from '@/components/NavBar.vue'
 import CartPanel from '@/components/CartPanel.vue'
 import CartAnimation from '@/components/CartAnimation.vue'
+import { useAnalytics } from '@/composables/useAnalytics'
 
 const route = useRoute()
 const router = useRouter()
@@ -13,6 +14,7 @@ const sessionStore = useSessionStore()
 const productsStore = useProductsStore()
 
 const isKioskFree = computed(() => route.path === '/budtender' || route.path.startsWith('/cart/'))
+const { track } = useAnalytics()
 const showNavBar = computed(() => !isKioskFree.value)
 
 // ─── Inactivity timeout (2 minutes) ─────────────────────────────────────────
@@ -26,6 +28,8 @@ function resetTimer() {
 }
 
 async function onInactivity() {
+  const itemCount = sessionStore.selectionCount
+  if (itemCount > 0) track('session_abandoned', { item_count: itemCount })
   await sessionStore.clearSession()
   router.push('/')
 }
