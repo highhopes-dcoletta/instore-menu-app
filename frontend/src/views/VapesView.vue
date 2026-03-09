@@ -12,7 +12,7 @@ const { filtered, categoryProducts, facets } = useProductFilters((p) => p.Catego
     <div class="flex-1 min-w-0">
       <h1 class="mb-4 text-2xl font-black tracking-wide">Vapes</h1>
       <ProductControls />
-      <GroupableList :products="filtered" :groupers="['vape-potency', 'strain', 'price']" />
+      <GroupableList :products="filtered" :groupers="['vape-potency', 'strain', 'vape-price']" />
     </div>
     <aside class="w-40 shrink-0 pt-14">
       <FilterPanel :filters="['strain', 'size', 'tag']" :products="categoryProducts" :facets="facets" />

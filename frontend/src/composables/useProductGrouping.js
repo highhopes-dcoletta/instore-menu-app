@@ -53,20 +53,95 @@ export const GROUPERS = [
       return 'hybrid'
     },
   },
+  // ── Category-specific price groupers ────────────────────────────────────
   {
-    key: 'price',
+    key: 'flower-price',
     icon: '💰',
     label: 'Price',
     groupDefs: [
-      { key: 'value',   label: 'Value',   sub: 'Under $20',  bg: '#0d2618', accent: '#22c55e' },
-      { key: 'mid',     label: 'Mid',     sub: '$20–$50',    bg: '#0a1a28', accent: '#38bdf8' },
-      { key: 'premium', label: 'Premium', sub: 'Over $50',   bg: '#1a0828', accent: '#c084fc' },
+      { key: 'a', label: 'Budget',  sub: 'Under $28', bg: '#0d2618', accent: '#22c55e' },
+      { key: 'b', label: 'Mid',     sub: '$28–$35',   bg: '#2a1f08', accent: '#eab308' },
+      { key: 'c', label: 'Upper',   sub: '$35–$65',   bg: '#2a0e08', accent: '#f97316' },
+      { key: 'd', label: 'Premium', sub: 'Over $65',  bg: '#1e0808', accent: '#ef4444' },
     ],
     groupFn(product) {
-      const price = product.SalePrice ?? product.Price ?? 0
-      if (price < 20) return 'value'
-      if (price <= 50) return 'mid'
-      return 'premium'
+      const p = product.SalePrice ?? product.Price ?? 0
+      if (p < 28) return 'a'
+      if (p <= 35) return 'b'
+      if (p <= 65) return 'c'
+      return 'd'
+    },
+  },
+  {
+    key: 'preroll-price',
+    icon: '💰',
+    label: 'Price',
+    groupDefs: [
+      { key: 'a', label: 'Budget',  sub: 'Under $8',  bg: '#0d2618', accent: '#22c55e' },
+      { key: 'b', label: 'Mid',     sub: '$8–$12',    bg: '#2a1f08', accent: '#eab308' },
+      { key: 'c', label: 'Upper',   sub: '$12–$22',   bg: '#2a0e08', accent: '#f97316' },
+      { key: 'd', label: 'Premium', sub: 'Over $22',  bg: '#1e0808', accent: '#ef4444' },
+    ],
+    groupFn(product) {
+      const p = product.SalePrice ?? product.Price ?? 0
+      if (p < 8) return 'a'
+      if (p <= 12) return 'b'
+      if (p <= 22) return 'c'
+      return 'd'
+    },
+  },
+  {
+    key: 'edible-price',
+    icon: '💰',
+    label: 'Price',
+    groupDefs: [
+      { key: 'a', label: 'Budget',   sub: 'Under $10', bg: '#0d2618', accent: '#22c55e' },
+      { key: 'b', label: 'Mid',      sub: '$10–$20',   bg: '#2a1f08', accent: '#eab308' },
+      { key: 'c', label: 'Standard', sub: '$20–$25',   bg: '#2a0e08', accent: '#f97316' },
+      { key: 'd', label: 'Premium',  sub: 'Over $25',  bg: '#1e0808', accent: '#ef4444' },
+    ],
+    groupFn(product) {
+      const p = product.SalePrice ?? product.Price ?? 0
+      if (p <= 10) return 'a'
+      if (p <= 20) return 'b'
+      if (p <= 25) return 'c'
+      return 'd'
+    },
+  },
+  {
+    key: 'vape-price',
+    icon: '💰',
+    label: 'Price',
+    groupDefs: [
+      { key: 'a', label: 'Budget',  sub: 'Under $32', bg: '#0d2618', accent: '#22c55e' },
+      { key: 'b', label: 'Mid',     sub: '$32–$38',   bg: '#2a1f08', accent: '#eab308' },
+      { key: 'c', label: 'Upper',   sub: '$38–$55',   bg: '#2a0e08', accent: '#f97316' },
+      { key: 'd', label: 'Premium', sub: 'Over $55',  bg: '#1e0808', accent: '#ef4444' },
+    ],
+    groupFn(product) {
+      const p = product.SalePrice ?? product.Price ?? 0
+      if (p < 32) return 'a'
+      if (p <= 38) return 'b'
+      if (p <= 55) return 'c'
+      return 'd'
+    },
+  },
+  {
+    key: 'dab-price',
+    icon: '💰',
+    label: 'Price',
+    groupDefs: [
+      { key: 'a', label: 'Budget',  sub: 'Under $32', bg: '#0d2618', accent: '#22c55e' },
+      { key: 'b', label: 'Mid',     sub: '$32–$48',   bg: '#2a1f08', accent: '#eab308' },
+      { key: 'c', label: 'Upper',   sub: '$48–$60',   bg: '#2a0e08', accent: '#f97316' },
+      { key: 'd', label: 'Premium', sub: 'Over $60',  bg: '#1e0808', accent: '#ef4444' },
+    ],
+    groupFn(product) {
+      const p = product.SalePrice ?? product.Price ?? 0
+      if (p < 32) return 'a'
+      if (p <= 48) return 'b'
+      if (p <= 60) return 'c'
+      return 'd'
     },
   },
 ]
