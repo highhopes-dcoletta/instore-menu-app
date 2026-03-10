@@ -15,8 +15,8 @@ const showAll = ref(false)
 const bundleContainer = ref(null)
 const hasOverflow = ref(false)
 
-// Each bundle button is ~28px tall; gap-2 = 8px between rows; 3 rows = 100px
-const MAX_HEIGHT = 100 // px
+// Each bundle button is ~28px tall; gap-2 = 8px between rows; 2 rows = 64px
+const MAX_HEIGHT = 64 // px
 
 function checkOverflow() {
   if (!bundleContainer.value) return
