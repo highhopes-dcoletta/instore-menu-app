@@ -103,6 +103,7 @@ function addCrossSell(product) {
     price: product.Price ?? 0,
     image: product.Image ?? null,
     category: product.Category ?? '',
+    subcategory: product.Subcategory ?? '',
   }, 1)
   track('add_to_cart', { source: 'cross_sell', product_id: product.id, product_name: product.Name, category: product.Category })
 }

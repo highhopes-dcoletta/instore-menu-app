@@ -48,7 +48,7 @@ const selectedBundle = ref(null)
 
     <!-- Today's Deals -->
     <div v-if="bundlesEnabled && todaysDeals.length" class="w-full max-w-5xl">
-      <p class="text-xs font-bold uppercase tracking-widest text-gray-500 mb-3">Today's Deals</p>
+      <p class="text-xs font-bold uppercase tracking-widest text-gray-500 mb-3">Today's Bundles</p>
       <div class="flex flex-wrap gap-3">
         <button
           v-for="deal in todaysDeals"

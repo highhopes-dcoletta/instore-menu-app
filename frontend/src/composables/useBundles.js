@@ -21,7 +21,9 @@ function scheduleActive(bundle) {
  */
 export function computeAppliedDeals(selections) {
   const items = Object.values(selections)
-  const deals = []
+
+  // Compute raw savings for every eligible bundle
+  const candidates = []
 
   for (const bundle of BUNDLES) {
     if (!scheduleActive(bundle)) continue
@@ -41,7 +43,7 @@ export function computeAppliedDeals(selections) {
       const savings      = normalTotal - bundleTotal
       if (savings <= 0) continue
 
-      deals.push({ id: bundle.id, label: bundle.label, savings })
+      candidates.push({ id: bundle.id, label: bundle.label, savings, group: bundle.group })
 
     } else if (bundle.type === 'timed') {
       const normalTotal = matching.reduce((s, i) => s + i.price * i.qty, 0)
@@ -50,11 +52,20 @@ export function computeAppliedDeals(selections) {
       const savings     = normalTotal - bundleTotal
       if (savings <= 0) continue
 
-      deals.push({ id: bundle.id, label: bundle.label, savings })
+      candidates.push({ id: bundle.id, label: bundle.label, savings, group: bundle.group })
     }
   }
 
-  return deals
+  // Within each group, keep only the deal with the highest savings (no stacking)
+  const best = new Map() // group key → best candidate
+  for (const c of candidates) {
+    const key = c.group ?? c.id  // ungrouped bundles are their own group
+    if (!best.has(key) || c.savings > best.get(key).savings) {
+      best.set(key, c)
+    }
+  }
+
+  return Array.from(best.values()).map(({ id, label, savings }) => ({ id, label, savings }))
 }
 
 // ── Reactive composable for the cart ─────────────────────────────────────────

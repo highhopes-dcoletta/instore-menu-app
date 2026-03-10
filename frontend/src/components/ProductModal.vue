@@ -27,6 +27,7 @@ function updateQty(delta, event) {
       price: props.product.Price ?? 0,
       image: props.product.Image ?? null,
       category: props.product.Category ?? '',
+      subcategory: props.product.Subcategory ?? '',
     }, delta), BUBBLE_DURATION)
   } else {
     session.updateQuantity(props.product.id, {
@@ -35,6 +36,7 @@ function updateQty(delta, event) {
       price: props.product.Price ?? 0,
       image: props.product.Image ?? null,
       category: props.product.Category ?? '',
+      subcategory: props.product.Subcategory ?? '',
     }, delta)
   }
 }

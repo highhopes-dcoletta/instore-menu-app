@@ -111,6 +111,7 @@ function addToCart(product, event) {
     price:       product.Price ?? 0,
     image:       product.Image ?? null,
     category:    product.Category ?? '',
+    subcategory: product.Subcategory ?? '',
   }, 1), BUBBLE_DURATION)
 }
 
@@ -121,6 +122,7 @@ function removeFromCart(product) {
     price:      product.Price ?? 0,
     image:      product.Image ?? null,
     category:   product.Category ?? '',
+    subcategory: product.Subcategory ?? '',
   }, -1)
 }
 

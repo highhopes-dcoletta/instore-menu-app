@@ -6,7 +6,7 @@ const API_BASE = '/api'
 
 export const useSessionStore = defineStore('session', () => {
   const sessionId = ref(null)
-  const selections = ref({}) // productId -> { name, unitWeight, price }
+  const selections = ref({}) // productId -> { name, unitWeight, price, category, subcategory, image, qty }
 
   const selectionCount = computed(() =>
     Object.values(selections.value).reduce((sum, s) => sum + (s.qty ?? 1), 0)
@@ -62,7 +62,7 @@ export const useSessionStore = defineStore('session', () => {
   /**
    * Increment or decrement the quantity of a product.
    * delta: +1 to add, -1 to remove one. Removes product when qty reaches 0.
-   * productData: { name, unitWeight, price }
+   * productData: { name, unitWeight, price, category, subcategory, image }
    */
   async function updateQuantity(productId, productData, delta) {
     const currentQty = selections.value[productId]?.qty ?? 0

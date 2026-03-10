@@ -123,6 +123,7 @@ function adjust(product, delta) {
     price: product.Price ?? 0,
     image: product.Image ?? null,
     category: product.Category ?? '',
+    subcategory: product.Subcategory ?? '',
   }, delta)
 }
 
