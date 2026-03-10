@@ -146,10 +146,10 @@ function pickForMe() {
 <template>
   <Teleport to="body">
     <div
-      class="fixed inset-0 z-50 flex items-end justify-center bg-black/50"
+      class="fixed inset-0 z-50 flex items-start justify-center bg-black/50"
       @click.self="emit('close')"
     >
-      <div class="relative w-full max-w-lg bg-white rounded-t-2xl p-6 max-h-[75vh] flex flex-col overflow-hidden">
+      <div class="relative w-full max-w-lg bg-white rounded-b-2xl p-6 max-h-[75vh] flex flex-col overflow-hidden">
 
         <!-- Fireworks canvas — sits over the modal, pointer-events off -->
         <canvas
