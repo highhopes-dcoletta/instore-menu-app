@@ -300,6 +300,15 @@ export const BUNDLES = [
     bundlePrice: 35,
   },
   {
+    id: 'wyld-2',
+    label: 'Any 2 Wyld Gummies — $35 (Wednesdays)',
+    type: 'quantity',
+    match: (item) => /\bwyld\b/i.test(item.name),
+    schedule: { days: [3] },
+    quantity: 2,
+    bundlePrice: 35,
+  },
+  {
     id: 'mindys-2',
     label: "Mindy's — 2 for $35",
     type: 'quantity',
