@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useProductsStore } from '@/stores/products'
 import { useSessionStore } from '@/stores/session'
 import { useCartAnimation } from '@/composables/useCartAnimation'
@@ -10,7 +11,10 @@ import { scoreProduct, getRecommendations } from '@/utils/recommendations'
 import { useAnalytics } from '@/composables/useAnalytics'
 import { useProductBundles } from '@/composables/useBundles'
 import { useFeatureFlags } from '@/composables/useFeatureFlags'
+import { perUnitLabel } from '@/composables/useProductGrouping'
 import ProductModal from '@/components/ProductModal.vue'
+
+const { t } = useI18n()
 
 const router = useRouter()
 const productsStore = useProductsStore()
@@ -29,32 +33,29 @@ const answers = ref({ experience: null, effect: null, method: null })
 const STEPS = [
   {
     key: 'experience',
-    question: 'How familiar are you with cannabis?',
     options: [
-      { value: 'new',        emoji: '🌱', label: 'New to this',     sub: 'Mild and approachable' },
-      { value: 'occasional', emoji: '🌿', label: 'Occasional user', sub: 'Some experience' },
-      { value: 'regular',    emoji: '💨', label: 'Regular user',    sub: 'I know what I like' },
+      { value: 'new',        emoji: '🌱' },
+      { value: 'occasional', emoji: '🌿' },
+      { value: 'regular',    emoji: '💨' },
     ],
   },
   {
     key: 'effect',
-    question: 'What are you looking for today?',
     options: [
-      { value: 'relax',    emoji: '😌', label: 'Relax & unwind',   sub: 'Take the edge off' },
-      { value: 'sleep',    emoji: '😴', label: 'Help me sleep',    sub: 'Deep, restful sleep' },
-      { value: 'energize', emoji: '⚡', label: 'Energy & focus',   sub: 'Get things done' },
-      { value: 'social',   emoji: '🎉', label: 'Fun & social',     sub: 'Good vibes' },
-      { value: 'pain',     emoji: '💪', label: 'Pain or stress',   sub: 'Relief and comfort' },
+      { value: 'relax',    emoji: '😌' },
+      { value: 'sleep',    emoji: '😴' },
+      { value: 'energize', emoji: '⚡' },
+      { value: 'social',   emoji: '🎉' },
+      { value: 'pain',     emoji: '💪' },
     ],
   },
   {
     key: 'method',
-    question: 'How do you prefer to consume?',
     options: [
-      { value: 'flower',  emoji: '🌸', label: 'Flower',         sub: 'Smoke or pack a bowl' },
-      { value: 'edibles', emoji: '🍬', label: 'Edibles',        sub: 'Gummies, chocolates, drinks' },
-      { value: 'vape',    emoji: '💨', label: 'Vape',           sub: 'Discreet and easy' },
-      { value: 'any',     emoji: '🤷', label: 'No preference',  sub: 'Show me everything' },
+      { value: 'flower',  emoji: '🌸' },
+      { value: 'edibles', emoji: '🍬' },
+      { value: 'vape',    emoji: '💨' },
+      { value: 'any',     emoji: '🤷' },
     ],
   },
 ]
@@ -159,7 +160,7 @@ function displayPrice(p) {
 
     <!-- Question -->
     <h1 class="text-white text-3xl font-black text-center mb-10 max-w-lg">
-      {{ currentStep.question }}
+      {{ t(`guided.${currentStep.key}.question`) }}
     </h1>
 
     <!-- Options -->
@@ -174,8 +175,8 @@ function displayPrice(p) {
         class="flex flex-col items-center justify-center gap-2 rounded-2xl bg-gray-800 text-white p-6 active:bg-teal-700 transition-colors aspect-square"
       >
         <span class="text-4xl">{{ opt.emoji }}</span>
-        <span class="font-black text-base text-center leading-tight">{{ opt.label }}</span>
-        <span class="text-xs text-gray-400 text-center leading-tight">{{ opt.sub }}</span>
+        <span class="font-black text-base text-center leading-tight">{{ t(`guided.${currentStep.key}.${opt.value}`) }}</span>
+        <span class="text-xs text-gray-400 text-center leading-tight">{{ t(`guided.${currentStep.key}.${opt.value}Sub`) }}</span>
       </button>
     </div>
 
@@ -185,11 +186,11 @@ function displayPrice(p) {
         v-if="step > 1"
         @click="back"
         class="px-5 py-3 rounded-xl bg-gray-800 text-white font-bold text-base active:bg-gray-700 transition-colors"
-      >← Back</button>
+      >{{ t('guided.back') }}</button>
       <button
         @click="router.push('/')"
         class="px-5 py-3 rounded-xl bg-gray-800 text-white font-bold text-base active:bg-gray-700 transition-colors"
-      >Browse full menu</button>
+      >{{ t('guided.browseFullMenu') }}</button>
     </div>
   </main>
 
@@ -197,13 +198,13 @@ function displayPrice(p) {
   <main v-else class="p-8 bg-gray-950 min-h-[calc(100vh-3rem)]">
     <div class="max-w-6xl mx-auto">
       <div class="flex items-center justify-between mb-2">
-        <h1 class="text-white text-2xl font-black">Our top picks for you</h1>
+        <h1 class="text-white text-2xl font-black">{{ t('guided.results.title') }}</h1>
         <button
           @click="router.push('/')"
           class="px-5 py-3 rounded-xl bg-gray-800 text-white font-bold text-base active:bg-gray-700 transition-colors"
-        >Browse full menu →</button>
+        >{{ t('guided.results.browseMenu') }}</button>
       </div>
-      <p class="text-gray-500 text-sm mb-8">Add items to your cart and show your budtender when you're ready.</p>
+      <p class="text-gray-500 text-sm mb-8">{{ t('guided.results.addHint') }}</p>
 
       <div class="grid grid-cols-4 gap-4">
         <div
@@ -258,7 +259,10 @@ function displayPrice(p) {
               </span>
             </div>
             <div class="flex items-center justify-between mt-auto pt-2">
-              <span class="text-teal-400 font-black text-sm">{{ displayPrice(p) }}</span>
+              <div class="flex flex-col leading-tight">
+                <span class="text-teal-400 font-black text-sm">{{ displayPrice(p) }}</span>
+                <span v-if="perUnitLabel(p)" class="text-gray-500 text-xs">{{ perUnitLabel(p) }}</span>
+              </div>
 
               <!-- +/- controls -->
               <div v-if="qty(p.id) > 0" class="flex items-center gap-2">
@@ -285,7 +289,7 @@ function displayPrice(p) {
       <button
         @click="back"
         class="mt-8 px-5 py-3 rounded-xl bg-gray-800 text-white font-bold text-base active:bg-gray-700 transition-colors"
-      >← Change my answers</button>
+      >{{ t('guided.results.changeAnswers') }}</button>
     </div>
   </main>
 

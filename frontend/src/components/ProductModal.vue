@@ -1,8 +1,12 @@
 <script setup>
 import { computed, onMounted, onUnmounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useSessionStore } from '@/stores/session'
 import { useCartAnimation } from '@/composables/useCartAnimation'
 import { useAnalytics } from '@/composables/useAnalytics'
+import { perUnitLabel } from '@/composables/useProductGrouping'
+
+const { t } = useI18n()
 
 const props = defineProps({
   product: { type: Object, required: true },
@@ -65,7 +69,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
         <button
           @click="emit('close')"
           class="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-2xl leading-none"
-          aria-label="Close"
+          :aria-label="t('msg.close')"
         >&times;</button>
 
         <!-- Image -->
@@ -80,9 +84,10 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
         <h2 class="text-3xl font-black text-gray-800 mb-2">{{ product.Name }}</h2>
 
         <!-- Price -->
-        <p v-if="product.Price != null" class="text-lg text-gray-700 mb-4">
-          ${{ product.Price }}
-        </p>
+        <div v-if="product.Price != null" class="mb-4">
+          <span class="text-lg text-gray-700">${{ product.Price }}</span>
+          <span v-if="perUnitLabel(product)" class="ml-2 text-sm text-gray-400">{{ perUnitLabel(product) }}</span>
+        </div>
 
         <!-- Description -->
         <p v-if="product.Description" class="text-gray-500 leading-relaxed mb-6">
@@ -95,7 +100,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
             <button
               @click="updateQty(1, $event)"
               class="flex-1 py-3 rounded-xl bg-teal-500 text-white font-bold text-base hover:bg-teal-600 active:bg-teal-700 transition-colors"
-            >Add to Cart</button>
+            >{{ t('cart.addToCart') }}</button>
           </template>
           <template v-else>
             <button

@@ -17,8 +17,11 @@
 <script setup>
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { strainLabel } from '@/utils/strainLabels'
 import { useAnalytics } from '@/composables/useAnalytics'
+
+const { t } = useI18n()
 
 const props = defineProps({
   filters: { type: Array, default: () => [] },
@@ -111,18 +114,18 @@ const CATEGORY_OPTS = [
 
     <!-- Brand — single toggle for High Hopes house brand -->
     <div v-if="filters.includes('brand')">
-      <div class="label">Brand</div>
+      <div class="label">{{ t('msg.filterBrand') }}</div>
       <div class="flex justify-end">
         <button
           @click="isActive('brand', 'High Hopes') ? clear('brand') : set('brand', 'High Hopes')"
           :class="['chip', isActive('brand', 'High Hopes') ? 'chip-on' : 'chip-off']"
-        >High Hopes Only</button>
+        >{{ t('msg.highHopesOnly') }}</button>
       </div>
     </div>
 
     <!-- Strain -->
     <div v-if="filters.includes('strain') && strainOptions.length">
-      <div class="label">Strain</div>
+      <div class="label">{{ t('msg.filterStrain') }}</div>
       <div class="flex flex-wrap gap-1.5 justify-end">
         <button
           v-for="opt in strainOptions"
@@ -135,7 +138,7 @@ const CATEGORY_OPTS = [
 
     <!-- Size -->
     <div v-if="filters.includes('size') && sizeOptions.length">
-      <div class="label">Size</div>
+      <div class="label">{{ t('msg.filterSize') }}</div>
       <div class="flex flex-wrap gap-1.5 justify-end">
         <button
           v-for="opt in sizeOptions"
@@ -148,18 +151,18 @@ const CATEGORY_OPTS = [
 
     <!-- Pre-Ground — single toggle -->
     <div v-if="filters.includes('preground')">
-      <div class="label">Pre-Ground?</div>
+      <div class="label">{{ t('msg.filterPreground') }}</div>
       <div class="flex justify-end">
         <button
           @click="isActive('preground', 'yes') ? clear('preground') : set('preground', 'yes')"
           :class="['chip', isActive('preground', 'yes') ? 'chip-on' : 'chip-off']"
-        >Pre-Ground Only</button>
+        >{{ t('msg.preGroundOnly') }}</button>
       </div>
     </div>
 
     <!-- Packaging -->
     <div v-if="filters.includes('packaging')">
-      <div class="label">Packaging</div>
+      <div class="label">{{ t('msg.filterPackaging') }}</div>
       <div class="flex flex-wrap gap-1.5 justify-end">
         <button
           v-for="opt in ['SINGLES', 'PACKS']"
@@ -172,22 +175,22 @@ const CATEGORY_OPTS = [
 
     <!-- Infused -->
     <div v-if="filters.includes('infused')">
-      <div class="label">Infused?</div>
+      <div class="label">{{ t('msg.filterInfused') }}</div>
       <div class="flex flex-wrap gap-1.5 justify-end">
         <button
           @click="isActive('infused', 'yes') ? clear('infused') : set('infused', 'yes')"
           :class="['chip', isActive('infused', 'yes') ? 'chip-on' : 'chip-off']"
-        >Infused Only</button>
+        >{{ t('msg.infusedOnly') }}</button>
         <button
           @click="isActive('infused', 'no') ? clear('infused') : set('infused', 'no')"
           :class="['chip', isActive('infused', 'no') ? 'chip-on' : 'chip-off']"
-        >Non-Infused Only</button>
+        >{{ t('msg.nonInfusedOnly') }}</button>
       </div>
     </div>
 
     <!-- Vape type tags -->
     <div v-if="filters.includes('tag')">
-      <div class="label">Type</div>
+      <div class="label">{{ t('msg.filterType') }}</div>
       <div class="flex flex-wrap gap-1.5 justify-end">
         <button
           v-for="opt in VAPE_TAGS"
@@ -200,7 +203,7 @@ const CATEGORY_OPTS = [
 
     <!-- Category chips (Sleep / Pain) -->
     <div v-if="filters.includes('category')">
-      <div class="label">Category</div>
+      <div class="label">{{ t('msg.filterCategory') }}</div>
       <div class="flex flex-wrap gap-1.5 justify-end">
         <button
           v-for="opt in CATEGORY_OPTS"

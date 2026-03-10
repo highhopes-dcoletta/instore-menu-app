@@ -1,0 +1,43 @@
+{
+  "experience": {
+    "question": "How familiar are you with cannabis?",
+    "new": "New to this",
+    "newSub": "Mild and approachable",
+    "occasional": "Occasional user",
+    "occasionalSub": "Some experience",
+    "regular": "Regular user",
+    "regularSub": "I know what I like"
+  },
+  "effect": {
+    "question": "What are you looking for today?",
+    "relax": "Relax & unwind",
+    "relaxSub": "Take the edge off",
+    "sleep": "Help me sleep",
+    "sleepSub": "Deep, restful sleep",
+    "energize": "Energy & focus",
+    "energizeSub": "Get things done",
+    "social": "Fun & social",
+    "socialSub": "Good vibes",
+    "pain": "Pain or stress",
+    "painSub": "Relief and comfort"
+  },
+  "method": {
+    "question": "How do you prefer to consume?",
+    "flower": "Flower",
+    "flowerSub": "Smoke or pack a bowl",
+    "edibles": "Edibles",
+    "ediblesSub": "Gummies, chocolates, drinks",
+    "vape": "Vape",
+    "vapeSub": "Discreet and easy",
+    "any": "No preference",
+    "anySub": "Show me everything"
+  },
+  "results": {
+    "title": "Our top picks for you",
+    "browseMenu": "Browse full menu →",
+    "addHint": "Add items to your cart and show your budtender when you're ready.",
+    "changeAnswers": "← Change my answers"
+  },
+  "back": "← Back",
+  "browseFullMenu": "Browse full menu"
+}

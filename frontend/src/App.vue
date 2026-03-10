@@ -1,12 +1,15 @@
 <script setup>
 import { computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useProductsStore } from '@/stores/products'
 import { useSessionStore } from '@/stores/session'
 import NavBar from '@/components/NavBar.vue'
 import CartPanel from '@/components/CartPanel.vue'
 import CartAnimation from '@/components/CartAnimation.vue'
 import { useAnalytics } from '@/composables/useAnalytics'
+
+const { t } = useI18n()
 
 const route = useRoute()
 const router = useRouter()
@@ -72,11 +75,11 @@ onUnmounted(() => {
   <template v-else>
     <div v-if="productsStore.loading" class="flex flex-col items-center justify-center h-screen gap-4 pr-72">
       <div class="h-10 w-10 animate-spin rounded-full border-4 border-teal-500 border-t-transparent"></div>
-      <p class="text-gray-500 text-lg">Loading menu...</p>
+      <p class="text-gray-500 text-lg">{{ t('msg.loading') }}</p>
     </div>
     <div v-else-if="productsStore.error" class="flex items-center justify-center h-screen px-8 pr-72">
       <p class="text-center text-xl text-gray-700 max-w-lg leading-relaxed">
-        Menu temporarily unavailable — please ask a budtender for assistance.
+        {{ t('msg.unavailable') }}
       </p>
     </div>
     <div v-else class="pr-72">

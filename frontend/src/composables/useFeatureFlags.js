@@ -1,11 +1,11 @@
 import { ref } from 'vue'
 
 // Singleton — checked on module load (i.e. each full page load).
-// No sessionStorage/localStorage persistence: the flag is only active
-// when ?bundles=1 is present in the URL.
+// Defaults to enabled; pass ?bundles=0 in the URL to disable.
 function readBundlesFlag() {
-  if (typeof window === 'undefined') return false
-  return new URLSearchParams(window.location.search).get('bundles') === '1'
+  if (typeof window === 'undefined') return true
+  const param = new URLSearchParams(window.location.search).get('bundles')
+  return param === null ? true : param !== '0'
 }
 
 export const bundlesEnabled = ref(readBundlesFlag())

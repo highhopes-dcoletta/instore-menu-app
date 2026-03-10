@@ -1,10 +1,13 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { calcQuota } from '@/utils/quotaCalc'
 import { useAnalytics } from '@/composables/useAnalytics'
 import { computeAppliedDeals } from '@/composables/useBundles'
 import { useFeatureFlags } from '@/composables/useFeatureFlags'
+
+const { t } = useI18n()
 
 const route = useRoute()
 const { track } = useAnalytics()
@@ -56,7 +59,7 @@ const adjustedSubtotal = computed(() => subtotal.value - totalDiscount.value)
     <div class="bg-teal-600 text-white px-5 py-4">
       <div class="max-w-lg mx-auto">
         <div class="text-xs font-bold uppercase tracking-widest text-teal-200 mb-0.5">High Hopes</div>
-        <h1 class="text-xl font-black">Your Saved Cart</h1>
+        <h1 class="text-xl font-black">{{ t('cart.savedCart') }}</h1>
       </div>
     </div>
 
@@ -70,21 +73,21 @@ const adjustedSubtotal = computed(() => subtotal.value - totalDiscount.value)
       <!-- Not found / expired / any error -->
       <div v-else-if="notFound" class="text-center py-16">
         <p class="text-2xl mb-2">😕</p>
-        <p class="text-gray-700 font-semibold">This cart has expired.</p>
-        <p class="text-gray-400 text-sm mt-1">Kiosk carts expire after 15 minutes of inactivity.</p>
+        <p class="text-gray-700 font-semibold">{{ t('cart.cartExpired') }}</p>
+        <p class="text-gray-400 text-sm mt-1">{{ t('cart.cartExpiredSub') }}</p>
       </div>
 
       <!-- Unexpected error (non-404 failure) -->
       <div v-else-if="!session" class="text-center py-16">
         <p class="text-2xl mb-2">😕</p>
-        <p class="text-gray-700 font-semibold">Couldn't load this cart.</p>
+        <p class="text-gray-700 font-semibold">{{ t('cart.cantLoadCart') }}</p>
         <p class="text-gray-400 text-sm mt-1">Check the console for details.</p>
       </div>
 
       <!-- Cart items -->
       <template v-else-if="session">
         <p class="text-sm text-gray-400 mb-5">
-          Here's what was in the cart when you scanned. See the budtender to place your order!
+          {{ t('cart.cartShareIntro') }}
         </p>
 
         <ul class="flex flex-col gap-4">
@@ -113,8 +116,8 @@ const adjustedSubtotal = computed(() => subtotal.value - totalDiscount.value)
         <div v-if="quota?.overLimit" class="mt-4 rounded-2xl bg-red-500 text-white px-4 py-3 flex items-start gap-3">
           <span class="text-xl leading-none shrink-0">⚠️</span>
           <div>
-            <p class="text-sm font-black uppercase tracking-wide leading-none mb-1">Over Daily Limit</p>
-            <p class="text-sm leading-snug opacity-90">This cart exceeds the 28g daily limit. A budtender will help you adjust your order when you visit.</p>
+            <p class="text-sm font-black uppercase tracking-wide leading-none mb-1">{{ t('cart.overLimitTitle') }}</p>
+            <p class="text-sm leading-snug opacity-90">{{ t('cart.overLimitShareMessage') }}</p>
           </div>
         </div>
 
@@ -122,7 +125,7 @@ const adjustedSubtotal = computed(() => subtotal.value - totalDiscount.value)
         <div class="mt-6 bg-white rounded-2xl shadow-sm px-5 py-4 flex flex-col gap-2">
           <div class="flex justify-between text-sm"
             :class="bundlesEnabled && appliedDeals.length ? 'text-gray-400 line-through' : 'text-gray-500'">
-            <span>Subtotal (before tax)</span>
+            <span>{{ t('cart.subtotalBeforeTax') }}</span>
             <span class="tabular-nums">${{ subtotal.toFixed(2) }}</span>
           </div>
           <template v-if="bundlesEnabled">
@@ -131,19 +134,19 @@ const adjustedSubtotal = computed(() => subtotal.value - totalDiscount.value)
               <span class="font-bold text-green-600 tabular-nums">-${{ deal.savings.toFixed(2) }}</span>
             </div>
             <div v-if="appliedDeals.length" class="flex justify-between text-sm text-gray-700 font-semibold">
-              <span>Deal price</span>
+              <span>{{ t('cart.dealPrice') }}</span>
               <span class="tabular-nums">${{ adjustedSubtotal.toFixed(2) }}</span>
             </div>
           </template>
           <div class="flex justify-between font-black text-gray-800 border-t border-gray-100 pt-2 mt-1">
-            <span>Est. total (20% tax)</span>
+            <span>{{ t('cart.estTotal') }}</span>
             <span class="tabular-nums">${{ ((bundlesEnabled ? adjustedSubtotal : subtotal) * 1.2).toFixed(2) }}</span>
           </div>
         </div>
 
         <p class="mt-6 text-center text-xs text-gray-400 leading-relaxed">
-          Prices and availability are subject to change.<br>
-          This cart is for reference only — place your order at the kiosk or with a budtender.
+          {{ t('cart.cartDisclaimer') }}<br>
+          {{ t('cart.cartDisclaimerSub') }}
         </p>
       </template>
 

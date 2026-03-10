@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { createRouter, createMemoryHistory } from 'vue-router'
+import { createI18n } from 'vue-i18n'
 import { defineComponent, nextTick } from 'vue'
 
 // ─── Minimal stubs ────────────────────────────────────────────────────────────
@@ -59,10 +60,11 @@ async function mountApp(initialPath = '/') {
   const router = makeRouter(initialPath)
   await router.push(initialPath)
 
+  const i18n = createI18n({ legacy: false, locale: 'en', messages: { en: {} } })
   const { default: App } = await import('./App.vue')
   currentWrapper = mount(App, {
     global: {
-      plugins: [createPinia(), router],
+      plugins: [createPinia(), router, i18n],
     },
   })
   return currentWrapper

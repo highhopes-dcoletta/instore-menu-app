@@ -1,6 +1,7 @@
 <script setup>
 import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useSessionStore } from '@/stores/session'
 import ProductModal from './ProductModal.vue'
 import { strainLabel } from '@/utils/strainLabels'
@@ -9,6 +10,8 @@ import { useDragToCart } from '@/composables/useDragToCart'
 import { useAnalytics } from '@/composables/useAnalytics'
 import { useProductBundles } from '@/composables/useBundles'
 import { useFeatureFlags } from '@/composables/useFeatureFlags'
+import { perUnitLabel } from '@/composables/useProductGrouping'
+import { perItemPotency } from '@/utils/potencyLevel'
 
 const props = defineProps({
   products:  { type: Array,   required: true },
@@ -24,6 +27,7 @@ const { startDrag } = useDragToCart()
 const { track } = useAnalytics()
 const { activeBundlesForProduct } = useProductBundles()
 const { bundlesEnabled } = useFeatureFlags()
+const { t } = useI18n()
 
 // ── Modal ─────────────────────────────────────────────────────────────────────
 
@@ -130,7 +134,7 @@ function stockBars(qty) {
 function potency(product) {
   if (product.Potency == null) return '—'
   const unit = product['Potency Unit'] ?? '%'
-  const val = String(product.Potency).replace(/[^0-9.]/g, '')
+  const val = String(perItemPotency(product)).replace(/[^0-9.]/g, '')
   return `${val}${unit}`
 }
 </script>
@@ -145,7 +149,7 @@ function potency(product) {
               v-if="sortable && route.query.sort"
               @click="router.replace({ query: { ...route.query, sort: undefined, dir: undefined } })"
               class="text-xs font-semibold text-gray-400 hover:text-teal-600 transition-colors whitespace-nowrap"
-            >↺ Popularity</button>
+            >{{ t('msg.popularity') }}</button>
           </th>
 
           <th v-if="columns.includes('name')" class="pb-3 pr-6">
@@ -153,8 +157,8 @@ function potency(product) {
               v-if="sortable"
               @click="sortBy('name')"
               :class="['hover:text-teal-600 transition-colors', isActiveSort('name') && 'text-teal-600']"
-            >Name{{ sortIcon('name') }}</button>
-            <span v-else>Name</span>
+            >{{ t('msg.name') }}{{ sortIcon('name') }}</button>
+            <span v-else>{{ t('msg.name') }}</span>
           </th>
 
           <th v-if="columns.includes('strain')" class="pb-3 pr-6">
@@ -162,8 +166,8 @@ function potency(product) {
               v-if="sortable"
               @click="sortBy('strain')"
               :class="['hover:text-teal-600 transition-colors', isActiveSort('strain') && 'text-teal-600']"
-            >Strain{{ sortIcon('strain') }}</button>
-            <span v-else>Strain</span>
+            >{{ t('msg.strain') }}{{ sortIcon('strain') }}</button>
+            <span v-else>{{ t('msg.strain') }}</span>
           </th>
 
           <th v-if="columns.includes('potency')" class="pb-3 pr-6">
@@ -171,8 +175,8 @@ function potency(product) {
               v-if="sortable"
               @click="sortBy('potency')"
               :class="['hover:text-teal-600 transition-colors', isActiveSort('potency') && 'text-teal-600']"
-            >Potency (TAC){{ sortIcon('potency') }}</button>
-            <span v-else>Potency (TAC)</span>
+            >{{ t('msg.potency') }}{{ sortIcon('potency') }}</button>
+            <span v-else>{{ t('msg.potency') }}</span>
           </th>
 
           <th v-if="columns.includes('price')" class="pb-3">
@@ -180,8 +184,8 @@ function potency(product) {
               v-if="sortable"
               @click="sortBy('price')"
               :class="['hover:text-teal-600 transition-colors', isActiveSort('price') && 'text-teal-600']"
-            >Price{{ sortIcon('price') }}</button>
-            <span v-else>Price</span>
+            >{{ t('msg.price') }}{{ sortIcon('price') }}</button>
+            <span v-else>{{ t('msg.price') }}</span>
           </th>
 
           <th v-if="columns.includes('stock')" class="pb-3 pl-4">
@@ -189,8 +193,8 @@ function potency(product) {
               v-if="sortable"
               @click="sortBy('stock')"
               :class="['hover:text-teal-600 transition-colors', isActiveSort('stock') && 'text-teal-600']"
-            >Stock{{ sortIcon('stock') }}</button>
-            <span v-else>Stock</span>
+            >{{ t('msg.stock') }}{{ sortIcon('stock') }}</button>
+            <span v-else>{{ t('msg.stock') }}</span>
           </th>
         </tr>
       </thead>
@@ -262,7 +266,8 @@ function potency(product) {
             {{ potency(product) }}
           </td>
           <td v-if="columns.includes('price')" class="py-4 tabular-nums text-slate-700">
-            {{ product.Price != null ? `$${product.Price}` : '—' }}
+            <div>{{ product.Price != null ? `$${product.Price}` : '—' }}</div>
+            <div v-if="perUnitLabel(product)" class="text-xs text-gray-400">{{ perUnitLabel(product) }}</div>
           </td>
 
           <td v-if="columns.includes('stock')" class="py-4 pl-4">
@@ -276,7 +281,7 @@ function potency(product) {
 
         <tr v-if="products.length === 0">
           <td :colspan="columns.length + 1" class="py-12 text-center text-gray-400">
-            No products match your filters.
+            {{ t('msg.noResults') }}
           </td>
         </tr>
       </tbody>

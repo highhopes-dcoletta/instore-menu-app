@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useSessionStore } from '@/stores/session'
 import { useProductsStore } from '@/stores/products'
 import { useCartAnimation } from '@/composables/useCartAnimation'
@@ -15,6 +16,7 @@ import BundleDealModal from '@/components/BundleDealModal.vue'
 import QRCode from 'qrcode'
 
 const { track } = useAnalytics()
+const { t } = useI18n()
 
 const session = useSessionStore()
 const productsStore = useProductsStore()
@@ -25,7 +27,7 @@ watch(() => productsStore.outOfStockNotice, (names) => {
   if (!names.length) return
   const listed = names.slice(0, 2).join(', ')
   const extra = names.length > 2 ? ` + ${names.length - 2} more` : ''
-  fireToast(`Removed from cart (out of stock): ${listed}${extra}`)
+  fireToast(t('cart.outOfStock', { items: `${listed}${extra}` }))
   productsStore.outOfStockNotice = []
 })
 const router = useRouter()
@@ -233,7 +235,7 @@ async function sendToBudtender() {
     orderNumber.value = num
     startCountdown()
   } else {
-    fireToast('Failed to send order — please try again.')
+    fireToast(t('cart.sendFailed'))
   }
 }
 
@@ -271,7 +273,7 @@ function resetReminderTimer() {
   clearTimeout(reminderTimer)
   if (!isEmpty.value && orderNumber.value == null) {
     reminderTimer = setTimeout(() => {
-      fireToast("When you're done, tap Send to Budtender")
+      fireToast(t('cart.reminderToast'))
       clearTimeout(wiggleTimer)
       wiggle.value = false
       nextTick(() => {
@@ -309,8 +311,8 @@ onUnmounted(() => {
       class="px-4 py-3 border-b border-gray-100 text-xs font-bold uppercase tracking-widest shrink-0 flex items-center justify-between"
       :class="isOverCart ? 'text-teal-500' : 'text-gray-400'"
     >
-      Your Cart
-      <span v-if="isOverCart" class="normal-case tracking-normal font-semibold text-teal-500">Drop to add</span>
+      {{ t('cart.title') }}
+      <span v-if="isOverCart" class="normal-case tracking-normal font-semibold text-teal-500">{{ t('cart.dropToAdd') }}</span>
     </div>
 
     <!-- Order confirmed view -->
@@ -319,7 +321,7 @@ onUnmounted(() => {
         #{{ String(orderNumber).padStart(2, '0') }}
       </div>
       <p class="text-gray-700 font-semibold text-sm leading-snug">
-        Your order has been sent!<br>A budtender will call your number shortly.
+        {{ t('cart.orderSent') }}<br>{{ t('cart.budtenderCallNumber') }}
       </p>
     </div>
 
@@ -339,15 +341,15 @@ onUnmounted(() => {
             wiggle && !isEmpty ? 'wiggle' : '',
           ]"
         >
-          {{ submitting ? 'Sending…' : 'Send to Budtender' }}
+          {{ submitting ? t('cart.sending') : t('cart.sendToBudtender') }}
         </button>
 
         <!-- Over-limit warning -->
         <div v-if="quota.overLimit && !isEmpty" class="mt-2 rounded-lg bg-red-500 text-white px-3 py-2.5 flex items-start gap-2">
           <span class="text-lg leading-none shrink-0">⚠️</span>
           <div>
-            <p class="text-xs font-black uppercase tracking-wide leading-none mb-0.5">Over Daily Limit</p>
-            <p class="text-xs leading-snug opacity-90">Your cart exceeds the 28g daily limit. A budtender will assist you.</p>
+            <p class="text-xs font-black uppercase tracking-wide leading-none mb-0.5">{{ t('cart.overLimitTitle') }}</p>
+            <p class="text-xs leading-snug opacity-90">{{ t('cart.overLimitMessage') }}</p>
           </div>
         </div>
       </div>
@@ -356,16 +358,16 @@ onUnmounted(() => {
       <div v-if="qrDataUrl && !isEmpty" class="px-4 pt-1 pb-3 border-b border-gray-100 shrink-0 flex flex-col items-center gap-2">
         <div class="flex items-center gap-2 w-full">
           <div class="flex-1 h-px bg-gray-200"></div>
-          <span class="text-xs font-bold text-gray-400 uppercase tracking-widest">or</span>
+          <span class="text-xs font-bold text-gray-400 uppercase tracking-widest">{{ t('cart.or') }}</span>
           <div class="flex-1 h-px bg-gray-200"></div>
         </div>
-        <p class="text-center text-xs font-semibold text-gray-500">Copy your cart to your phone!</p>
+        <p class="text-center text-xs font-semibold text-gray-500">{{ t('cart.copyToPhone') }}</p>
         <img :src="qrDataUrl" width="200" height="200" alt="Cart QR code" class="rounded-lg" />
       </div>
 
       <!-- Empty state -->
       <div v-if="isEmpty" class="flex-1 flex items-center justify-center">
-        <p class="text-gray-300 text-sm">Cart is empty</p>
+        <p class="text-gray-300 text-sm">{{ t('cart.empty') }}</p>
       </div>
 
       <!-- Items + quota + totals scroll together -->
@@ -408,7 +410,7 @@ onUnmounted(() => {
         <!-- Quota bar — anchored directly below items -->
         <div class="px-4 py-3 border-t border-gray-100">
           <div class="flex items-center justify-between mb-1.5">
-            <span class="text-xs text-gray-400">Daily limit</span>
+            <span class="text-xs text-gray-400">{{ t('cart.dailyLimit') }}</span>
             <span :class="['text-xs font-semibold tabular-nums', quota.overLimit ? 'text-red-500' : quota.pct >= 0.7 ? 'text-amber-500' : 'text-gray-500']">
               {{ quota.usedGrams.toFixed(1) }} / 28g
             </span>
@@ -419,7 +421,7 @@ onUnmounted(() => {
               :style="{ width: (quota.pct * 100).toFixed(1) + '%' }"
             ></div>
           </div>
-          <p v-if="quota.overLimit" class="mt-1.5 text-xs text-red-500 font-semibold">Daily limit reached</p>
+          <p v-if="quota.overLimit" class="mt-1.5 text-xs text-red-500 font-semibold">{{ t('cart.dailyLimitReached') }}</p>
         </div>
 
         <!-- Near-deal nudges -->
@@ -432,7 +434,7 @@ onUnmounted(() => {
           >
             <span class="text-base leading-none shrink-0">🎯</span>
             <span class="text-xs text-amber-800 leading-snug flex-1">
-              Add {{ deal.needed }} more for<br>
+              {{ t('cart.addMore', { n: deal.needed }) }}<br>
               <span class="font-semibold">{{ deal.label }}</span>
             </span>
             <span class="text-amber-400 text-sm leading-none self-center shrink-0">›</span>
@@ -442,7 +444,7 @@ onUnmounted(() => {
         <!-- Totals — anchored directly below quota bar -->
         <div class="border-t border-gray-100">
           <div class="px-4 pt-3 pb-1 flex items-center justify-between">
-            <span class="text-xs text-gray-400">before tax</span>
+            <span class="text-xs text-gray-400">{{ t('cart.beforeTax') }}</span>
             <span class="text-sm font-semibold tabular-nums" :class="bundlesEnabled && appliedDeals.length ? 'text-gray-400 line-through' : 'text-gray-600'">${{ subtotal.toFixed(2) }}</span>
           </div>
           <template v-if="bundlesEnabled">
@@ -451,19 +453,19 @@ onUnmounted(() => {
               <span class="text-sm font-bold text-green-600 tabular-nums">-${{ deal.savings.toFixed(2) }}</span>
             </div>
             <div v-if="appliedDeals.length" class="px-4 pb-1 flex items-center justify-between">
-              <span class="text-xs text-gray-500 font-semibold">deal price</span>
+              <span class="text-xs text-gray-500 font-semibold">{{ t('cart.dealPrice') }}</span>
               <span class="text-sm font-bold text-gray-700 tabular-nums">${{ adjustedSubtotal.toFixed(2) }}</span>
             </div>
           </template>
           <div class="px-4 pb-4 flex items-center justify-between">
-            <span class="text-xs text-gray-500">after tax (20%)</span>
+            <span class="text-xs text-gray-500">{{ t('cart.afterTax') }}</span>
             <span class="text-base font-black text-gray-800 tabular-nums">${{ ((bundlesEnabled ? adjustedSubtotal : subtotal) * 1.2).toFixed(2) }}</span>
           </div>
         </div>
 
         <!-- Cross-sell suggestions -->
         <div v-if="crossSellProducts.length" class="border-t border-gray-100 px-4 py-3">
-          <p class="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">You might also like</p>
+          <p class="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">{{ t('cart.crossSell') }}</p>
           <div class="flex flex-col gap-2">
             <div
               v-for="p in crossSellProducts"
@@ -512,27 +514,27 @@ onUnmounted(() => {
   <Teleport to="body">
     <Transition name="confirm">
       <div v-if="orderNumber != null" class="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 bg-gray-950 text-white overflow-y-auto py-8">
-        <div class="text-xs font-bold uppercase tracking-widest text-teal-400">Order submitted</div>
+        <div class="text-xs font-bold uppercase tracking-widest text-teal-400">{{ t('cart.orderSubmitted') }}</div>
         <div class="text-[7rem] font-black text-teal-400 tabular-nums leading-none">
           #{{ String(orderNumber).padStart(2, '0') }}
         </div>
         <p class="text-gray-300 font-semibold text-lg text-center leading-snug">
-          Please give your order number to the budtender!
+          {{ t('cart.orderSentMessage') }}
         </p>
         <p class="text-gray-500 text-sm tabular-nums">
-          Returning to menu in {{ countdown }}…
+          {{ t('cart.returningToMenu', { n: countdown }) }}
         </p>
         <button
           @click="resetToMenu"
           class="shrink-0 px-8 py-4 bg-teal-500 hover:bg-teal-400 text-white font-bold rounded-xl text-lg transition-colors"
         >
-          Start a new order!
+          {{ t('cart.startNewOrder') }}
         </button>
         <button
           @click="goBackToPreviousOrder"
           class="shrink-0 px-8 py-3 border border-gray-600 hover:border-gray-400 text-gray-400 hover:text-gray-200 font-semibold rounded-xl text-base transition-colors"
         >
-          Go Back to Previous Order
+          {{ t('cart.goBackToPrevious') }}
         </button>
       </div>
     </Transition>

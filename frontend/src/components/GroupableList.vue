@@ -1,11 +1,11 @@
 <script setup>
 import { ref, computed, nextTick } from 'vue'
-import { GROUPERS, computeGroups } from '@/composables/useProductGrouping'
+import { GROUPERS, computeGroups, perUnitLabel } from '@/composables/useProductGrouping'
 import { useSessionStore } from '@/stores/session'
 import { useCartAnimation } from '@/composables/useCartAnimation'
 import { useAnalytics } from '@/composables/useAnalytics'
 import { strainLabel } from '@/utils/strainLabels'
-import { getPotencyLevel } from '@/utils/potencyLevel'
+import { getPotencyLevel, perItemPotency } from '@/utils/potencyLevel'
 import ProductTable from './ProductTable.vue'
 import ProductModal from './ProductModal.vue'
 
@@ -150,6 +150,7 @@ function displayPrice(p) {
   const price = p.SalePrice ?? p.Price
   return price ? `$${price}` : null
 }
+
 
 // ── Animation state ────────────────────────────────────────────────────────
 
@@ -504,12 +505,15 @@ async function exitGroupView() {
               />
             </div>
             <span class="text-xs text-gray-500">{{ getPotencyLevel(p).label }}</span>
-            <span v-if="p.Potency != null" class="text-xs font-semibold text-gray-600 tabular-nums">· {{ p.Potency }}{{ p['Potency Unit'] }}</span>
+            <span v-if="p.Potency != null" class="text-xs font-semibold text-gray-600 tabular-nums">· {{ perItemPotency(p) }}{{ p['Potency Unit'] }}</span>
           </div>
 
           <!-- Price + cart -->
           <div class="flex items-center justify-between mt-auto pt-2">
-            <span class="text-teal-600 font-black text-sm">{{ displayPrice(p) }}</span>
+            <div class="flex flex-col leading-tight">
+              <span class="text-teal-600 font-black text-sm">{{ displayPrice(p) }}</span>
+              <span v-if="perUnitLabel(p)" class="text-gray-400 text-xs">{{ perUnitLabel(p) }}</span>
+            </div>
             <div v-if="qty(p.id) > 0" class="flex items-center gap-1.5">
               <button
                 @click.stop="removeFromCart(p)"

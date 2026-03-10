@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createPinia } from 'pinia'
+import { createI18n } from 'vue-i18n'
 
 // ── Dependency mocks ──────────────────────────────────────────────────────────
 
@@ -63,7 +64,8 @@ import CartPanel from './CartPanel.vue'
 
 describe('CartPanel — totals positioning', () => {
   it('quota bar and totals are inside the same scroll container as the items list', () => {
-    const wrapper = mount(CartPanel, { global: { plugins: [createPinia()] } })
+    const i18n = createI18n({ legacy: false, locale: 'en', messages: { en: { cart: { title: 'Your Cart', dropToAdd: 'Drop to add', empty: 'Cart is empty', sendToBudtender: 'Send to Budtender', sending: 'Sending…', overLimitTitle: 'Over Daily Limit', overLimitMessage: 'Your cart exceeds the 28g daily limit. A budtender will assist you.', dailyLimit: 'Daily limit', dailyLimitReached: 'Daily limit reached', or: 'or', copyToPhone: 'Copy your cart to your phone!', beforeTax: 'before tax', dealPrice: 'deal price', afterTax: 'after tax (20%)', crossSell: 'You might also like', addMore: 'Add {n} more for', orderSubmitted: 'Order submitted', orderSentMessage: 'Please give your order number to the budtender!', returningToMenu: 'Returning to menu in {n}…', startNewOrder: 'Start a new order!', goBackToPrevious: 'Go Back to Previous Order', orderSent: 'Your order has been sent!', budtenderCallNumber: 'A budtender will call your number shortly.', reminderToast: "When you're done, tap Send to Budtender", outOfStock: 'Removed from cart (out of stock): {items}' } } } })
+    const wrapper = mount(CartPanel, { global: { plugins: [createPinia(), i18n] } })
 
     // The scroll container wraps items + quota + totals
     const scrollContainer = wrapper.find('.overflow-y-auto')
@@ -82,7 +84,8 @@ describe('CartPanel — totals positioning', () => {
   })
 
   it('quota bar and totals are NOT siblings of the scroll container at panel level', () => {
-    const wrapper = mount(CartPanel, { global: { plugins: [createPinia()] } })
+    const i18n = createI18n({ legacy: false, locale: 'en', messages: { en: { cart: { title: 'Your Cart', dropToAdd: 'Drop to add', empty: 'Cart is empty', sendToBudtender: 'Send to Budtender', sending: 'Sending…', overLimitTitle: 'Over Daily Limit', overLimitMessage: 'Your cart exceeds the 28g daily limit. A budtender will assist you.', dailyLimit: 'Daily limit', dailyLimitReached: 'Daily limit reached', or: 'or', copyToPhone: 'Copy your cart to your phone!', beforeTax: 'before tax', dealPrice: 'deal price', afterTax: 'after tax (20%)', crossSell: 'You might also like', addMore: 'Add {n} more for', orderSubmitted: 'Order submitted', orderSentMessage: 'Please give your order number to the budtender!', returningToMenu: 'Returning to menu in {n}…', startNewOrder: 'Start a new order!', goBackToPrevious: 'Go Back to Previous Order', orderSent: 'Your order has been sent!', budtenderCallNumber: 'A budtender will call your number shortly.', reminderToast: "When you're done, tap Send to Budtender", outOfStock: 'Removed from cart (out of stock): {items}' } } } })
+    const wrapper = mount(CartPanel, { global: { plugins: [createPinia(), i18n] } })
 
     const scrollContainer = wrapper.find('.overflow-y-auto')
     const panelEl = scrollContainer.element.parentElement

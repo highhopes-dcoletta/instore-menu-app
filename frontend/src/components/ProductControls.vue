@@ -1,9 +1,11 @@
 <!-- Search box — reads/writes the search-for URL param. -->
 <script setup>
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 
 const route = useRoute()
 const router = useRouter()
+const { t } = useI18n()
 
 function onSearch(e) {
   const q = { ...route.query }
@@ -23,7 +25,7 @@ function onSearch(e) {
     </svg>
     <input
       type="text"
-      placeholder="Type here to search"
+      :placeholder="t('msg.search')"
       :value="route.query['search-for'] || ''"
       @input="onSearch"
       class="w-full rounded-xl border border-gray-200 bg-white pl-10 pr-4 py-2.5 text-sm text-slate-700 placeholder-gray-400 focus:outline-none focus:border-teal-400 shadow-sm"

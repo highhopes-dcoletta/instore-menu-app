@@ -1,3 +1,77 @@
+// ── Unit parsing helpers ───────────────────────────────────────────────────────
+
+const OZ_TO_G = 28.3495
+
+/**
+ * Parse a piece count from a product name, e.g. "Wana Gummies 20pk" → 20,
+ * "1906 Love Tablet 30-pack" → 30, "Mindy's 20pack" → 20.
+ */
+export function parseCountFromName(name) {
+  if (!name) return null
+  const m = String(name).match(/\b(\d+)[-\s]?(?:pk|pack|pc|pcs|piece|pieces)\b/i)
+  return m ? parseInt(m[1], 10) : null
+}
+
+/**
+ * Parse a quantity from a Unit Weight string, always in grams for weight units.
+ * Returns grams for weight units, count for piece units, or null if unparseable.
+ * Examples: "1g" → 1, "3.5g" → 3.5, "1oz" → 28.35, "1/8oz" → 3.54,
+ *           "10 ct" → 10, "5-pk" → 5
+ */
+export function parseQuantity(unitWeight) {
+  if (!unitWeight) return null
+  const s = String(unitWeight).trim()
+  // Grams: "1g", "3.5g", "0.5g"
+  const grams = s.match(/^(\d*\.?\d+)\s*g$/i)
+  if (grams) return parseFloat(grams[1])
+  // Decimal oz: "1oz", "0.5oz", "0.25oz"
+  const decOz = s.match(/^(\d+(?:\.\d+)?)\s*oz$/i)
+  if (decOz) return parseFloat(decOz[1]) * OZ_TO_G
+  // Fractional oz: "1/8oz", "1/4 oz", "1/2oz"
+  const fracOz = s.match(/^(\d+)\/(\d+)\s*oz$/i)
+  if (fracOz) return (parseInt(fracOz[1]) / parseInt(fracOz[2])) * OZ_TO_G
+  // Piece counts: "10 ct", "5-pk", "10 pack"
+  const count = s.match(/^(\d+)[-\s]?(?:ct|pk|pack|pcs|piece|pieces)$/i)
+  if (count) return parseInt(count[1], 10)
+  return null
+}
+
+/** Price divided by unit quantity (grams, piece count, or name-based count); falls back to total price. */
+function pricePerUnit(product) {
+  const price = product.SalePrice ?? product.Price ?? 0
+  const qty = parseQuantity(product['Unit Weight'])
+  if (qty && qty > 0) return price / qty
+  const count = parseCountFromName(product.Name)
+  return count && count > 0 ? price / count : price
+}
+
+/**
+ * Returns a human-readable per-unit price label like "$12/g" or "$2.50/pc",
+ * or null when the unit weight isn't parseable or the label would be redundant.
+ */
+export function perUnitLabel(product) {
+  const price = product.SalePrice ?? product.Price
+  if (!price) return null
+  const uw = product['Unit Weight']
+  const qty = parseQuantity(uw)
+  if (qty) {
+    const isWeight = /(?:g|oz)$/i.test(String(uw).trim())
+    if (!isWeight && qty <= 1) return null
+    const unit = isWeight ? 'g' : 'pc'
+    const per = price / qty
+    const formatted = Number.isInteger(per) ? per : per.toFixed(2)
+    return `$${formatted}/${unit}`
+  }
+  // Fallback: piece count from product name (e.g. Dutchie edibles with "100mg" unit weight)
+  const count = parseCountFromName(product.Name)
+  if (count && count > 1) {
+    const per = price / count
+    const formatted = Number.isInteger(per) ? per : per.toFixed(2)
+    return `$${formatted}/pc`
+  }
+  return null
+}
+
 export const GROUPERS = [
   {
     key: 'potency',
@@ -77,16 +151,16 @@ export const GROUPERS = [
     icon: '💰',
     label: 'Price',
     groupDefs: [
-      { key: 'a', label: 'Budget',  sub: 'Under $8',  bg: '#0d2618', accent: '#22c55e' },
-      { key: 'b', label: 'Mid',     sub: '$8–$12',    bg: '#2a1f08', accent: '#eab308' },
-      { key: 'c', label: 'Upper',   sub: '$12–$22',   bg: '#2a0e08', accent: '#f97316' },
-      { key: 'd', label: 'Premium', sub: 'Over $22',  bg: '#1e0808', accent: '#ef4444' },
+      { key: 'a', label: 'Budget',  sub: 'Under $9/g',  bg: '#0d2618', accent: '#22c55e' },
+      { key: 'b', label: 'Mid',     sub: '$9–$13/g',    bg: '#2a1f08', accent: '#eab308' },
+      { key: 'c', label: 'Upper',   sub: '$13–$19/g',   bg: '#2a0e08', accent: '#f97316' },
+      { key: 'd', label: 'Premium', sub: 'Over $19/g',  bg: '#1e0808', accent: '#ef4444' },
     ],
     groupFn(product) {
-      const p = product.SalePrice ?? product.Price ?? 0
-      if (p < 8) return 'a'
-      if (p <= 12) return 'b'
-      if (p <= 22) return 'c'
+      const p = pricePerUnit(product)
+      if (p < 9) return 'a'
+      if (p <= 13) return 'b'
+      if (p <= 19) return 'c'
       return 'd'
     },
   },
@@ -95,16 +169,16 @@ export const GROUPERS = [
     icon: '💰',
     label: 'Price',
     groupDefs: [
-      { key: 'a', label: 'Budget',   sub: 'Under $10', bg: '#0d2618', accent: '#22c55e' },
-      { key: 'b', label: 'Mid',      sub: '$10–$20',   bg: '#2a1f08', accent: '#eab308' },
-      { key: 'c', label: 'Standard', sub: '$20–$25',   bg: '#2a0e08', accent: '#f97316' },
-      { key: 'd', label: 'Premium',  sub: 'Over $25',  bg: '#1e0808', accent: '#ef4444' },
+      { key: 'a', label: 'Budget',   sub: 'Under $2/unit', bg: '#0d2618', accent: '#22c55e' },
+      { key: 'b', label: 'Mid',      sub: '$2–$3/unit',    bg: '#2a1f08', accent: '#eab308' },
+      { key: 'c', label: 'Standard', sub: '$3–$5/unit',    bg: '#2a0e08', accent: '#f97316' },
+      { key: 'd', label: 'Premium',  sub: 'Over $5/unit',  bg: '#1e0808', accent: '#ef4444' },
     ],
     groupFn(product) {
-      const p = product.SalePrice ?? product.Price ?? 0
-      if (p <= 10) return 'a'
-      if (p <= 20) return 'b'
-      if (p <= 25) return 'c'
+      const p = pricePerUnit(product)
+      if (p < 2) return 'a'
+      if (p <= 3) return 'b'
+      if (p <= 5) return 'c'
       return 'd'
     },
   },

@@ -1,0 +1,43 @@
+{
+  "experience": {
+    "question": "Qual é a sua experiência com cannabis?",
+    "new": "Sou novo nisso",
+    "newSub": "Suave e acessível",
+    "occasional": "Uso ocasional",
+    "occasionalSub": "Alguma experiência",
+    "regular": "Uso regular",
+    "regularSub": "Sei o que gosto"
+  },
+  "effect": {
+    "question": "O que você está buscando hoje?",
+    "relax": "Relaxar",
+    "relaxSub": "Desestressar um pouco",
+    "sleep": "Ajuda para dormir",
+    "sleepSub": "Sono profundo e reparador",
+    "energize": "Energia e foco",
+    "energizeSub": "Ser produtivo",
+    "social": "Diversão e socializar",
+    "socialSub": "Boas vibes",
+    "pain": "Dor ou estresse",
+    "painSub": "Alívio e conforto"
+  },
+  "method": {
+    "question": "Como você prefere consumir?",
+    "flower": "Flor",
+    "flowerSub": "Fumar ou cachimbo",
+    "edibles": "Comestíveis",
+    "ediblesSub": "Gomas, chocolates, bebidas",
+    "vape": "Vape",
+    "vapeSub": "Discreto e fácil",
+    "any": "Sem preferência",
+    "anySub": "Mostre-me tudo"
+  },
+  "results": {
+    "title": "Nossas melhores opções para você",
+    "browseMenu": "Ver menu completo →",
+    "addHint": "Adicione produtos ao carrinho e mostre ao budtender quando estiver pronto.",
+    "changeAnswers": "← Mudar minhas respostas"
+  },
+  "back": "← Voltar",
+  "browseFullMenu": "Ver menu completo"
+}
