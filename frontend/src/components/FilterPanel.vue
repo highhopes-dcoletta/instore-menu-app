@@ -123,7 +123,7 @@ const CATEGORY_OPTS = [
     <!-- Strain -->
     <div v-if="filters.includes('strain') && strainOptions.length">
       <div class="label">Strain</div>
-      <div class="flex flex-col gap-1.5 items-end">
+      <div class="flex flex-wrap gap-1.5 justify-end">
         <button
           v-for="opt in strainOptions"
           :key="opt"
@@ -136,7 +136,7 @@ const CATEGORY_OPTS = [
     <!-- Size -->
     <div v-if="filters.includes('size') && sizeOptions.length">
       <div class="label">Size</div>
-      <div class="flex flex-col gap-1.5 items-end">
+      <div class="flex flex-wrap gap-1.5 justify-end">
         <button
           v-for="opt in sizeOptions"
           :key="opt"
@@ -160,7 +160,7 @@ const CATEGORY_OPTS = [
     <!-- Packaging -->
     <div v-if="filters.includes('packaging')">
       <div class="label">Packaging</div>
-      <div class="flex flex-col gap-1.5 items-end">
+      <div class="flex flex-wrap gap-1.5 justify-end">
         <button
           v-for="opt in ['SINGLES', 'PACKS']"
           :key="opt"
@@ -173,7 +173,7 @@ const CATEGORY_OPTS = [
     <!-- Infused -->
     <div v-if="filters.includes('infused')">
       <div class="label">Infused?</div>
-      <div class="flex flex-col gap-1.5 items-end">
+      <div class="flex flex-wrap gap-1.5 justify-end">
         <button
           @click="isActive('infused', 'yes') ? clear('infused') : set('infused', 'yes')"
           :class="['chip', isActive('infused', 'yes') ? 'chip-on' : 'chip-off']"
@@ -188,7 +188,7 @@ const CATEGORY_OPTS = [
     <!-- Vape type tags -->
     <div v-if="filters.includes('tag')">
       <div class="label">Type</div>
-      <div class="flex flex-col gap-1.5 items-end">
+      <div class="flex flex-wrap gap-1.5 justify-end">
         <button
           v-for="opt in VAPE_TAGS"
           :key="opt"
@@ -201,7 +201,7 @@ const CATEGORY_OPTS = [
     <!-- Category chips (Sleep / Pain) -->
     <div v-if="filters.includes('category')">
       <div class="label">Category</div>
-      <div class="flex flex-col gap-1.5 items-end">
+      <div class="flex flex-wrap gap-1.5 justify-end">
         <button
           v-for="opt in CATEGORY_OPTS"
           :key="opt.value"

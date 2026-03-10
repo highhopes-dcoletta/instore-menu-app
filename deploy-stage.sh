@@ -80,16 +80,15 @@ EOF
 
 echo "==> Restarting staging service..."
 ssh $SSHOPTS "$HOST" "systemctl restart $SERVICE"
-sleep 8
 
 echo "==> Waiting for staging API..."
 for i in $(seq 1 30); do
-  if ssh $SSHOPTS "$HOST" "curl -sm 2 http://127.0.0.1:5002/api/sessions" 2>/dev/null; then
+  if ssh $SSHOPTS "$HOST" "nc -z 127.0.0.1 5002" 2>/dev/null; then
     echo "  API OK (${i}s)"
     break
   fi
   if [ $i -eq 30 ]; then
-    echo "ERROR: Staging API did not respond after 38s" >&2
+    echo "ERROR: Staging API did not respond after 30s" >&2
     exit 1
   fi
   sleep 1
@@ -101,7 +100,7 @@ ssh $SSHOPTS "$HOST" "certbot --nginx -d menu2-stage.highhopesma.com -n --redire
 
 echo ""
 echo "==> Running e2e tests against staging..."
-if E2E_BASE_URL=https://menu2-stage.highhopesma.com npx --prefix monitor playwright test --reporter=list; then
+if E2E_BASE_URL=https://menu2-stage.highhopesma.com npx --prefix monitor playwright test --config monitor/playwright.config.js --reporter=list; then
   echo ""
   echo "==> Done! https://menu2-stage.highhopesma.com"
 else

@@ -173,6 +173,12 @@ const listRef       = ref(null)
 
 const sleep = ms => new Promise(r => setTimeout(r, ms))
 
+defineExpose({
+  activeGrouperKey, activeGrouper, availableGroupers,
+  grouped, animating, exitAnimating,
+  showGrouperPicker, selectGrouper, exitGroupView,
+})
+
 const GHOSTS_PER_GROUP = 3
 
 function sampleSnapshots(snapshots) {
@@ -358,70 +364,25 @@ async function exitGroupView() {
 
 <template>
   <div>
-    <!-- Controls bar -->
-    <div class="flex items-center gap-2 justify-end mb-3">
-
-      <!-- Breadcrumb when drilled in -->
-      <div v-if="grouped && expandedKey" class="mr-auto flex items-center gap-1.5 font-black text-gray-400 text-sm">
-        <button
-          @click="expandedKey = null; subExpandedKey = null"
-          class="hover:text-gray-700 transition-colors"
-        >All piles</button>
+    <!-- Breadcrumb when drilled in -->
+    <div v-if="grouped && expandedKey" class="flex items-center gap-1.5 font-black text-gray-400 text-sm mb-3">
+      <button
+        @click="expandedKey = null; subExpandedKey = null"
+        class="hover:text-gray-700 transition-colors"
+      >All piles</button>
+      <span>›</span>
+      <button
+        v-if="subExpandedKey"
+        @click="subExpandedKey = null"
+        class="hover:text-gray-700 transition-colors"
+      >{{ expandedLabel }}</button>
+      <span v-else class="text-gray-700">{{ expandedLabel }}</span>
+      <template v-if="subExpandedKey">
         <span>›</span>
-        <button
-          v-if="subExpandedKey"
-          @click="subExpandedKey = null"
-          class="hover:text-gray-700 transition-colors"
-        >{{ expandedLabel }}</button>
-        <span v-else class="text-gray-700">{{ expandedLabel }}</span>
-        <template v-if="subExpandedKey">
-          <span>›</span>
-          <span class="text-gray-700">{{ subExpandedLabel }}</span>
-        </template>
-      </div>
-
-      <!-- Single Group button (always visible) -->
-      <div v-if="!animating && !exitAnimating" class="relative">
-        <button
-          @click="showGrouperPicker = !showGrouperPicker"
-          class="px-4 py-2 rounded-xl text-sm font-bold bg-gray-800 text-white active:bg-teal-700 transition-colors flex items-center gap-2"
-        >Drill Down By<template v-if="grouped"> · {{ activeGrouper.label }}</template> <span class="text-white opacity-60 text-base leading-none">▼</span></button>
-
-        <!-- Popup -->
-        <div
-          v-if="showGrouperPicker"
-          class="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 overflow-hidden min-w-max"
-        >
-          <!-- Show list option — only when already grouped -->
-          <button
-            v-if="grouped"
-            @click="showGrouperPicker = false; exitGroupView()"
-            class="flex items-center gap-2 w-full px-4 py-2.5 text-sm font-semibold text-left transition-colors hover:bg-gray-50 active:bg-gray-100 text-gray-500 border-b border-gray-100"
-          >
-            <span>☰</span>
-            <span>Show list</span>
-          </button>
-          <button
-            v-for="g in availableGroupers"
-            :key="g.key"
-            @click="selectGrouper(g)"
-            class="flex items-center gap-2 w-full px-4 py-2.5 text-sm font-semibold text-left transition-colors hover:bg-gray-50 active:bg-gray-100"
-            :class="activeGrouperKey && activeGrouper.key === g.key ? 'text-teal-600' : 'text-gray-700'"
-          >
-            <span>{{ g.icon }}</span>
-            <span>{{ g.label }}</span>
-            <span v-if="activeGrouperKey && activeGrouper.key === g.key" class="ml-auto text-teal-500 text-xs">✓</span>
-          </button>
-        </div>
-
-        <!-- Backdrop to close popup -->
-        <div
-          v-if="showGrouperPicker"
-          class="fixed inset-0 z-40"
-          @click="showGrouperPicker = false"
-        />
-      </div>
+        <span class="text-gray-700">{{ subExpandedLabel }}</span>
+      </template>
     </div>
+
 
     <!-- Level-1 pile cards — shown during animation and while grouped (at top level) -->
     <div
@@ -458,7 +419,7 @@ async function exitGroupView() {
         <div
           v-if="animating ? pileCounts[g.key] > 0 : true"
           class="ph-badge"
-          :key="animating ? pileCounts[g.key] : g.key"
+          :key="g.key"
           :style="{ background: g.accent }"
         >{{ animating ? pileCounts[g.key] : g.products.length }}</div>
       </div>

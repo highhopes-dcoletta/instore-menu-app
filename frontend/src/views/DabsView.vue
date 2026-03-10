@@ -1,8 +1,10 @@
 <script setup>
+import { ref } from 'vue'
 import { useProductFilters } from '@/composables/useProductFilters'
 import FilterPanel from '@/components/FilterPanel.vue'
 import ProductControls from '@/components/ProductControls.vue'
 import GroupableList from '@/components/GroupableList.vue'
+import GroupDrillButton from '@/components/GroupDrillButton.vue'
 import SubcategoryTabs from '@/components/SubcategoryTabs.vue'
 
 const TABS = [
@@ -23,18 +25,22 @@ const TABS = [
 const COLUMNS = ['name', 'strain', 'potency', 'stock']
 
 const { filtered, categoryProducts, facets } = useProductFilters((p) => p.Category === 'CONCENTRATES')
+const groupList = ref(null)
 </script>
 
 <template>
-  <main class="flex gap-8 p-6">
-    <div class="flex-1 min-w-0">
-      <h1 class="mb-4 text-2xl font-black tracking-wide">Dabs</h1>
-      <SubcategoryTabs :tabs="TABS" />
-      <ProductControls />
-      <GroupableList :products="filtered" :columns="COLUMNS" :groupers="['potency', 'strain', 'dab-price']" />
+  <main class="p-6">
+    <h1 class="mb-4 text-2xl font-black tracking-wide">Dabs</h1>
+    <SubcategoryTabs :tabs="TABS" />
+    <ProductControls />
+    <div class="flex gap-8">
+      <aside class="w-40 shrink-0 order-last">
+        <GroupDrillButton :gl="groupList" />
+        <FilterPanel :filters="['strain', 'size']" :products="categoryProducts" :facets="facets" />
+      </aside>
+      <div class="flex-1 min-w-0">
+        <GroupableList ref="groupList" :products="filtered" :columns="COLUMNS" :groupers="['potency', 'strain', 'dab-price']" />
+      </div>
     </div>
-    <aside class="w-40 shrink-0 pt-14">
-      <FilterPanel :filters="['strain', 'size']" :products="categoryProducts" :facets="facets" />
-    </aside>
   </main>
 </template>

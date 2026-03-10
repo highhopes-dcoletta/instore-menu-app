@@ -144,9 +144,37 @@ export const GROUPERS = [
       return 'd'
     },
   },
+  {
+    key: 'category',
+    icon: '📂',
+    label: 'Category',
+    groupDefs: [],  // built dynamically from products
+    groupFn(product) {
+      return product.Category ?? 'Other'
+    },
+  },
 ]
 
 export function computeGroups(grouper, products) {
+  // Dynamic groupDefs: build from actual product categories when groupDefs is empty
+  if (grouper.groupDefs.length === 0) {
+    const seen = new Set()
+    const defs = []
+    for (const p of products) {
+      const key = grouper.groupFn(p)
+      if (!seen.has(key)) {
+        seen.add(key)
+        defs.push({ key, label: key, sub: '', bg: '#1a1a2e', accent: '#6366f1', products: [] })
+      }
+    }
+    defs.sort((a, b) => a.label.localeCompare(b.label))
+    const map = Object.fromEntries(defs.map(g => [g.key, { ...g }]))
+    for (const p of products) {
+      const key = grouper.groupFn(p)
+      if (map[key]) map[key].products.push(p)
+    }
+    return defs.map(g => map[g.key]).filter(g => g.products.length > 0)
+  }
   const map = Object.fromEntries(grouper.groupDefs.map(g => [g.key, { ...g, products: [] }]))
   for (const p of products) {
     const key = grouper.groupFn(p)
