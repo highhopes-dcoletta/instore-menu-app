@@ -203,7 +203,7 @@ export const BUNDLES = [
     id: 'crude-strane-4',
     label: 'Crude Boys or Strane Carts — 4 for $100',
     type: 'quantity',
-    match: (item) => /crude boys|strane/i.test(item.name) && !/cloud bar|disposable/i.test(item.name),
+    match: (item) => /crude boys|strane/i.test(item.name) && item.subcategory === 'CARTRIDGES',
     quantity: 4,
     bundlePrice: 100,
   },
@@ -221,7 +221,7 @@ export const BUNDLES = [
     type: 'quantity',
     match: (item) => /1g/i.test(item.unitWeight) && (
       (/hellavated/i.test(item.name) && /cloud bar/i.test(item.name)) ||
-      (/strane/i.test(item.name) && /disposable/i.test(item.name))
+      (/strane/i.test(item.name) && item.subcategory === 'DISPOSABLES')
     ),
     quantity: 2,
     bundlePrice: 55,
