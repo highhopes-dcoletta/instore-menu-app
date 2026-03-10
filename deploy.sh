@@ -79,16 +79,15 @@ scp $SSHOPTS backend/.env "$HOST:$REMOTE_DIR/backend/.env"
 
 echo "==> Restarting service..."
 ssh $SSHOPTS "$HOST" "systemctl daemon-reload; systemctl restart $SERVICE"
-sleep 8
 
 echo "==> Waiting for API..."
 for i in $(seq 1 30); do
-  if ssh $SSHOPTS "$HOST" "curl -sm 2 http://127.0.0.1:5001/api/sessions" 2>/dev/null; then
+  if ssh $SSHOPTS "$HOST" "nc -z 127.0.0.1 5001" 2>/dev/null; then
     echo "  API OK (${i}s)"
     break
   fi
   if [ $i -eq 30 ]; then
-    echo "ERROR: API did not respond after 38s" >&2
+    echo "ERROR: API did not respond after 30s" >&2
     exit 1
   fi
   sleep 1
