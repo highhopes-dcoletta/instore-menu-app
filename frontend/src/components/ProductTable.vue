@@ -7,6 +7,7 @@ import { strainLabel } from '@/utils/strainLabels'
 import { useCartAnimation } from '@/composables/useCartAnimation'
 import { useDragToCart } from '@/composables/useDragToCart'
 import { useAnalytics } from '@/composables/useAnalytics'
+import { useProductBundles } from '@/composables/useBundles'
 
 const props = defineProps({
   products:  { type: Array,   required: true },
@@ -20,6 +21,7 @@ const session = useSessionStore()
 const { fire: fireCartAnimation, fireToast, BUBBLE_DURATION } = useCartAnimation()
 const { startDrag } = useDragToCart()
 const { track } = useAnalytics()
+const { activeBundlesForProduct } = useProductBundles()
 
 // ── Modal ─────────────────────────────────────────────────────────────────────
 
@@ -235,7 +237,16 @@ function potency(product) {
                 :src="product.Image"
                 class="w-10 h-10 rounded-lg object-cover shrink-0 bg-white"
               />
-              <span>{{ product.Name }}<span v-if="product['Unit Weight']" class="ml-1.5 font-bold"> {{ product['Unit Weight'] }}</span></span>
+              <div>
+                <div>{{ product.Name }}<span v-if="product['Unit Weight']" class="ml-1.5 font-bold"> {{ product['Unit Weight'] }}</span></div>
+                <div v-if="activeBundlesForProduct(product).length" class="flex flex-wrap gap-1 mt-1">
+                  <span
+                    v-for="bundle in activeBundlesForProduct(product)"
+                    :key="bundle.id"
+                    class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-amber-100 border border-amber-200 text-amber-700 text-xs font-bold leading-none"
+                  >🎉 {{ bundle.label }}</span>
+                </div>
+              </div>
             </div>
           </td>
 

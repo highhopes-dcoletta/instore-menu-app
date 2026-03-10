@@ -85,3 +85,30 @@ export function useBundles(selectionsRef) {
 
   return { appliedDeals, totalDiscount, nearDeals }
 }
+
+/**
+ * Returns activeBundlesForProduct(product) — given a catalog product object
+ * (with Name/Category/'Unit Weight' fields), returns the bundles that are
+ * currently active (schedule matches today) and match that product.
+ */
+export function useProductBundles() {
+  function activeBundlesForProduct(product) {
+    const now = new Date()
+    return BUNDLES.filter(bundle => {
+      if (bundle.schedule) {
+        const { days, dates } = bundle.schedule
+        if (days?.length && !days.includes(now.getDay())) return false
+        if (dates?.length && !dates.includes(now.getDate())) return false
+      }
+      return bundle.match({
+        name: product.Name,
+        category: product.Category,
+        unitWeight: product['Unit Weight'] ?? '',
+        price: product.Price ?? 0,
+        qty: 1,
+      })
+    })
+  }
+
+  return { activeBundlesForProduct }
+}
