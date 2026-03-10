@@ -73,7 +73,7 @@ vi.mock('@/config/bundles', () => ({
   BUNDLES: [
     {
       id: 'juicy-stix-4pack',
-      label: 'Any 4 Juicy Stix — $42',
+      label: 'Any 4 Juicy Stickz — $42',
       type: 'quantity',
       match: (item) => /juicy stickz/i.test(item.name),
       quantity: 4,
@@ -81,7 +81,7 @@ vi.mock('@/config/bundles', () => ({
     },
     {
       id: 'juicy-stix-6pack',
-      label: 'Any 6 Juicy Stix — $60',
+      label: 'Any 6 Juicy Stickz — $60',
       type: 'quantity',
       match: (item) => /juicy stickz/i.test(item.name),
       quantity: 6,
