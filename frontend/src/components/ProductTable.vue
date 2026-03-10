@@ -8,6 +8,7 @@ import { useCartAnimation } from '@/composables/useCartAnimation'
 import { useDragToCart } from '@/composables/useDragToCart'
 import { useAnalytics } from '@/composables/useAnalytics'
 import { useProductBundles } from '@/composables/useBundles'
+import { useFeatureFlags } from '@/composables/useFeatureFlags'
 
 const props = defineProps({
   products:  { type: Array,   required: true },
@@ -22,6 +23,7 @@ const { fire: fireCartAnimation, fireToast, BUBBLE_DURATION } = useCartAnimation
 const { startDrag } = useDragToCart()
 const { track } = useAnalytics()
 const { activeBundlesForProduct } = useProductBundles()
+const { bundlesEnabled } = useFeatureFlags()
 
 // ── Modal ─────────────────────────────────────────────────────────────────────
 
@@ -239,7 +241,7 @@ function potency(product) {
               />
               <div>
                 <div>{{ product.Name }}<span v-if="product['Unit Weight']" class="ml-1.5 font-bold"> {{ product['Unit Weight'] }}</span></div>
-                <div v-if="activeBundlesForProduct(product).length" class="flex flex-wrap gap-1 mt-1">
+                <div v-if="bundlesEnabled && activeBundlesForProduct(product).length" class="flex flex-wrap gap-1 mt-1">
                   <span
                     v-for="bundle in activeBundlesForProduct(product)"
                     :key="bundle.id"

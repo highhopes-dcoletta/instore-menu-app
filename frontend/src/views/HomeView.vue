@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { BUNDLES } from '@/config/bundles'
 import BundleDealModal from '@/components/BundleDealModal.vue'
+import { useFeatureFlags } from '@/composables/useFeatureFlags'
 
 const CATEGORIES = [
   { path: '/flower',                  label: 'FLOWER' },
@@ -25,6 +26,7 @@ const todaysDeals = computed(() => {
   })
 })
 
+const { bundlesEnabled } = useFeatureFlags()
 const selectedBundle = ref(null)
 </script>
 
@@ -45,7 +47,7 @@ const selectedBundle = ref(null)
     </router-link>
 
     <!-- Today's Deals -->
-    <div v-if="todaysDeals.length" class="w-full max-w-5xl">
+    <div v-if="bundlesEnabled && todaysDeals.length" class="w-full max-w-5xl">
       <p class="text-xs font-bold uppercase tracking-widest text-gray-500 mb-3">Today's Deals</p>
       <div class="flex flex-wrap gap-3">
         <button

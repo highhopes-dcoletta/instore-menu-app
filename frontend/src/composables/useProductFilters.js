@@ -14,6 +14,7 @@ import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useProductsStore } from '@/stores/products'
 import { BUNDLES } from '@/config/bundles'
+import { bundlesEnabled } from '@/composables/useFeatureFlags'
 
 function toArray(val) {
   if (!val) return []
@@ -137,7 +138,7 @@ export function useProductFilters(categoryFn) {
     }
 
     // ── Deal boost: float active-deal products to top when in default order ──
-    if (!sort) {
+    if (!sort && bundlesEnabled.value) {
       const now = new Date()
       const activeBundles = BUNDLES.filter(bundle => {
         if (!bundle.schedule) return true

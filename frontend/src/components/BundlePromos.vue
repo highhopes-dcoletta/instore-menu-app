@@ -3,10 +3,12 @@ import { computed, ref } from 'vue'
 import { BUNDLES } from '@/config/bundles'
 import BundleDealModal from '@/components/BundleDealModal.vue'
 import { useAnalytics } from '@/composables/useAnalytics'
+import { useFeatureFlags } from '@/composables/useFeatureFlags'
 
 const props = defineProps({ products: { type: Array, default: () => [] } })
 
 const { track } = useAnalytics()
+const { bundlesEnabled } = useFeatureFlags()
 const selectedBundle = ref(null)
 
 function openModal(bundle) {
@@ -36,7 +38,7 @@ const relevantBundles = computed(() => {
 </script>
 
 <template>
-  <div v-if="relevantBundles.length" class="flex flex-wrap gap-2 mb-4">
+  <div v-if="bundlesEnabled && relevantBundles.length" class="flex flex-wrap gap-2 mb-4">
     <button
       v-for="bundle in relevantBundles"
       :key="bundle.id"

@@ -9,6 +9,7 @@ import { getPotencyLevel } from '@/utils/potencyLevel'
 import { scoreProduct, getRecommendations } from '@/utils/recommendations'
 import { useAnalytics } from '@/composables/useAnalytics'
 import { useProductBundles } from '@/composables/useBundles'
+import { useFeatureFlags } from '@/composables/useFeatureFlags'
 import ProductModal from '@/components/ProductModal.vue'
 
 const router = useRouter()
@@ -17,6 +18,7 @@ const session = useSessionStore()
 const { fire: fireCartAnimation, fireToast, BUBBLE_DURATION } = useCartAnimation()
 const { track } = useAnalytics()
 const { activeBundlesForProduct } = useProductBundles()
+const { bundlesEnabled } = useFeatureFlags()
 track('guided_view_started')
 
 // ── Wizard state ──────────────────────────────────────────────────────────────
@@ -222,7 +224,7 @@ function displayPrice(p) {
           <!-- Info -->
           <div class="p-3 flex flex-col gap-1 flex-1">
             <p class="text-white font-bold text-sm leading-tight line-clamp-2">{{ p.Name }}</p>
-            <div v-if="activeBundlesForProduct(p).length" class="flex flex-wrap gap-1 mt-1">
+            <div v-if="bundlesEnabled && activeBundlesForProduct(p).length" class="flex flex-wrap gap-1 mt-1">
               <span
                 v-for="bundle in activeBundlesForProduct(p)"
                 :key="bundle.id"

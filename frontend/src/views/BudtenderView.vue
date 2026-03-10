@@ -5,6 +5,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 import { computeAppliedDeals } from '@/composables/useBundles'
+import { useFeatureFlags } from '@/composables/useFeatureFlags'
 
 const sessions = ref([])
 let pollTimer = null
@@ -34,6 +35,7 @@ function timeSince(iso) {
 }
 
 const computeDeals = computeAppliedDeals
+const { bundlesEnabled } = useFeatureFlags()
 
 function subtotal(selections) {
   return Object.values(selections).reduce((s, i) => s + (i.price ?? 0) * (i.qty ?? 1), 0)
@@ -102,7 +104,7 @@ onUnmounted(() => clearInterval(pollTimer))
         </ul>
 
         <!-- Deals -->
-        <template v-if="computeDeals(s.selections).length">
+        <template v-if="bundlesEnabled && computeDeals(s.selections).length">
           <div class="mt-3 pt-3 border-t border-gray-200 space-y-1">
             <div v-for="deal in computeDeals(s.selections)" :key="deal.id"
               class="flex items-center justify-between text-sm"
