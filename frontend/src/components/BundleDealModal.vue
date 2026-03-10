@@ -19,6 +19,7 @@ const matchingProducts = computed(() =>
     props.bundle.match({
       name: p.Name,
       category: p.Category,
+      subcategory: p.Subcategory ?? '',
       unitWeight: p['Unit Weight'] ?? '',
       price: p.Price ?? 0,
       qty: 1,

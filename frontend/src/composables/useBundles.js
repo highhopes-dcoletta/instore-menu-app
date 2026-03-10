@@ -118,6 +118,7 @@ export function useProductBundles() {
       return bundle.match({
         name: product.Name,
         category: product.Category,
+        subcategory: product.Subcategory ?? '',
         unitWeight: product['Unit Weight'] ?? '',
         price: product.Price ?? 0,
         qty: 1,
