@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { calcQuota } from '@/utils/quotaCalc'
 import { useAnalytics } from '@/composables/useAnalytics'
+import { computeAppliedDeals } from '@/composables/useBundles'
 
 const route = useRoute()
 const { track } = useAnalytics()
@@ -36,6 +37,13 @@ const subtotal = computed(() => {
 })
 
 const quota = computed(() => session.value ? calcQuota(session.value.selections) : null)
+
+const appliedDeals = computed(() =>
+  session.value ? computeAppliedDeals(session.value.selections) : []
+)
+
+const totalDiscount = computed(() => appliedDeals.value.reduce((s, d) => s + d.savings, 0))
+const adjustedSubtotal = computed(() => subtotal.value - totalDiscount.value)
 
 </script>
 
@@ -110,13 +118,22 @@ const quota = computed(() => session.value ? calcQuota(session.value.selections)
 
         <!-- Totals -->
         <div class="mt-6 bg-white rounded-2xl shadow-sm px-5 py-4 flex flex-col gap-2">
-          <div class="flex justify-between text-sm text-gray-500">
+          <div class="flex justify-between text-sm"
+            :class="appliedDeals.length ? 'text-gray-400 line-through' : 'text-gray-500'">
             <span>Subtotal (before tax)</span>
             <span class="tabular-nums">${{ subtotal.toFixed(2) }}</span>
           </div>
-          <div class="flex justify-between font-black text-gray-800">
+          <div v-for="deal in appliedDeals" :key="deal.id" class="flex justify-between text-sm">
+            <span class="font-semibold text-green-600">🎉 {{ deal.label }}</span>
+            <span class="font-bold text-green-600 tabular-nums">-${{ deal.savings.toFixed(2) }}</span>
+          </div>
+          <div v-if="appliedDeals.length" class="flex justify-between text-sm text-gray-700 font-semibold">
+            <span>Deal price</span>
+            <span class="tabular-nums">${{ adjustedSubtotal.toFixed(2) }}</span>
+          </div>
+          <div class="flex justify-between font-black text-gray-800 border-t border-gray-100 pt-2 mt-1">
             <span>Est. total (20% tax)</span>
-            <span class="tabular-nums">${{ (subtotal * 1.2).toFixed(2) }}</span>
+            <span class="tabular-nums">${{ (adjustedSubtotal * 1.2).toFixed(2) }}</span>
           </div>
         </div>
 

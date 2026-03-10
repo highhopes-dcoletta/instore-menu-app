@@ -41,9 +41,21 @@ const quota = computed(() => calcQuota(session.selections))
 
 const { appliedDeals, totalDiscount, nearDeals } = useBundles(computed(() => session.selections))
 const selectedBundle = ref(null)
+
 function openBundleModal(dealId) {
-  selectedBundle.value = BUNDLES.find(b => b.id === dealId) ?? null
+  const bundle = BUNDLES.find(b => b.id === dealId) ?? null
+  if (bundle) track('bundle_modal_opened', { bundle_id: bundle.id, bundle_label: bundle.label, source: 'cart_nudge' })
+  selectedBundle.value = bundle
 }
+
+watch(appliedDeals, (newDeals, oldDeals) => {
+  const oldIds = new Set((oldDeals ?? []).map(d => d.id))
+  for (const deal of newDeals) {
+    if (!oldIds.has(deal.id)) {
+      track('bundle_deal_applied', { bundle_id: deal.id, bundle_label: deal.label, savings: deal.savings })
+    }
+  }
+})
 const adjustedSubtotal = computed(() => subtotal.value - totalDiscount.value)
 
 // ── Cross-sell suggestions ────────────────────────────────────────────────────

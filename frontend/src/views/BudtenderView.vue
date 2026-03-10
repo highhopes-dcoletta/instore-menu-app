@@ -4,6 +4,7 @@
 -->
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
+import { computeAppliedDeals } from '@/composables/useBundles'
 
 const sessions = ref([])
 let pollTimer = null
@@ -30,6 +31,12 @@ function timeSince(iso) {
   if (diff < 60) return `${diff}s ago`
   if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
   return `${Math.floor(diff / 3600)}h ago`
+}
+
+const computeDeals = computeAppliedDeals
+
+function subtotal(selections) {
+  return Object.values(selections).reduce((s, i) => s + (i.price ?? 0) * (i.qty ?? 1), 0)
 }
 
 function formatItem(item) {
@@ -93,6 +100,24 @@ onUnmounted(() => clearInterval(pollTimer))
             {{ formatItem(item) }}
           </li>
         </ul>
+
+        <!-- Deals -->
+        <template v-if="computeDeals(s.selections).length">
+          <div class="mt-3 pt-3 border-t border-gray-200 space-y-1">
+            <div v-for="deal in computeDeals(s.selections)" :key="deal.id"
+              class="flex items-center justify-between text-sm"
+            >
+              <span class="font-semibold text-green-700">🎉 {{ deal.label }}</span>
+              <span class="font-bold text-green-700 tabular-nums">-${{ deal.savings.toFixed(2) }}</span>
+            </div>
+          </div>
+          <div class="mt-2 flex items-center justify-between text-sm">
+            <span class="text-gray-500">Subtotal after deals</span>
+            <span class="font-black text-gray-800 tabular-nums">
+              ${{ (subtotal(s.selections) - computeDeals(s.selections).reduce((t, d) => t + d.savings, 0)).toFixed(2) }}
+            </span>
+          </div>
+        </template>
       </div>
     </div>
   </main>

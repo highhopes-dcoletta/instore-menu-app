@@ -13,6 +13,7 @@
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useProductsStore } from '@/stores/products'
+import { BUNDLES } from '@/config/bundles'
 
 function toArray(val) {
   if (!val) return []
@@ -133,6 +134,24 @@ export function useProductFilters(categoryFn) {
         if (bn) return -1
         return asc ? a.Quantity - b.Quantity : b.Quantity - a.Quantity
       })
+    }
+
+    // ── Deal boost: float active-deal products to top when in default order ──
+    if (!sort) {
+      const now = new Date()
+      const activeBundles = BUNDLES.filter(bundle => {
+        if (!bundle.schedule) return true
+        const { days, dates } = bundle.schedule
+        if (days?.length && !days.includes(now.getDay())) return false
+        if (dates?.length && !dates.includes(now.getDate())) return false
+        return true
+      })
+      if (activeBundles.length) {
+        const isDeal = (p) => activeBundles.some(b =>
+          b.match({ name: p.Name, category: p.Category, unitWeight: p['Unit Weight'] ?? '', price: p.Price ?? 0, qty: 1 })
+        )
+        list = [...list.filter(isDeal), ...list.filter(p => !isDeal(p))]
+      }
     }
 
     return list

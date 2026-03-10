@@ -2,6 +2,7 @@
 import { computed, ref, watch, nextTick } from 'vue'
 import { useProductsStore } from '@/stores/products'
 import { useSessionStore } from '@/stores/session'
+import { useAnalytics } from '@/composables/useAnalytics'
 
 const props = defineProps({
   bundle: { type: Object, required: true },
@@ -10,6 +11,7 @@ const emit = defineEmits(['close'])
 
 const productsStore = useProductsStore()
 const session = useSessionStore()
+const { track } = useAnalytics()
 const canvas = ref(null)
 
 const matchingProducts = computed(() =>
@@ -128,7 +130,9 @@ function adjust(product, delta) {
 function pickForMe() {
   const products = matchingProducts.value
   if (!products.length) return
-  let remaining = needed.value
+  const count = needed.value
+  track('bundle_pick_for_me_used', { bundle_id: props.bundle.id, bundle_label: props.bundle.label, items_added: count })
+  let remaining = count
   let i = 0
   while (remaining > 0) {
     adjust(products[i % products.length], 1)

@@ -2,10 +2,17 @@
 import { computed, ref } from 'vue'
 import { BUNDLES } from '@/config/bundles'
 import BundleDealModal from '@/components/BundleDealModal.vue'
+import { useAnalytics } from '@/composables/useAnalytics'
 
 const props = defineProps({ products: { type: Array, default: () => [] } })
 
+const { track } = useAnalytics()
 const selectedBundle = ref(null)
+
+function openModal(bundle) {
+  track('bundle_modal_opened', { bundle_id: bundle.id, bundle_label: bundle.label, source: 'page_banner' })
+  selectedBundle.value = bundle
+}
 
 function isScheduleActive(bundle) {
   if (!bundle.schedule) return true
@@ -35,7 +42,7 @@ const relevantBundles = computed(() => {
       :key="bundle.id"
       class="flex items-center gap-1.5 rounded-xl bg-amber-50 border border-amber-200 px-3 py-1.5 transition-colors"
       :class="bundle.type === 'quantity' ? 'hover:bg-amber-100 hover:border-amber-300 cursor-pointer' : 'cursor-default'"
-      @click="bundle.type === 'quantity' && (selectedBundle = bundle)"
+      @click="bundle.type === 'quantity' && openModal(bundle)"
     >
       <span class="text-base leading-none">🎉</span>
       <span class="text-xs font-semibold text-amber-800">{{ bundle.label }}</span>
