@@ -1,10 +1,11 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { BUNDLES } from '@/config/bundles'
+import BundleDealModal from '@/components/BundleDealModal.vue'
 
 const props = defineProps({ products: { type: Array, default: () => [] } })
 
-const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+const selectedBundle = ref(null)
 
 function isScheduleActive(bundle) {
   if (!bundle.schedule) return true
@@ -29,13 +30,22 @@ const relevantBundles = computed(() => {
 
 <template>
   <div v-if="relevantBundles.length" class="flex flex-wrap gap-2 mb-4">
-    <div
+    <button
       v-for="bundle in relevantBundles"
       :key="bundle.id"
-      class="flex items-center gap-1.5 rounded-xl bg-amber-50 border border-amber-200 px-3 py-1.5"
+      class="flex items-center gap-1.5 rounded-xl bg-amber-50 border border-amber-200 px-3 py-1.5 transition-colors"
+      :class="bundle.type === 'quantity' ? 'hover:bg-amber-100 hover:border-amber-300 cursor-pointer' : 'cursor-default'"
+      @click="bundle.type === 'quantity' && (selectedBundle = bundle)"
     >
       <span class="text-base leading-none">🎉</span>
       <span class="text-xs font-semibold text-amber-800">{{ bundle.label }}</span>
-    </div>
+      <span v-if="bundle.type === 'quantity'" class="text-amber-400 text-xs leading-none">›</span>
+    </button>
   </div>
+
+  <BundleDealModal
+    v-if="selectedBundle"
+    :bundle="selectedBundle"
+    @close="selectedBundle = null"
+  />
 </template>

@@ -8,7 +8,9 @@ import { useDragToCart } from '@/composables/useDragToCart'
 import { calcQuota } from '@/utils/quotaCalc'
 import { useAnalytics } from '@/composables/useAnalytics'
 import { useBundles } from '@/composables/useBundles'
+import { BUNDLES } from '@/config/bundles'
 import ProductModal from '@/components/ProductModal.vue'
+import BundleDealModal from '@/components/BundleDealModal.vue'
 import QRCode from 'qrcode'
 
 const { track } = useAnalytics()
@@ -38,6 +40,10 @@ const isEmpty = computed(() => Object.keys(session.selections).length === 0)
 const quota = computed(() => calcQuota(session.selections))
 
 const { appliedDeals, totalDiscount, nearDeals } = useBundles(computed(() => session.selections))
+const selectedBundle = ref(null)
+function openBundleModal(dealId) {
+  selectedBundle.value = BUNDLES.find(b => b.id === dealId) ?? null
+}
 const adjustedSubtotal = computed(() => subtotal.value - totalDiscount.value)
 
 // ── Cross-sell suggestions ────────────────────────────────────────────────────
@@ -402,17 +408,19 @@ onUnmounted(() => {
 
         <!-- Near-deal nudges -->
         <div v-if="nearDeals.length" class="border-t border-gray-100 px-4 py-2 flex flex-col gap-1.5">
-          <div
+          <button
             v-for="deal in nearDeals"
             :key="deal.id"
-            class="flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2"
+            class="flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 hover:bg-amber-100 hover:border-amber-300 transition-colors w-full text-left"
+            @click="openBundleModal(deal.id)"
           >
             <span class="text-base leading-none shrink-0">🎯</span>
-            <span class="text-xs text-amber-800 leading-snug">
+            <span class="text-xs text-amber-800 leading-snug flex-1">
               Add {{ deal.needed }} more for<br>
               <span class="font-semibold">{{ deal.label }}</span>
             </span>
-          </div>
+            <span class="text-amber-400 text-sm leading-none self-center shrink-0">›</span>
+          </button>
         </div>
 
         <!-- Totals — anchored directly below quota bar -->
@@ -474,6 +482,12 @@ onUnmounted(() => {
     v-if="modalProduct"
     :product="modalProduct"
     @close="modalProduct = null"
+  />
+
+  <BundleDealModal
+    v-if="selectedBundle"
+    :bundle="selectedBundle"
+    @close="selectedBundle = null"
   />
 
   <!-- Order confirmation overlay -->
