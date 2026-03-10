@@ -50,6 +50,23 @@ export const BUNDLES = [
     bundlePrice: 60,
   },
   {
+    id: 'friday-fernway-1g-3pack',
+    label: 'Fernway 1G Cartridge 3-Pack — $85',
+    type: 'quantity',
+    match: (item) => /fernway/i.test(item.name) && /1g/i.test(item.unitWeight) && !/disposable/i.test(item.name),
+    schedule: { days: [5] },
+    quantity: 3,
+    bundlePrice: 85,
+  },
+  {
+    id: 'hh-eighth-3pack',
+    label: 'Any 3 High Hopes Eighths — $55',
+    type: 'quantity',
+    match: (item) => /high hopes/i.test(item.name) && /3\.5g/i.test(item.unitWeight),
+    quantity: 3,
+    bundlePrice: 55,
+  },
+  {
     id: 'friday-flower-2pack',
     label: 'High Hopes Flower 3.5G 2-Pack — $28',
     type: 'quantity',
