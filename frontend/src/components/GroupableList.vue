@@ -151,6 +151,18 @@ function displayPrice(p) {
 
 // ── Animation state ────────────────────────────────────────────────────────
 
+const showGrouperPicker = ref(false)
+
+function selectGrouper(g) {
+  showGrouperPicker.value = false
+  activeGrouperKey.value = g.key
+  expandedKey.value = null
+  subExpandedKey.value = null
+  if (!grouped.value) {
+    enterGroupView()
+  }
+}
+
 const animating        = ref(false)
 const exitAnimating    = ref(false)
 const pilesCollapsing  = ref(false)
@@ -322,6 +334,9 @@ async function exitGroupView() {
     })
   })
 
+  // Collapse piles at the same time as ghosts fly
+  pilesCollapsing.value = true
+
   await sleep(200)
   listShifted.value = false
 
@@ -332,14 +347,12 @@ async function exitGroupView() {
     listRef.value.style.transition = 'opacity 0.3s ease'
     listRef.value.style.opacity = '1'
   }
-
-  // Slide pile section up before removing it
-  pilesCollapsing.value = true
-  await sleep(380)
+  await sleep(320)
 
   exitAnimating.value   = false
   grouped.value         = false
   pilesCollapsing.value = false
+  activeGrouperKey.value = null
 }
 </script>
 
@@ -367,26 +380,47 @@ async function exitGroupView() {
         </template>
       </div>
 
-      <!-- Grouper switcher (always visible at top level) -->
-      <template v-if="!expandedKey">
+      <!-- Single Group button (always visible) -->
+      <div v-if="!animating && !exitAnimating" class="relative">
         <button
-          v-for="g in availableGroupers" :key="g.key"
-          @click="activeGrouperKey = g.key; expandedKey = null; subExpandedKey = null"
-          class="px-3 py-1.5 rounded-lg text-sm font-bold transition-colors"
-          :class="activeGrouper.key === g.key
-            ? 'bg-teal-600 text-white'
-            : 'bg-gray-100 text-gray-600 active:bg-gray-200'"
-        >{{ g.icon }} {{ g.label }}</button>
-      </template>
+          @click="showGrouperPicker = !showGrouperPicker"
+          class="px-4 py-2 rounded-xl text-sm font-bold bg-gray-800 text-white active:bg-teal-700 transition-colors flex items-center gap-2"
+        >Drill Down By<template v-if="grouped"> · {{ activeGrouper.label }}</template> <span class="text-white opacity-60 text-base leading-none">▼</span></button>
 
-      <button
-        v-if="!animating && !exitAnimating"
-        @click="grouped ? exitGroupView() : enterGroupView()"
-        class="px-4 py-2 rounded-xl text-sm font-bold transition-colors"
-        :class="grouped
-          ? 'bg-gray-100 text-gray-700 active:bg-gray-200'
-          : 'bg-gray-800 text-white active:bg-teal-700'"
-      >{{ grouped ? '☰ Show list' : '🃏 Group' }}</button>
+        <!-- Popup -->
+        <div
+          v-if="showGrouperPicker"
+          class="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 overflow-hidden min-w-max"
+        >
+          <!-- Show list option — only when already grouped -->
+          <button
+            v-if="grouped"
+            @click="showGrouperPicker = false; exitGroupView()"
+            class="flex items-center gap-2 w-full px-4 py-2.5 text-sm font-semibold text-left transition-colors hover:bg-gray-50 active:bg-gray-100 text-gray-500 border-b border-gray-100"
+          >
+            <span>☰</span>
+            <span>Show list</span>
+          </button>
+          <button
+            v-for="g in availableGroupers"
+            :key="g.key"
+            @click="selectGrouper(g)"
+            class="flex items-center gap-2 w-full px-4 py-2.5 text-sm font-semibold text-left transition-colors hover:bg-gray-50 active:bg-gray-100"
+            :class="activeGrouperKey && activeGrouper.key === g.key ? 'text-teal-600' : 'text-gray-700'"
+          >
+            <span>{{ g.icon }}</span>
+            <span>{{ g.label }}</span>
+            <span v-if="activeGrouperKey && activeGrouper.key === g.key" class="ml-auto text-teal-500 text-xs">✓</span>
+          </button>
+        </div>
+
+        <!-- Backdrop to close popup -->
+        <div
+          v-if="showGrouperPicker"
+          class="fixed inset-0 z-40"
+          @click="showGrouperPicker = false"
+        />
+      </div>
     </div>
 
     <!-- Level-1 pile cards — shown during animation and while grouped (at top level) -->
