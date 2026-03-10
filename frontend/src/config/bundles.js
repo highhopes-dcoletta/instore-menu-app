@@ -137,6 +137,14 @@ export const BUNDLES = [
   // ── FLOWER ───────────────────────────────────────────────────────────────────
 
   {
+    id: 'hh-eighth-3pack',
+    label: 'High Hopes Oranguava, Love Truffles & OGKB — 3 for $55',
+    type: 'quantity',
+    match: (item) => /oranguava|love truffles|ogkb/i.test(item.name),
+    quantity: 3,
+    bundlePrice: 55,
+  },
+  {
     id: 'friday-flower-2pack',
     label: 'High Hopes Flower 3.5G 2-Pack — $28 (Fridays)',
     type: 'quantity',
