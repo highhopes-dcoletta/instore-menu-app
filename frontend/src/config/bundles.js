@@ -140,7 +140,7 @@ export const BUNDLES = [
     id: 'hh-eighth-3pack',
     label: 'High Hopes Oranguava, Love Truffles & OGKB — 3 for $55',
     type: 'quantity',
-    match: (item) => /oranguava|love truffles|ogkb/i.test(item.name),
+    match: (item) => /oranguava|love truffles|ogkb/i.test(item.name) && /3\.5g/i.test(item.unitWeight),
     quantity: 3,
     bundlePrice: 55,
   },
