@@ -50,6 +50,17 @@ function parsePotency(formatted) {
   return { value: num, unit }
 }
 
+// For pre-rolls, convert oz options (e.g. "1/4oz") to grams ("7g").
+// Dutchie sometimes uses oz for large-format pre-rolls; grams are more meaningful here.
+function normalizeOption(category, option) {
+  if (category !== 'PRE_ROLLS' || !option) return option
+  const fracOz = option.match(/^(\d+)\/(\d+)\s*oz$/i)
+  if (fracOz) return `${(parseInt(fracOz[1]) / parseInt(fracOz[2])) * 28}g`
+  const decOz = option.match(/^(\d+(?:\.\d+)?)\s*oz$/i)
+  if (decOz) return `${parseFloat(decOz[1]) * 28}g`
+  return option
+}
+
 // Flatten one (product, variant) pair into the field shape the app expects.
 function normalizeVariant(product, variant) {
   const { value: potencyVal, unit: potencyUnit } = parsePotency(product.potencyThc?.formatted)
@@ -82,7 +93,7 @@ function normalizeVariant(product, variant) {
     Category: product.category,
     Subcategory: product.subcategory ?? null,
     Strain: product.strainType ?? null,
-    'Unit Weight': variant.option ?? null,
+    'Unit Weight': normalizeOption(product.category, variant.option ?? null),
     Price: variant.priceRec ?? null,
     SalePrice: variant.specialPriceRec ?? null,
     Potency: potencyVal,
