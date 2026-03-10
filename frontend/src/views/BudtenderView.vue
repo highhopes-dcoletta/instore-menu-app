@@ -3,12 +3,38 @@
   Ready orders appear first with order number + green badge.
 -->
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { computeAppliedDeals } from '@/composables/useBundles'
 import { useFeatureFlags } from '@/composables/useFeatureFlags'
+import QRCode from 'qrcode'
 
 const sessions = ref([])
+const qrCodes = ref({})   // sessionId → data URL
 let pollTimer = null
+
+function cartUrl(sessionId) {
+  const origin = window.location.hostname === 'localhost'
+    ? 'http://100.67.159.25:5173'
+    : window.location.origin
+  return `${origin}/cart/${sessionId}`
+}
+
+async function generateQr(sessionId) {
+  if (qrCodes.value[sessionId]) return
+  try {
+    const canvas = document.createElement('canvas')
+    await QRCode.toCanvas(canvas, cartUrl(sessionId), {
+      width: 96, margin: 1, color: { dark: '#134e4a', light: '#ffffff' },
+    })
+    qrCodes.value[sessionId] = canvas.toDataURL('image/png')
+  } catch (e) {
+    console.error('QR generation failed:', e)
+  }
+}
+
+watch(sessions, (list) => {
+  for (const s of list) generateQr(s.sessionId)
+}, { deep: false })
 
 async function fetchSessions() {
   try {
@@ -91,6 +117,13 @@ onUnmounted(() => clearInterval(pollTimer))
               {{ s.ready ? 'Submitted' : 'Last updated' }} {{ timeSince(s.updatedAt) }}
             </div>
           </div>
+          <img
+            v-if="qrCodes[s.sessionId]"
+            :src="qrCodes[s.sessionId]"
+            width="96" height="96"
+            class="rounded-lg shrink-0"
+            :alt="`QR for session ${s.sessionId}`"
+          />
           <button
             @click="deleteSession(s.sessionId)"
             title="Dismiss order"
