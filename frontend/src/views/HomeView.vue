@@ -62,6 +62,15 @@ const dealsByCategory = computed(() => {
 
 const { bundlesEnabled } = useFeatureFlags()
 const selectedBundle = ref(null)
+
+const MAX_DEALS = 3
+const showAll = ref(false)
+
+const hasMoreDeals = computed(() => dealsByCategory.value.some(g => g.deals.length > MAX_DEALS))
+
+function visibleDeals(group) {
+  return showAll.value ? group.deals : group.deals.slice(0, MAX_DEALS)
+}
 </script>
 
 <template>
@@ -88,7 +97,7 @@ const selectedBundle = ref(null)
           <p class="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">{{ group.category }}</p>
           <div class="flex flex-col gap-2">
             <button
-              v-for="deal in group.deals"
+              v-for="deal in visibleDeals(group)"
               :key="deal.id"
               class="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-300 hover:bg-amber-500/25 hover:border-amber-500/50 transition-colors text-left"
               @click="selectedBundle = deal"
@@ -98,6 +107,18 @@ const selectedBundle = ref(null)
             </button>
           </div>
         </div>
+      </div>
+      <div v-if="hasMoreDeals" class="mt-2">
+        <button
+          v-if="!showAll"
+          @click="showAll = true"
+          class="text-xs font-semibold text-amber-500 hover:text-amber-300 transition-colors"
+        >Show all deals ↓</button>
+        <button
+          v-else
+          @click="showAll = false"
+          class="text-xs font-semibold text-amber-500 hover:text-amber-300 transition-colors"
+        >Show fewer ↑</button>
       </div>
     </div>
 
