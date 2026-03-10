@@ -5,6 +5,7 @@ import FilterPanel from '@/components/FilterPanel.vue'
 import ProductControls from '@/components/ProductControls.vue'
 import GroupableList from '@/components/GroupableList.vue'
 import GroupDrillButton from '@/components/GroupDrillButton.vue'
+import BundlePromos from '@/components/BundlePromos.vue'
 import SubcategoryTabs from '@/components/SubcategoryTabs.vue'
 
 const TABS = [
@@ -24,6 +25,7 @@ const groupList = ref(null)
   <main class="p-6">
     <h1 class="mb-4 text-2xl font-black tracking-wide">Edibles</h1>
     <SubcategoryTabs :tabs="TABS" />
+    <BundlePromos :products="categoryProducts" />
     <ProductControls />
     <div class="flex gap-8">
       <aside class="w-40 shrink-0 order-last">

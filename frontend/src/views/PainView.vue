@@ -5,6 +5,7 @@ import FilterPanel from '@/components/FilterPanel.vue'
 import ProductControls from '@/components/ProductControls.vue'
 import GroupableList from '@/components/GroupableList.vue'
 import GroupDrillButton from '@/components/GroupDrillButton.vue'
+import BundlePromos from '@/components/BundlePromos.vue'
 
 const COLUMNS = ['name', 'potency', 'strain', 'price', 'stock']
 
@@ -17,6 +18,7 @@ const groupList = ref(null)
 <template>
   <main class="p-6">
     <h1 class="mb-4 text-2xl font-black tracking-wide">Pain</h1>
+    <BundlePromos :products="categoryProducts" />
     <ProductControls />
     <div class="flex gap-8">
       <aside class="w-40 shrink-0 order-last">

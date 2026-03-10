@@ -7,6 +7,7 @@ import { useCartAnimation } from '@/composables/useCartAnimation'
 import { useDragToCart } from '@/composables/useDragToCart'
 import { calcQuota } from '@/utils/quotaCalc'
 import { useAnalytics } from '@/composables/useAnalytics'
+import { useBundles } from '@/composables/useBundles'
 import ProductModal from '@/components/ProductModal.vue'
 import QRCode from 'qrcode'
 
@@ -35,6 +36,9 @@ const subtotal = computed(() =>
 )
 const isEmpty = computed(() => Object.keys(session.selections).length === 0)
 const quota = computed(() => calcQuota(session.selections))
+
+const { appliedDeals, totalDiscount, nearDeals } = useBundles(computed(() => session.selections))
+const adjustedSubtotal = computed(() => subtotal.value - totalDiscount.value)
 
 // ── Cross-sell suggestions ────────────────────────────────────────────────────
 
@@ -396,15 +400,38 @@ onUnmounted(() => {
           <p v-if="quota.overLimit" class="mt-1.5 text-xs text-red-500 font-semibold">Daily limit reached</p>
         </div>
 
+        <!-- Near-deal nudges -->
+        <div v-if="nearDeals.length" class="border-t border-gray-100 px-4 py-2 flex flex-col gap-1.5">
+          <div
+            v-for="deal in nearDeals"
+            :key="deal.id"
+            class="flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2"
+          >
+            <span class="text-base leading-none shrink-0">🎯</span>
+            <span class="text-xs text-amber-800 leading-snug">
+              Add {{ deal.needed }} more for<br>
+              <span class="font-semibold">{{ deal.label }}</span>
+            </span>
+          </div>
+        </div>
+
         <!-- Totals — anchored directly below quota bar -->
         <div class="border-t border-gray-100">
           <div class="px-4 pt-3 pb-1 flex items-center justify-between">
             <span class="text-xs text-gray-400">before tax</span>
-            <span class="text-sm font-semibold text-gray-600 tabular-nums">${{ subtotal.toFixed(2) }}</span>
+            <span class="text-sm font-semibold tabular-nums" :class="appliedDeals.length ? 'text-gray-400 line-through' : 'text-gray-600'">${{ subtotal.toFixed(2) }}</span>
+          </div>
+          <div v-for="deal in appliedDeals" :key="deal.id" class="px-4 py-0.5 flex items-center justify-between">
+            <span class="text-xs font-semibold text-green-600">🎉 {{ deal.label }}</span>
+            <span class="text-sm font-bold text-green-600 tabular-nums">-${{ deal.savings.toFixed(2) }}</span>
+          </div>
+          <div v-if="appliedDeals.length" class="px-4 pb-1 flex items-center justify-between">
+            <span class="text-xs text-gray-500 font-semibold">deal price</span>
+            <span class="text-sm font-bold text-gray-700 tabular-nums">${{ adjustedSubtotal.toFixed(2) }}</span>
           </div>
           <div class="px-4 pb-4 flex items-center justify-between">
             <span class="text-xs text-gray-500">after tax (20%)</span>
-            <span class="text-base font-black text-gray-800 tabular-nums">${{ (subtotal * 1.2).toFixed(2) }}</span>
+            <span class="text-base font-black text-gray-800 tabular-nums">${{ (adjustedSubtotal * 1.2).toFixed(2) }}</span>
           </div>
         </div>
 
