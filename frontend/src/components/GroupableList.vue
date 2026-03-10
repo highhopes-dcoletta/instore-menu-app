@@ -504,6 +504,7 @@ async function exitGroupView() {
               />
             </div>
             <span class="text-xs text-gray-500">{{ getPotencyLevel(p).label }}</span>
+            <span v-if="p.Potency != null" class="text-xs font-semibold text-gray-600 tabular-nums">· {{ p.Potency }}{{ p['Potency Unit'] }}</span>
           </div>
 
           <!-- Price + cart -->
