@@ -24,6 +24,7 @@ const MENU_QUERY = `
         image
         description
         effects
+        staffPick
         variants {
           id
           option
@@ -89,6 +90,7 @@ function normalizeVariant(product, variant) {
     Image: product.image ?? null,
     Description: product.description ?? null,
     Tags: tags,
+    StaffPick: product.staffPick ?? false,
     'Pre-Ground?': isPreGround ? 'Yes' : null,
     'Infused Preroll?': isInfused ? 'Yes' : null,
     Quantity: variant.quantity ?? null,

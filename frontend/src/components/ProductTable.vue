@@ -248,12 +248,18 @@ function potency(product) {
               />
               <div>
                 <div>{{ product.Name }}<span v-if="product['Unit Weight']" class="ml-1.5 font-bold"> {{ product['Unit Weight'] }}</span></div>
-                <div v-if="bundlesEnabled && activeBundlesForProduct(product).length" class="flex flex-wrap gap-1 mt-1">
+                <div class="flex flex-wrap gap-1 mt-1">
                   <span
-                    v-for="bundle in activeBundlesForProduct(product)"
-                    :key="bundle.id"
-                    class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-amber-100 border border-amber-200 text-amber-700 text-xs font-bold leading-none"
-                  >🎉 {{ bundle.label }}</span>
+                    v-if="product.StaffPick"
+                    class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-yellow-100 border border-yellow-300 text-yellow-700 text-xs font-bold leading-none"
+                  >⭐ Staff Pick</span>
+                  <template v-if="bundlesEnabled && activeBundlesForProduct(product).length">
+                    <span
+                      v-for="bundle in activeBundlesForProduct(product)"
+                      :key="bundle.id"
+                      class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-amber-100 border border-amber-200 text-amber-700 text-xs font-bold leading-none"
+                    >🎉 {{ bundle.label }}</span>
+                  </template>
                 </div>
               </div>
             </div>

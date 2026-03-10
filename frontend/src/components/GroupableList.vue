@@ -483,6 +483,11 @@ async function exitGroupView() {
         <div class="p-3 flex flex-col gap-1 flex-1">
           <p class="font-bold text-sm leading-tight line-clamp-2">{{ p.Name }}</p>
 
+          <span
+            v-if="p.StaffPick"
+            class="self-start inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-yellow-100 border border-yellow-300 text-yellow-700 text-xs font-bold leading-none mt-0.5"
+          >⭐ Staff Pick</span>
+
           <div class="flex items-center gap-1.5 flex-wrap mt-0.5">
             <span
               v-if="p.Strain"

@@ -338,7 +338,7 @@ test.describe('product modal on /flower', () => {
     await modal.getByRole('button', { name: '+' }).click()
 
     // Cart should now show qty 2
-    await expect(page.locator('[data-cart-list] li').first().getByText('2')).toBeVisible({ timeout: 5000 })
+    await expect(page.locator('[data-cart-list] li').first().locator('.tabular-nums', { hasText: /^2$/ })).toBeVisible({ timeout: 5000 })
   })
 })
 
