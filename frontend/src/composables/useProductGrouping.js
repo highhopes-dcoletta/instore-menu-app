@@ -1,6 +1,6 @@
 // ── Unit parsing helpers ───────────────────────────────────────────────────────
 
-const OZ_TO_G = 28.3495
+const OZ_TO_G = 28
 
 /**
  * Parse a piece count from a product name, e.g. "Wana Gummies 20pk" → 20,
