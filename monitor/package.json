@@ -4,7 +4,8 @@
   "scripts": {
     "test": "playwright test --config=playwright.config.js",
     "test:ui": "playwright test --config=playwright.config.js --ui",
-    "test:headed": "playwright test --config=playwright.config.js --headed"
+    "test:headed": "playwright test --config=playwright.config.js --headed",
+    "screenshots": "NODE_PATH=./node_modules node ../scripts/screenshots/bundle-editor.js"
   },
   "devDependencies": {
     "@playwright/test": "^1.42.0"
