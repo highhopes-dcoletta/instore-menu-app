@@ -9,10 +9,20 @@ const productsStore = useProductsStore()
 
 const editing = ref(null)    // bundle object being edited, or 'new' for create
 const confirmDelete = ref(null) // bundle id pending delete confirmation
+const canPush = ref(false)
+const pushing = ref(false)
+const pushResult = ref(null)  // { success: bool, message: string }
 
-onMounted(() => {
+onMounted(async () => {
   bundlesStore.loadAllBundles()
   if (!productsStore.products.length) productsStore.loadProducts()
+  try {
+    const res = await fetch('/api/bundles/push-available')
+    if (res.ok) {
+      const data = await res.json()
+      canPush.value = data.available
+    }
+  } catch {}
 })
 
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -84,6 +94,30 @@ function toApiShape(bundle) {
   }
 }
 
+async function pushToProd(ids) {
+  pushing.value = true
+  pushResult.value = null
+  try {
+    const body = ids ? { ids } : {}
+    const res = await fetch('/api/bundles/push-to-prod', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.error || `HTTP ${res.status}`)
+    }
+    const data = await res.json()
+    pushResult.value = { success: true, message: `Pushed ${data.pushed} bundle${data.pushed === 1 ? '' : 's'} to prod` }
+  } catch (e) {
+    pushResult.value = { success: false, message: e.message }
+  } finally {
+    pushing.value = false
+    setTimeout(() => { pushResult.value = null }, 4000)
+  }
+}
+
 const groupedBundles = computed(() => {
   const groups = {}
   for (const b of bundlesStore.bundles) {
@@ -102,6 +136,12 @@ const groupedBundles = computed(() => {
       <h1 class="text-2xl font-black tracking-wide">Bundle Deals</h1>
       <div class="flex items-center gap-4">
         <a href="/budtender" class="text-sm font-semibold text-teal-600 hover:text-teal-800 transition-colors">← Orders</a>
+        <button
+          v-if="canPush"
+          @click="pushToProd(null)"
+          :disabled="pushing || !bundlesStore.bundles.length"
+          class="px-4 py-2 rounded-lg bg-amber-500 text-white text-sm font-bold hover:bg-amber-600 disabled:opacity-50 transition-colors"
+        >{{ pushing ? 'Pushing...' : 'Push All to Prod' }}</button>
         <button
           @click="startCreate"
           class="px-4 py-2 rounded-lg bg-teal-600 text-white text-sm font-bold hover:bg-teal-700 transition-colors"
@@ -161,6 +201,12 @@ const groupedBundles = computed(() => {
                   ></span>
                 </button>
                 <button
+                  v-if="canPush"
+                  @click="pushToProd([bundle.id])"
+                  :disabled="pushing"
+                  class="text-sm font-semibold text-amber-500 hover:text-amber-700 disabled:opacity-50 transition-colors"
+                >Push</button>
+                <button
                   @click="startEdit(bundle)"
                   class="text-sm font-semibold text-teal-600 hover:text-teal-800 transition-colors"
                 >Edit</button>
@@ -185,6 +231,11 @@ const groupedBundles = computed(() => {
         </div>
       </div>
     </template>
+
+    <!-- Push result toast -->
+    <div v-if="pushResult" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-xl shadow-lg text-sm font-bold"
+      :class="pushResult.success ? 'bg-green-600 text-white' : 'bg-red-600 text-white'"
+    >{{ pushResult.message }}</div>
 
     <!-- Create/Edit modal -->
     <Teleport to="body">

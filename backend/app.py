@@ -255,6 +255,73 @@ def delete_bundle(bundle_id):
     return "", 200
 
 
+# ── Push to Prod (stage only) ────────────────────────────────────────────────
+
+PROD_DB_PATH = os.getenv("PROD_DB_PATH")
+
+
+@app.route("/api/bundles/push-available", methods=["GET"])
+def push_available():
+    return jsonify({"available": PROD_DB_PATH is not None})
+
+
+@app.route("/api/bundles/push-to-prod", methods=["POST"])
+def push_to_prod():
+    if not PROD_DB_PATH:
+        return jsonify({"error": "push-to-prod not configured"}), 501
+
+    data = request.get_json(force=True)
+    ids = data.get("ids")  # list of bundle IDs, or None for all
+
+    with sqlite3.connect(DB_PATH) as src:
+        src.row_factory = sqlite3.Row
+        if ids:
+            placeholders = ",".join("?" for _ in ids)
+            rows = src.execute(
+                f"SELECT * FROM bundles WHERE id IN ({placeholders})", ids
+            ).fetchall()
+        else:
+            rows = src.execute("SELECT * FROM bundles").fetchall()
+
+    if not rows:
+        return jsonify({"error": "no bundles to push"}), 400
+
+    with sqlite3.connect(PROD_DB_PATH) as dst:
+        # Ensure table exists in prod
+        dst.execute(
+            """CREATE TABLE IF NOT EXISTS bundles (
+              id TEXT PRIMARY KEY, label TEXT NOT NULL,
+              type TEXT NOT NULL DEFAULT 'quantity', grp TEXT,
+              display_category TEXT, quantity INTEGER,
+              bundle_price REAL, unit_price REAL,
+              schedule_days TEXT, schedule_dates TEXT,
+              match_criteria TEXT NOT NULL DEFAULT '{}',
+              sort_order INTEGER DEFAULT 0,
+              enabled INTEGER DEFAULT 1,
+              created_at TEXT DEFAULT (datetime('now')),
+              updated_at TEXT DEFAULT (datetime('now'))
+            )"""
+        )
+        for row in rows:
+            dst.execute(
+                """INSERT OR REPLACE INTO bundles
+                   (id, label, type, grp, display_category, quantity,
+                    bundle_price, unit_price, schedule_days, schedule_dates,
+                    match_criteria, sort_order, enabled, updated_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))""",
+                (
+                    row["id"], row["label"], row["type"], row["grp"],
+                    row["display_category"], row["quantity"],
+                    row["bundle_price"], row["unit_price"],
+                    row["schedule_days"], row["schedule_dates"],
+                    row["match_criteria"], row["sort_order"], row["enabled"],
+                ),
+            )
+        dst.commit()
+
+    return jsonify({"pushed": len(rows)})
+
+
 @app.route("/api/event", methods=["POST"])
 def log_event():
     try:
