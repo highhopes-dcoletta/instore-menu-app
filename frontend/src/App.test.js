@@ -173,3 +173,13 @@ describe('App.vue — analytics route (/analytics)', () => {
     expect(mockClearSession).not.toHaveBeenCalled()
   })
 })
+
+describe('App.vue — version badge', () => {
+  it('renders a version badge with the build version', async () => {
+    const wrapper = await mountApp('/')
+    await flushPromises()
+    const badge = wrapper.find('[data-version]')
+    expect(badge.exists()).toBe(true)
+    expect(badge.text()).toContain(__APP_VERSION__)
+  })
+})

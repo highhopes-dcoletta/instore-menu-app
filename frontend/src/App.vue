@@ -9,8 +9,10 @@ import NavBar from '@/components/NavBar.vue'
 import CartPanel from '@/components/CartPanel.vue'
 import CartAnimation from '@/components/CartAnimation.vue'
 import { useAnalytics } from '@/composables/useAnalytics'
+import { envPrefix } from '@/router/index.js'
 
 const { t } = useI18n()
+const version = (envPrefix() + __APP_VERSION__).trim()
 
 const route = useRoute()
 const router = useRouter()
@@ -92,4 +94,6 @@ onUnmounted(() => {
       <router-view />
     </div>
   </template>
+
+  <span data-version class="fixed bottom-1 left-1 text-[10px] text-gray-300 pointer-events-none select-none z-50">{{ version }}</span>
 </template>

@@ -44,7 +44,8 @@ export function envPrefix() {
 }
 
 router.afterEach((to) => {
-  document.title = envPrefix() + (to.meta.title || DEFAULT_TITLE)
+  const base = envPrefix() + (to.meta.title || DEFAULT_TITLE)
+  document.title = `${base} (${__APP_VERSION__})`
 })
 
 export default router

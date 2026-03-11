@@ -50,42 +50,44 @@ describe('envPrefix', () => {
 })
 
 describe('route titles', () => {
-  it('sets default title for kiosk routes', async () => {
+  const v = __APP_VERSION__
+
+  it('sets default title with version for kiosk routes', async () => {
     vi.spyOn(window, 'location', 'get').mockReturnValue({ hostname: 'menu2.highhopesma.com' })
     await router.push('/')
-    expect(document.title).toBe('High Hopes Menu')
+    expect(document.title).toBe(`High Hopes Menu (${v})`)
 
     await router.push('/flower')
-    expect(document.title).toBe('High Hopes Menu')
+    expect(document.title).toBe(`High Hopes Menu (${v})`)
   })
 
   it('sets custom title for budtender', async () => {
     vi.spyOn(window, 'location', 'get').mockReturnValue({ hostname: 'menu2.highhopesma.com' })
     await router.push('/budtender')
-    expect(document.title).toBe('Budtender at High Hopes')
+    expect(document.title).toBe(`Budtender at High Hopes (${v})`)
   })
 
   it('sets custom title for bundles', async () => {
     vi.spyOn(window, 'location', 'get').mockReturnValue({ hostname: 'menu2.highhopesma.com' })
     await router.push('/bundles')
-    expect(document.title).toBe('Bundles at High Hopes')
+    expect(document.title).toBe(`Bundles at High Hopes (${v})`)
   })
 
   it('sets custom title for analytics', async () => {
     vi.spyOn(window, 'location', 'get').mockReturnValue({ hostname: 'menu2.highhopesma.com' })
     await router.push('/analytics')
-    expect(document.title).toBe('Analytics at High Hopes')
+    expect(document.title).toBe(`Analytics at High Hopes (${v})`)
   })
 
   it('prefixes with [stage] on stage hostname', async () => {
     vi.spyOn(window, 'location', 'get').mockReturnValue({ hostname: 'menu2-stage.highhopesma.com' })
     await router.push('/budtender')
-    expect(document.title).toBe('[stage] Budtender at High Hopes')
+    expect(document.title).toBe(`[stage] Budtender at High Hopes (${v})`)
   })
 
   it('prefixes with [local] on localhost', async () => {
     vi.spyOn(window, 'location', 'get').mockReturnValue({ hostname: 'localhost' })
     await router.push('/bundles')
-    expect(document.title).toBe('[local] Bundles at High Hopes')
+    expect(document.title).toBe(`[local] Bundles at High Hopes (${v})`)
   })
 })
