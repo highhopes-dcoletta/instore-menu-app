@@ -85,6 +85,84 @@ function nextRefreshReturns(items) {
   })
 }
 
+describe('localStorage product cache', () => {
+  it('saves products to localStorage after a successful load', async () => {
+    await loadWith([{ id: 'p1', name: 'Blue Dream' }])
+    const cached = JSON.parse(localStorage.getItem('dutchie_products_v1'))
+    expect(cached).not.toBeNull()
+    expect(cached.data).toHaveLength(1)
+    expect(cached.data[0].Name).toBe('Blue Dream')
+    expect(cached.ts).toBeGreaterThan(0)
+  })
+
+  it('falls back to cache when all retries fail on initial load', async () => {
+    // Seed the cache manually
+    localStorage.setItem('dutchie_products_v1', JSON.stringify({
+      ts: Date.now(),
+      data: [{ id: 'p1', Name: 'Cached Product', Category: 'FLOWER' }],
+    }))
+
+    // All three fetch attempts fail
+    mockFetch.mockImplementation(() => Promise.reject(new Error('Network error')))
+
+    const store = useProductsStore()
+    const loadPromise = store.loadProducts()
+    await vi.advanceTimersByTimeAsync(10_000) // advance through retry delays
+    await loadPromise
+
+    expect(store.products).toHaveLength(1)
+    expect(store.products[0].Name).toBe('Cached Product')
+    expect(store.usingCache).toBe(true)
+    expect(store.error).toBe(false)
+    expect(store.loading).toBe(false)
+  })
+
+  it('sets error=true when all retries fail and there is no cache', async () => {
+    mockFetch.mockImplementation(() => Promise.reject(new Error('Network error')))
+
+    const store = useProductsStore()
+    const loadPromise = store.loadProducts()
+    await vi.advanceTimersByTimeAsync(10_000)
+    await loadPromise
+
+    expect(store.error).toBe(true)
+    expect(store.usingCache).toBe(false)
+    expect(store.products).toHaveLength(0)
+  })
+
+  it('clears usingCache flag when background refresh succeeds', async () => {
+    // Seed cache and fail initial load
+    localStorage.setItem('dutchie_products_v1', JSON.stringify({
+      ts: Date.now(),
+      data: [{ id: 'p1', Name: 'Cached Product', Category: 'FLOWER' }],
+    }))
+    mockFetch.mockImplementation(() => Promise.reject(new Error('Network error')))
+
+    const store = useProductsStore()
+    const loadPromise = store.loadProducts()
+    await vi.advanceTimersByTimeAsync(10_000)
+    await loadPromise
+    expect(store.usingCache).toBe(true)
+
+    // Background refresh succeeds
+    nextRefreshReturns([{ id: 'p2', name: 'Fresh Product' }])
+    await vi.advanceTimersByTimeAsync(60_000)
+
+    expect(store.usingCache).toBe(false)
+    expect(store.products[0].Name).toBe('Fresh Product')
+  })
+
+  it('updates the cache after a successful background refresh', async () => {
+    await loadWith([{ id: 'p1', name: 'Blue Dream' }])
+
+    nextRefreshReturns([{ id: 'p2', name: 'OG Kush' }])
+    await vi.advanceTimersByTimeAsync(60_000)
+
+    const cached = JSON.parse(localStorage.getItem('dutchie_products_v1'))
+    expect(cached.data[0].Name).toBe('OG Kush')
+  })
+})
+
 describe('background refresh — cart preservation', () => {
   it('keeps all cart items when every product is still available', async () => {
     const productsStore = await loadWith([

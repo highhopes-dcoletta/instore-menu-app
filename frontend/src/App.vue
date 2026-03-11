@@ -83,6 +83,9 @@ onUnmounted(() => {
       </p>
     </div>
     <div v-else class="pr-72">
+      <div v-if="productsStore.usingCache" class="bg-amber-50 border-b border-amber-200 px-4 py-2 text-xs font-semibold text-amber-700 text-center">
+        Live menu unavailable — showing last known product list
+      </div>
       <router-view />
     </div>
   </template>

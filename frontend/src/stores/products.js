@@ -108,10 +108,31 @@ function normalizeVariant(product, variant) {
   }
 }
 
+const CACHE_KEY = 'dutchie_products_v1'
+
+function saveCache(data) {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), data }))
+  } catch (e) {
+    console.warn('Failed to save product cache to localStorage:', e)
+  }
+}
+
+function loadCache() {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY)
+    if (!raw) return null
+    return JSON.parse(raw).data ?? null
+  } catch (e) {
+    return null
+  }
+}
+
 export const useProductsStore = defineStore('products', () => {
   const products = ref([])
   const loading = ref(false)
   const error = ref(false)
+  const usingCache = ref(false)
   const outOfStockNotice = ref([]) // names of items silently removed by background refresh
 
   let refreshTimer = null
@@ -168,7 +189,9 @@ export const useProductsStore = defineStore('products', () => {
     for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
       try {
         const data = await _fetchAll()
+        saveCache(data)
         products.value = data
+        usingCache.value = false
         loading.value = false
         _startRefreshTimer()
         return
@@ -178,6 +201,17 @@ export const useProductsStore = defineStore('products', () => {
           await new Promise((r) => setTimeout(r, 1000 * attempt))
         }
       }
+    }
+
+    // All retries failed — fall back to last cached product list if available
+    const cached = loadCache()
+    if (cached?.length) {
+      console.warn('Dutchie API unavailable — using cached product list')
+      products.value = cached
+      usingCache.value = true
+      loading.value = false
+      _startRefreshTimer() // keep retrying in the background
+      return
     }
 
     loading.value = false
@@ -190,6 +224,7 @@ export const useProductsStore = defineStore('products', () => {
     const scrollY = window.scrollY
     try {
       const newData = await _fetchAll()
+      saveCache(newData)
 
       const sessionStore = useSessionStore()
       const newIds = new Set(newData.map((p) => p.id))
@@ -201,6 +236,7 @@ export const useProductsStore = defineStore('products', () => {
       }
 
       products.value = newData
+      usingCache.value = false
       window.scrollTo({ top: scrollY, behavior: 'instant' })
     } catch (e) {
       console.error('Background refresh failed:', e)
@@ -218,6 +254,7 @@ export const useProductsStore = defineStore('products', () => {
     products,
     loading,
     error,
+    usingCache,
     outOfStockNotice,
     loadProducts,
   }
