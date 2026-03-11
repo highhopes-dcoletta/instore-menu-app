@@ -399,3 +399,162 @@ test('cart share page shows expired message for unknown session', async ({ page 
   await page.goto(`${BASE}/cart/non-existent-session-id-xyz`)
   await expect(page.getByText(/expired/i)).toBeVisible({ timeout: 10000 })
 })
+
+// ─── Group 7: Bundle editor CRUD + customer-facing integration ──────────────
+
+const E2E_PREFIX = 'e2e-test-bundle'
+const E2E_BUNDLE_ID = `${E2E_PREFIX}-${Date.now()}`
+const E2E_LABEL = `${E2E_BUNDLE_ID} Test Deal`
+const E2E_LABEL_UPDATED = `${E2E_BUNDLE_ID} Updated Deal`
+
+test.describe.serial('bundle editor', () => {
+  // Clean up any leftover test bundles before and after the suite
+  async function cleanupTestBundles(request) {
+    const res = await request.fetch(`${BASE}/api/bundles?includeDisabled=1`)
+    if (res.ok()) {
+      const bundles = await res.json()
+      for (const b of bundles) {
+        if (b.id.startsWith(E2E_PREFIX)) {
+          await request.delete(`${BASE}/api/bundles/${b.id}`)
+        }
+      }
+    }
+  }
+
+  test('bundles page loads and shows existing bundles', async ({ page, request }) => {
+    await cleanupTestBundles(request) // pre-clean stale bundles from prior runs
+    await page.goto(`${BASE}/bundles`)
+    await expect(
+      page.locator('.rounded-xl.border').first().or(page.getByText(/no bundles yet/i))
+    ).toBeVisible({ timeout: 15000 })
+  })
+
+  test('create a new bundle via the form', async ({ page }) => {
+    await page.goto(`${BASE}/bundles`)
+    await page.waitForResponse(resp => resp.url().includes('/api/bundles'))
+
+    await page.getByRole('button', { name: '+ New Bundle' }).click()
+    await expect(page.getByRole('heading', { name: 'New Bundle' })).toBeVisible()
+
+    const form = page.locator('form')
+    await form.locator('input').first().fill(E2E_LABEL)
+    await form.getByRole('button', { name: 'Timed' }).click()
+    const unitPriceInput = form.locator('input[type="number"]').first()
+    await unitPriceInput.fill('5')
+    await form.locator('select').first().selectOption('Flower')
+
+    // Add name-contains criterion
+    const nameInput = form.locator('input[placeholder="e.g. juicy stickz"]')
+    await nameInput.fill('high hopes')
+    await nameInput.locator('..').getByRole('button', { name: 'Add' }).click()
+    await expect(form.locator('.bg-blue-100', { hasText: 'high hopes' })).toBeVisible()
+
+    // Live preview should show matches
+    await expect(form.getByText(/matching products/i).locator('span')).not.toHaveText('(0)', { timeout: 5000 })
+
+    // Set the ID
+    const idInput = form.locator('input').nth(1)
+    await idInput.fill(E2E_BUNDLE_ID)
+
+    await form.getByRole('button', { name: 'Create' }).click()
+    await expect(page.getByRole('heading', { name: 'New Bundle' })).not.toBeVisible({ timeout: 5000 })
+    await expect(page.getByText(E2E_LABEL)).toBeVisible({ timeout: 5000 })
+  })
+
+  test('created bundle shows as a deal badge on the flower page', async ({ page }) => {
+    await page.goto(`${BASE}/flower`)
+    await waitForProducts(page)
+    await expect(
+      page.locator('.bg-amber-50', { hasText: E2E_LABEL })
+    ).toBeVisible({ timeout: 10000 })
+  })
+
+  test('edit the bundle label and verify it updates on the flower page', async ({ page }) => {
+    await page.goto(`${BASE}/bundles`)
+    await page.waitForResponse(resp => resp.url().includes('/api/bundles'))
+
+    const bundleCard = page.locator('.rounded-xl.border', { hasText: E2E_LABEL })
+    await expect(bundleCard).toBeVisible({ timeout: 10000 })
+    await bundleCard.getByRole('button', { name: 'Edit' }).click()
+    await expect(page.getByRole('heading', { name: 'Edit Bundle' })).toBeVisible()
+
+    const form = page.locator('form')
+    await form.locator('input').first().fill(E2E_LABEL_UPDATED)
+    await form.getByRole('button', { name: 'Save Changes' }).click()
+    await expect(page.getByRole('heading', { name: 'Edit Bundle' })).not.toBeVisible({ timeout: 5000 })
+    await expect(page.getByText(E2E_LABEL_UPDATED)).toBeVisible({ timeout: 5000 })
+
+    // Verify on flower page
+    await page.goto(`${BASE}/flower`)
+    await waitForProducts(page)
+    await expect(
+      page.locator('.bg-amber-50', { hasText: E2E_LABEL_UPDATED })
+    ).toBeVisible({ timeout: 10000 })
+  })
+
+  test('disable the bundle and verify it disappears from the flower page', async ({ page, request }) => {
+    await page.goto(`${BASE}/bundles`)
+    // Wait for bundles API to respond and render
+    await page.waitForResponse(resp => resp.url().includes('/api/bundles'))
+
+    const bundleCard = page.locator('.rounded-xl.border', { hasText: E2E_LABEL_UPDATED })
+    await expect(bundleCard).toBeVisible({ timeout: 10000 })
+    await bundleCard.locator('button[title="Disable"]').click({ force: true })
+    await expect(bundleCard).toHaveClass(/opacity-60/, { timeout: 10000 })
+
+    // Verify via API that bundle is disabled
+    const apiRes = await request.fetch(`${BASE}/api/bundles?includeDisabled=1`)
+    const allBundles = await apiRes.json()
+    const testBundle = allBundles.find(b => b.id === E2E_BUNDLE_ID)
+    expect(testBundle).toBeTruthy()
+    expect(testBundle.enabled).toBe(false)
+
+    await page.goto(`${BASE}/flower`)
+    await waitForProducts(page)
+    await expect(
+      page.locator('.bg-amber-50', { hasText: E2E_LABEL_UPDATED })
+    ).not.toBeVisible({ timeout: 5000 })
+  })
+
+  test('re-enable the bundle and verify it reappears', async ({ page, request }) => {
+    // Verify the bundle still exists via API before loading the page
+    const apiCheck = await request.fetch(`${BASE}/api/bundles?includeDisabled=1`)
+    const checkBundles = await apiCheck.json()
+    expect(checkBundles.find(b => b.id === E2E_BUNDLE_ID)).toBeTruthy()
+
+    await page.goto(`${BASE}/bundles`)
+    await page.waitForResponse(resp => resp.url().includes('/api/bundles'))
+
+    const bundleCard = page.locator('.rounded-xl.border', { hasText: E2E_LABEL_UPDATED })
+    await expect(bundleCard).toBeVisible({ timeout: 10000 })
+    await bundleCard.locator('button[title="Enable"]').click({ force: true })
+    await expect(bundleCard).not.toHaveClass(/opacity-60/, { timeout: 10000 })
+
+    await page.goto(`${BASE}/flower`)
+    await waitForProducts(page)
+    await expect(
+      page.locator('.bg-amber-50', { hasText: E2E_LABEL_UPDATED })
+    ).toBeVisible({ timeout: 10000 })
+  })
+
+  test('delete the bundle and verify it disappears everywhere', async ({ page, request }) => {
+    await page.goto(`${BASE}/bundles`)
+    await page.waitForResponse(resp => resp.url().includes('/api/bundles'))
+
+    const bundleCard = page.locator('.rounded-xl.border', { hasText: E2E_LABEL_UPDATED })
+    await expect(bundleCard).toBeVisible({ timeout: 10000 })
+
+    await bundleCard.getByRole('button', { name: 'Delete' }).click()
+    await bundleCard.getByRole('button', { name: 'Confirm' }).click()
+    await expect(bundleCard).not.toBeVisible({ timeout: 5000 })
+
+    await page.goto(`${BASE}/flower`)
+    await waitForProducts(page)
+    await expect(
+      page.locator('.bg-amber-50', { hasText: E2E_LABEL_UPDATED })
+    ).not.toBeVisible({ timeout: 5000 })
+
+    // Final cleanup
+    await cleanupTestBundles(request)
+  })
+})
