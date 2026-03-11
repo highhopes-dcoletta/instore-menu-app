@@ -1,7 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { BUNDLES } from '@/config/bundles'
+import { useBundlesStore } from '@/stores/bundles'
 import BundleDealModal from '@/components/BundleDealModal.vue'
 import { useFeatureFlags } from '@/composables/useFeatureFlags'
 
@@ -18,42 +18,15 @@ const CATEGORIES = [
   { path: '/pain',                    labelKey: 'nav.pain' },
 ]
 
-function isActiveToday(bundle) {
-  if (!bundle.schedule) return true
-  const now = new Date()
-  const { days, dates } = bundle.schedule
-  if (days?.length && !days.includes(now.getDay())) return false
-  if (dates?.length && !dates.includes(now.getDate())) return false
-  return true
-}
-
-// Map bundle IDs to display categories
-const BUNDLE_CATEGORIES = {
-  'drinks-4': 'Edibles', 'drinks-6': 'Edibles', 'drinks-8': 'Edibles', 'drinks-case': 'Edibles',
-  'bettys-fruit-2': 'Edibles', 'wyld-2': 'Edibles', 'mindys-2': 'Edibles',
-  'monday-dorks-2': 'Edibles', 'monday-pax-2': 'Edibles', 'monday-choice-3': 'Edibles',
-  'monday-camino-2': 'Edibles', 'monday-bettys-3': 'Edibles', 'monday-cannatini-2': 'Edibles',
-  'monday-zzzonked-2': 'Edibles', 'monday-jams-2': 'Edibles',
-  'juicy-fire-4pack': 'Pre-Rolls', 'juicy-fire-6pack': 'Pre-Rolls',
-  'hh-1g-preroll-2': 'Pre-Rolls', 'hh-1g-preroll-5': 'Pre-Rolls', 'hh-1g-preroll-10': 'Pre-Rolls',
-  'hh-5pack-2': 'Pre-Rolls', 'valorem-1g-2': 'Pre-Rolls', 'realm-1g-2': 'Pre-Rolls',
-  'hh-eighth-3pack': 'Flower', 'friday-flower-2pack': 'Flower',
-  'hellavated-1g-2': 'Vapes', 'freshly-baked-1g-2': 'Vapes', 'fernway-1g-2': 'Vapes',
-  'friday-fernway-1g-3': 'Vapes', 'select-briq-2g-2': 'Vapes', 'crude-strane-4': 'Vapes',
-  'dcc-1g-4': 'Vapes', 'hellavated-strane-cloud-2': 'Vapes',
-  'dime-1g-2': 'Vapes', 'dime-2g-2': 'Vapes', 'dime-mix-2': 'Vapes',
-  'mac-sugar-2': 'Dabs', 'mac-sugar-3': 'Dabs', 'mac-live-hash-2': 'Dabs',
-}
+const bundlesStore = useBundlesStore()
 
 const dealsByCategory = computed(() => {
-  const active = BUNDLES.filter(isActiveToday)
   const grouped = {}
-  for (const deal of active) {
-    const cat = BUNDLE_CATEGORIES[deal.id] || 'Other'
+  for (const deal of bundlesStore.activeBundles) {
+    const cat = deal.displayCategory || 'Other'
     if (!grouped[cat]) grouped[cat] = []
     grouped[cat].push(deal)
   }
-  // Return as sorted array of { category, deals }
   const order = ['Flower', 'Pre-Rolls', 'Edibles', 'Vapes', 'Dabs']
   return order
     .filter(c => grouped[c])

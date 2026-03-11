@@ -1,5 +1,5 @@
 import { computed } from 'vue'
-import { BUNDLES } from '@/config/bundles'
+import { useBundlesStore } from '@/stores/bundles'
 
 // ── Shared schedule check ─────────────────────────────────────────────────────
 
@@ -18,14 +18,17 @@ function scheduleActive(bundle) {
  * Given a plain selections object { [productId]: { name, category, unitWeight, price, qty } },
  * returns an array of { id, label, savings } for every deal currently active and met.
  * Safe to call from anywhere — no Vue reactivity required.
+ *
+ * Optionally accepts a bundleList for use outside reactive contexts (e.g. BudtenderView).
  */
-export function computeAppliedDeals(selections) {
+export function computeAppliedDeals(selections, bundleList) {
+  const allBundles = bundleList ?? useBundlesStore().bundles
   const items = Object.values(selections)
 
   // Compute raw savings for every eligible bundle
   const candidates = []
 
-  for (const bundle of BUNDLES) {
+  for (const bundle of allBundles) {
     if (!scheduleActive(bundle)) continue
 
     const matching = items.filter(i => bundle.match(i))
@@ -77,6 +80,8 @@ export function computeAppliedDeals(selections) {
  *   nearDeals     — quantity bundles the customer is partway toward
  */
 export function useBundles(selectionsRef) {
+  const bundlesStore = useBundlesStore()
+
   const appliedDeals = computed(() => computeAppliedDeals(selectionsRef.value))
 
   const totalDiscount = computed(() =>
@@ -87,7 +92,7 @@ export function useBundles(selectionsRef) {
     const items = Object.values(selectionsRef.value)
     const near = []
 
-    for (const bundle of BUNDLES) {
+    for (const bundle of bundlesStore.bundles) {
       if (bundle.type !== 'quantity') continue
       if (!scheduleActive(bundle)) continue
 
@@ -112,8 +117,10 @@ export function useBundles(selectionsRef) {
  * (with Name/Category/'Unit Weight' fields), returns bundles active today that match it.
  */
 export function useProductBundles() {
+  const bundlesStore = useBundlesStore()
+
   function activeBundlesForProduct(product) {
-    return BUNDLES.filter(bundle => {
+    return bundlesStore.bundles.filter(bundle => {
       if (!scheduleActive(bundle)) return false
       return bundle.match({
         name: product.Name,

@@ -1,5 +1,7 @@
-import { describe, it, expect, vi, afterEach } from 'vitest'
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
 import { ref } from 'vue'
+import { createPinia, setActivePinia } from 'pinia'
+import { useBundlesStore } from '@/stores/bundles'
 import { useBundles } from './useBundles'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -93,119 +95,134 @@ const hhPreroll1g = (qty, price = 8) => ({
 // ── Mock bundles ──────────────────────────────────────────────────────────────
 // Isolated from production values so tests don't break when prices change.
 
-vi.mock('@/config/bundles', () => ({
-  BUNDLES: [
-    // Grouped: only the best deal in 'juicy-fire' applies
-    {
-      id: 'juicy-stix-4pack',
-      label: 'Any 4 Juicy Stickz — $42',
-      type: 'quantity',
-      group: 'juicy-fire',
-      match: (item) => /juicy stickz/i.test(item.name),
-      quantity: 4,
-      bundlePrice: 42,
-    },
-    {
-      id: 'juicy-stix-6pack',
-      label: 'Any 6 Juicy Stickz — $60',
-      type: 'quantity',
-      group: 'juicy-fire',
-      match: (item) => /juicy stickz/i.test(item.name),
-      quantity: 6,
-      bundlePrice: 60,
-    },
-    // Monday edibles — timed
-    {
-      id: 'monday-edibles',
-      label: 'Monday Edible Value Menu',
-      type: 'timed',
-      match: (item) => item.category === 'EDIBLES',
-      schedule: { days: [1] },
-      unitPrice: 8,
-    },
-    // Hellavated — timed, always-on (empty schedule)
-    {
-      id: 'hellavated-1g-cart',
-      label: 'Hellavated 1G Cartridge — $45',
-      type: 'timed',
-      match: (item) =>
-        /hellavated/i.test(item.name) &&
-        /1g/i.test(item.unitWeight) &&
-        !/disposable/i.test(item.name),
-      schedule: {},
-      unitPrice: 45,
-    },
-    // Friday flower
-    {
-      id: 'friday-flower-2pack',
-      label: 'High Hopes Flower 3.5G 2-Pack — $28',
-      type: 'quantity',
-      match: (item) => /high hopes/i.test(item.name) && /3\.5g/i.test(item.unitWeight),
-      schedule: { days: [5] },
-      quantity: 2,
-      bundlePrice: 28,
-    },
-    // Dime Day — grouped, three overlapping tiers
-    {
-      id: 'dime-1g-2',
-      label: 'Dime 1G Disposables — 2 for $70',
-      type: 'quantity',
-      group: 'dime-day',
-      match: (item) => /\bdime\b/i.test(item.name) && /1g/i.test(item.unitWeight),
-      schedule: { dates: [10] },
-      quantity: 2,
-      bundlePrice: 70,
-    },
-    {
-      id: 'dime-2g-2',
-      label: 'Dime 2G Disposables — 2 for $80',
-      type: 'quantity',
-      group: 'dime-day',
-      match: (item) => /\bdime\b/i.test(item.name) && /2g/i.test(item.unitWeight),
-      schedule: { dates: [10] },
-      quantity: 2,
-      bundlePrice: 80,
-    },
-    {
-      id: 'dime-mix-2',
-      label: 'Mix & Match Dime — 2 for $80',
-      type: 'quantity',
-      group: 'dime-day',
-      match: (item) => /\bdime\b/i.test(item.name) && /1g|2g/i.test(item.unitWeight),
-      schedule: { dates: [10] },
-      quantity: 2,
-      bundlePrice: 80,
-    },
-    // HH 1G pre-roll tiers — grouped
-    {
-      id: 'hh-1g-preroll-2',
-      label: 'Any 2 High Hopes 1G Pre-Rolls — $15',
-      type: 'quantity',
-      group: 'hh-1g-preroll',
-      match: (item) => /high hopes/i.test(item.name) && /1g/i.test(item.unitWeight) && item.subcategory !== 'PACKS',
-      quantity: 2,
-      bundlePrice: 15,
-    },
-    {
-      id: 'hh-1g-preroll-5',
-      label: 'Any 5 High Hopes 1G Pre-Rolls — $35',
-      type: 'quantity',
-      group: 'hh-1g-preroll',
-      match: (item) => /high hopes/i.test(item.name) && /1g/i.test(item.unitWeight) && item.subcategory !== 'PACKS',
-      quantity: 5,
-      bundlePrice: 35,
-    },
-    {
-      id: 'hh-1g-preroll-10',
-      label: 'Any 10 High Hopes 1G Pre-Rolls — $65',
-      type: 'quantity',
-      group: 'hh-1g-preroll',
-      match: (item) => /high hopes/i.test(item.name) && /1g/i.test(item.unitWeight) && item.subcategory !== 'PACKS',
-      quantity: 10,
-      bundlePrice: 65,
-    },
-  ],
-}))
+const MOCK_BUNDLES = [
+  // Grouped: only the best deal in 'juicy-fire' applies
+  {
+    id: 'juicy-stix-4pack',
+    label: 'Any 4 Juicy Stickz — $42',
+    type: 'quantity',
+    group: 'juicy-fire',
+    match: (item) => /juicy stickz/i.test(item.name),
+    quantity: 4,
+    bundlePrice: 42,
+    enabled: true,
+  },
+  {
+    id: 'juicy-stix-6pack',
+    label: 'Any 6 Juicy Stickz — $60',
+    type: 'quantity',
+    group: 'juicy-fire',
+    match: (item) => /juicy stickz/i.test(item.name),
+    quantity: 6,
+    bundlePrice: 60,
+    enabled: true,
+  },
+  // Monday edibles — timed
+  {
+    id: 'monday-edibles',
+    label: 'Monday Edible Value Menu',
+    type: 'timed',
+    match: (item) => item.category === 'EDIBLES',
+    schedule: { days: [1] },
+    unitPrice: 8,
+    enabled: true,
+  },
+  // Hellavated — timed, always-on (empty schedule)
+  {
+    id: 'hellavated-1g-cart',
+    label: 'Hellavated 1G Cartridge — $45',
+    type: 'timed',
+    match: (item) =>
+      /hellavated/i.test(item.name) &&
+      /1g/i.test(item.unitWeight) &&
+      !/disposable/i.test(item.name),
+    schedule: {},
+    unitPrice: 45,
+    enabled: true,
+  },
+  // Friday flower
+  {
+    id: 'friday-flower-2pack',
+    label: 'High Hopes Flower 3.5G 2-Pack — $28',
+    type: 'quantity',
+    match: (item) => /high hopes/i.test(item.name) && /3\.5g/i.test(item.unitWeight),
+    schedule: { days: [5] },
+    quantity: 2,
+    bundlePrice: 28,
+    enabled: true,
+  },
+  // Dime Day — grouped, three overlapping tiers
+  {
+    id: 'dime-1g-2',
+    label: 'Dime 1G Disposables — 2 for $70',
+    type: 'quantity',
+    group: 'dime-day',
+    match: (item) => /\bdime\b/i.test(item.name) && /1g/i.test(item.unitWeight),
+    schedule: { dates: [10] },
+    quantity: 2,
+    bundlePrice: 70,
+    enabled: true,
+  },
+  {
+    id: 'dime-2g-2',
+    label: 'Dime 2G Disposables — 2 for $80',
+    type: 'quantity',
+    group: 'dime-day',
+    match: (item) => /\bdime\b/i.test(item.name) && /2g/i.test(item.unitWeight),
+    schedule: { dates: [10] },
+    quantity: 2,
+    bundlePrice: 80,
+    enabled: true,
+  },
+  {
+    id: 'dime-mix-2',
+    label: 'Mix & Match Dime — 2 for $80',
+    type: 'quantity',
+    group: 'dime-day',
+    match: (item) => /\bdime\b/i.test(item.name) && /1g|2g/i.test(item.unitWeight),
+    schedule: { dates: [10] },
+    quantity: 2,
+    bundlePrice: 80,
+    enabled: true,
+  },
+  // HH 1G pre-roll tiers — grouped
+  {
+    id: 'hh-1g-preroll-2',
+    label: 'Any 2 High Hopes 1G Pre-Rolls — $15',
+    type: 'quantity',
+    group: 'hh-1g-preroll',
+    match: (item) => /high hopes/i.test(item.name) && /1g/i.test(item.unitWeight) && item.subcategory !== 'PACKS',
+    quantity: 2,
+    bundlePrice: 15,
+    enabled: true,
+  },
+  {
+    id: 'hh-1g-preroll-5',
+    label: 'Any 5 High Hopes 1G Pre-Rolls — $35',
+    type: 'quantity',
+    group: 'hh-1g-preroll',
+    match: (item) => /high hopes/i.test(item.name) && /1g/i.test(item.unitWeight) && item.subcategory !== 'PACKS',
+    quantity: 5,
+    bundlePrice: 35,
+    enabled: true,
+  },
+  {
+    id: 'hh-1g-preroll-10',
+    label: 'Any 10 High Hopes 1G Pre-Rolls — $65',
+    type: 'quantity',
+    group: 'hh-1g-preroll',
+    match: (item) => /high hopes/i.test(item.name) && /1g/i.test(item.unitWeight) && item.subcategory !== 'PACKS',
+    quantity: 10,
+    bundlePrice: 65,
+    enabled: true,
+  },
+]
+
+beforeEach(() => {
+  setActivePinia(createPinia())
+  const store = useBundlesStore()
+  store.bundles = MOCK_BUNDLES
+})
 
 // ── Date helpers ──────────────────────────────────────────────────────────────
 

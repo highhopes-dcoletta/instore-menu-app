@@ -36,6 +36,27 @@ def _init_db() -> None:
             )
             """
         )
+        con.execute(
+            """
+            CREATE TABLE IF NOT EXISTS bundles (
+              id TEXT PRIMARY KEY,
+              label TEXT NOT NULL,
+              type TEXT NOT NULL DEFAULT 'quantity',
+              grp TEXT,
+              display_category TEXT,
+              quantity INTEGER,
+              bundle_price REAL,
+              unit_price REAL,
+              schedule_days TEXT,
+              schedule_dates TEXT,
+              match_criteria TEXT NOT NULL DEFAULT '{}',
+              sort_order INTEGER DEFAULT 0,
+              enabled INTEGER DEFAULT 1,
+              created_at TEXT DEFAULT (datetime('now')),
+              updated_at TEXT DEFAULT (datetime('now'))
+            )
+            """
+        )
         con.commit()
 
 
@@ -125,6 +146,113 @@ def get_sessions():
     # Ready orders first, then by updatedAt
     result.sort(key=lambda x: (not x["ready"], x["updatedAt"]))
     return jsonify(result)
+
+
+# ── Bundle CRUD ──────────────────────────────────────────────────────────────
+
+def _bundle_row_to_dict(row):
+    return {
+        "id": row["id"],
+        "label": row["label"],
+        "type": row["type"],
+        "group": row["grp"],
+        "displayCategory": row["display_category"],
+        "quantity": row["quantity"],
+        "bundlePrice": row["bundle_price"],
+        "unitPrice": row["unit_price"],
+        "scheduleDays": json.loads(row["schedule_days"]) if row["schedule_days"] else None,
+        "scheduleDates": json.loads(row["schedule_dates"]) if row["schedule_dates"] else None,
+        "matchCriteria": json.loads(row["match_criteria"]),
+        "sortOrder": row["sort_order"],
+        "enabled": bool(row["enabled"]),
+    }
+
+
+@app.route("/api/bundles", methods=["GET"])
+def list_bundles():
+    include_disabled = request.args.get("includeDisabled") == "1"
+    with sqlite3.connect(DB_PATH) as con:
+        con.row_factory = sqlite3.Row
+        if include_disabled:
+            rows = con.execute("SELECT * FROM bundles ORDER BY sort_order, id").fetchall()
+        else:
+            rows = con.execute("SELECT * FROM bundles WHERE enabled = 1 ORDER BY sort_order, id").fetchall()
+    return jsonify([_bundle_row_to_dict(r) for r in rows])
+
+
+@app.route("/api/bundles", methods=["POST"])
+def create_bundle():
+    data = request.get_json(force=True)
+    if not data.get("id") or not data.get("label"):
+        return jsonify({"error": "id and label are required"}), 400
+
+    with sqlite3.connect(DB_PATH) as con:
+        try:
+            con.execute(
+                """INSERT INTO bundles (id, label, type, grp, display_category, quantity,
+                   bundle_price, unit_price, schedule_days, schedule_dates,
+                   match_criteria, sort_order, enabled)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    data["id"],
+                    data["label"],
+                    data.get("type", "quantity"),
+                    data.get("group"),
+                    data.get("displayCategory"),
+                    data.get("quantity"),
+                    data.get("bundlePrice"),
+                    data.get("unitPrice"),
+                    json.dumps(data["scheduleDays"]) if data.get("scheduleDays") else None,
+                    json.dumps(data["scheduleDates"]) if data.get("scheduleDates") else None,
+                    json.dumps(data.get("matchCriteria", {})),
+                    data.get("sortOrder", 0),
+                    1 if data.get("enabled", True) else 0,
+                ),
+            )
+            con.commit()
+        except sqlite3.IntegrityError:
+            return jsonify({"error": "bundle with this id already exists"}), 409
+    return "", 201
+
+
+@app.route("/api/bundles/<bundle_id>", methods=["PUT"])
+def update_bundle(bundle_id):
+    data = request.get_json(force=True)
+    with sqlite3.connect(DB_PATH) as con:
+        result = con.execute(
+            """UPDATE bundles SET label=?, type=?, grp=?, display_category=?,
+               quantity=?, bundle_price=?, unit_price=?, schedule_days=?,
+               schedule_dates=?, match_criteria=?, sort_order=?, enabled=?,
+               updated_at=datetime('now')
+               WHERE id=?""",
+            (
+                data.get("label", ""),
+                data.get("type", "quantity"),
+                data.get("group"),
+                data.get("displayCategory"),
+                data.get("quantity"),
+                data.get("bundlePrice"),
+                data.get("unitPrice"),
+                json.dumps(data["scheduleDays"]) if data.get("scheduleDays") else None,
+                json.dumps(data["scheduleDates"]) if data.get("scheduleDates") else None,
+                json.dumps(data.get("matchCriteria", {})),
+                data.get("sortOrder", 0),
+                1 if data.get("enabled", True) else 0,
+                bundle_id,
+            ),
+        )
+        con.commit()
+        if result.rowcount == 0:
+            return jsonify({"error": "not found"}), 404
+    return "", 200
+
+
+@app.route("/api/bundles/<bundle_id>", methods=["DELETE"])
+def delete_bundle(bundle_id):
+    with sqlite3.connect(DB_PATH) as con:
+        con.execute("DELETE FROM bundles WHERE id = ?", (bundle_id,))
+        con.commit()
+    return "", 200
 
 
 @app.route("/api/event", methods=["POST"])

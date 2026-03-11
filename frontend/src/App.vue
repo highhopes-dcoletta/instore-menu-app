@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useProductsStore } from '@/stores/products'
 import { useSessionStore } from '@/stores/session'
+import { useBundlesStore } from '@/stores/bundles'
 import NavBar from '@/components/NavBar.vue'
 import CartPanel from '@/components/CartPanel.vue'
 import CartAnimation from '@/components/CartAnimation.vue'
@@ -15,8 +16,9 @@ const route = useRoute()
 const router = useRouter()
 const sessionStore = useSessionStore()
 const productsStore = useProductsStore()
+const bundlesStore = useBundlesStore()
 
-const isKioskFree = computed(() => route.path === '/budtender' || route.path === '/analytics' || route.path.startsWith('/cart/'))
+const isKioskFree = computed(() => route.path === '/budtender' || route.path === '/analytics' || route.path === '/bundles' || route.path.startsWith('/cart/'))
 const { track } = useAnalytics()
 const showNavBar = computed(() => !isKioskFree.value)
 
@@ -53,6 +55,7 @@ onMounted(async () => {
   }
 
   productsStore.loadProducts() // intentionally not awaited — loading state handles UI
+  bundlesStore.loadBundles()   // intentionally not awaited
 })
 
 onUnmounted(() => {

@@ -1,6 +1,6 @@
 <script setup>
 import { computed, ref, watch, nextTick, onMounted } from 'vue'
-import { BUNDLES } from '@/config/bundles'
+import { useBundlesStore } from '@/stores/bundles'
 import BundleDealModal from '@/components/BundleDealModal.vue'
 import { useAnalytics } from '@/composables/useAnalytics'
 import { useFeatureFlags } from '@/composables/useFeatureFlags'
@@ -40,13 +40,15 @@ function isScheduleActive(bundle) {
   return true
 }
 
+const bundlesStore = useBundlesStore()
+
 const relevantBundles = computed(() => {
   if (!props.products.length) return []
 
-  return BUNDLES.filter(bundle => {
+  return bundlesStore.bundles.filter(bundle => {
     if (!isScheduleActive(bundle)) return false
     return props.products.some(p =>
-      bundle.match({ name: p.Name, category: p.Category, unitWeight: p['Unit Weight'] ?? '', price: p.Price ?? 0, qty: 1 })
+      bundle.match({ name: p.Name, category: p.Category, subcategory: p.Subcategory ?? '', unitWeight: p['Unit Weight'] ?? '', price: p.Price ?? 0, qty: 1 })
     )
   })
 })

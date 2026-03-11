@@ -9,6 +9,7 @@ import TincturesTopicalsView from '@/views/TincturesTopicalsView.vue'
 import SleepView from '@/views/SleepView.vue'
 import PainView from '@/views/PainView.vue'
 import BudtenderView from '@/views/BudtenderView.vue'
+import BundlesView from '@/views/BundlesView.vue'
 import AnalyticsView from '@/views/AnalyticsView.vue'
 import CartShareView from '@/views/CartShareView.vue'
 import GuidedView from '@/views/GuidedView.vue'
@@ -27,6 +28,7 @@ const router = createRouter({
     { path: '/sleep', component: SleepView },
     { path: '/pain', component: PainView },
     { path: '/budtender', component: BudtenderView },
+    { path: '/bundles', component: BundlesView },
     { path: '/analytics', component: AnalyticsView },
     { path: '/cart/:sessionId', component: CartShareView },
   ],

@@ -89,6 +89,7 @@ onUnmounted(() => clearInterval(pollTimer))
     <div class="flex items-center justify-between mb-4">
       <h1 class="text-2xl font-black tracking-wide">Active Orders</h1>
       <div class="flex items-center gap-4">
+        <a href="/bundles" class="text-sm font-semibold text-teal-600 hover:text-teal-800 transition-colors">Bundles →</a>
         <a href="/analytics" class="text-sm font-semibold text-teal-600 hover:text-teal-800 transition-colors">Analytics →</a>
         <button
           v-if="sessions.length > 0"

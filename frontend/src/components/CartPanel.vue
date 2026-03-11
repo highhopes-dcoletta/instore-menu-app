@@ -9,7 +9,7 @@ import { useDragToCart } from '@/composables/useDragToCart'
 import { calcQuota } from '@/utils/quotaCalc'
 import { useAnalytics } from '@/composables/useAnalytics'
 import { useBundles } from '@/composables/useBundles'
-import { BUNDLES } from '@/config/bundles'
+import { useBundlesStore } from '@/stores/bundles'
 import { useFeatureFlags } from '@/composables/useFeatureFlags'
 import ProductModal from '@/components/ProductModal.vue'
 import BundleDealModal from '@/components/BundleDealModal.vue'
@@ -46,8 +46,10 @@ const { appliedDeals, totalDiscount, nearDeals } = useBundles(computed(() => ses
 const { bundlesEnabled } = useFeatureFlags()
 const selectedBundle = ref(null)
 
+const bundlesStore = useBundlesStore()
+
 function openBundleModal(dealId) {
-  const bundle = BUNDLES.find(b => b.id === dealId) ?? null
+  const bundle = bundlesStore.bundles.find(b => b.id === dealId) ?? null
   if (bundle) track('bundle_modal_opened', { bundle_id: bundle.id, bundle_label: bundle.label, source: 'cart_nudge' })
   selectedBundle.value = bundle
 }
