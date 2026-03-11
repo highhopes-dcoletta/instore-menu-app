@@ -61,6 +61,7 @@ echo "  index.html verified."
 
 echo "==> Copying .env to server..."
 scp $SSHOPTS backend/.env "$HOST:$REMOTE_DIR/backend/.env"
+ssh $SSHOPTS "$HOST" "grep -q PROD_DB_PATH $REMOTE_DIR/backend/.env || echo 'PROD_DB_PATH=/home/highhopes/highhopes-menu/backend/analytics.db' >> $REMOTE_DIR/backend/.env"
 
 echo "==> Installing nginx + systemd config..."
 ssh $SSHOPTS "$HOST" bash << EOF

@@ -45,10 +45,25 @@ const nameContainsAllInput = ref('')
 const nameExcludesInput = ref('')
 const unitWeightInput = ref('')
 
-function addTag(list, inputRef) {
-  const val = inputRef.value.trim()
-  if (val && !list.includes(val)) list.push(val)
-  inputRef.value = ''
+function addNameContains() {
+  const val = nameContainsInput.value.trim()
+  if (val && !criteria.value.nameContains.includes(val)) criteria.value.nameContains.push(val)
+  nameContainsInput.value = ''
+}
+function addNameContainsAll() {
+  const val = nameContainsAllInput.value.trim()
+  if (val && !criteria.value.nameContainsAll.includes(val)) criteria.value.nameContainsAll.push(val)
+  nameContainsAllInput.value = ''
+}
+function addNameExcludes() {
+  const val = nameExcludesInput.value.trim()
+  if (val && !criteria.value.nameExcludes.includes(val)) criteria.value.nameExcludes.push(val)
+  nameExcludesInput.value = ''
+}
+function addUnitWeight() {
+  const val = unitWeightInput.value.trim()
+  if (val && !criteria.value.unitWeightContains.includes(val)) criteria.value.unitWeightContains.push(val)
+  unitWeightInput.value = ''
 }
 
 function removeTag(list, index) {
@@ -247,8 +262,8 @@ const SUBCATEGORIES = [
         <div class="mb-3">
           <label class="block text-xs text-gray-500 mb-1">Product name must contain at least one of:</label>
           <div class="flex items-center gap-2 mb-1">
-            <input v-model="nameContainsInput" class="flex-1 border rounded-lg px-3 py-1.5 text-sm" placeholder="e.g. juicy stickz" @keydown.enter.prevent="addTag(criteria.nameContains, nameContainsInput)" />
-            <button type="button" @click="addTag(criteria.nameContains, nameContainsInput)" class="text-xs font-semibold text-teal-600">Add</button>
+            <input v-model="nameContainsInput" class="flex-1 border rounded-lg px-3 py-1.5 text-sm" placeholder="e.g. juicy stickz" @keydown.enter.prevent="addNameContains()" />
+            <button type="button" @click="addNameContains()" class="text-xs font-semibold text-teal-600">Add</button>
           </div>
           <div class="flex flex-wrap gap-1">
             <span v-for="(tag, i) in criteria.nameContains" :key="tag" class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-100 text-blue-700 text-xs font-semibold">
@@ -262,8 +277,8 @@ const SUBCATEGORIES = [
         <div class="mb-3">
           <label class="block text-xs text-gray-500 mb-1">Product name must contain ALL of:</label>
           <div class="flex items-center gap-2 mb-1">
-            <input v-model="nameContainsAllInput" class="flex-1 border rounded-lg px-3 py-1.5 text-sm" placeholder="e.g. mac" @keydown.enter.prevent="addTag(criteria.nameContainsAll, nameContainsAllInput)" />
-            <button type="button" @click="addTag(criteria.nameContainsAll, nameContainsAllInput)" class="text-xs font-semibold text-teal-600">Add</button>
+            <input v-model="nameContainsAllInput" class="flex-1 border rounded-lg px-3 py-1.5 text-sm" placeholder="e.g. mac" @keydown.enter.prevent="addNameContainsAll()" />
+            <button type="button" @click="addNameContainsAll()" class="text-xs font-semibold text-teal-600">Add</button>
           </div>
           <div class="flex flex-wrap gap-1">
             <span v-for="(tag, i) in criteria.nameContainsAll" :key="tag" class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-indigo-100 text-indigo-700 text-xs font-semibold">
@@ -277,8 +292,8 @@ const SUBCATEGORIES = [
         <div class="mb-3">
           <label class="block text-xs text-gray-500 mb-1">Product name must NOT contain any of:</label>
           <div class="flex items-center gap-2 mb-1">
-            <input v-model="nameExcludesInput" class="flex-1 border rounded-lg px-3 py-1.5 text-sm" placeholder="e.g. cloud bar" @keydown.enter.prevent="addTag(criteria.nameExcludes, nameExcludesInput)" />
-            <button type="button" @click="addTag(criteria.nameExcludes, nameExcludesInput)" class="text-xs font-semibold text-teal-600">Add</button>
+            <input v-model="nameExcludesInput" class="flex-1 border rounded-lg px-3 py-1.5 text-sm" placeholder="e.g. cloud bar" @keydown.enter.prevent="addNameExcludes()" />
+            <button type="button" @click="addNameExcludes()" class="text-xs font-semibold text-teal-600">Add</button>
           </div>
           <div class="flex flex-wrap gap-1">
             <span v-for="(tag, i) in criteria.nameExcludes" :key="tag" class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-red-100 text-red-700 text-xs font-semibold">
@@ -310,8 +325,8 @@ const SUBCATEGORIES = [
         <div class="mb-3">
           <label class="block text-xs text-gray-500 mb-1">Unit weight must contain at least one of:</label>
           <div class="flex items-center gap-2 mb-1">
-            <input v-model="unitWeightInput" class="flex-1 border rounded-lg px-3 py-1.5 text-sm" placeholder="e.g. 1g" @keydown.enter.prevent="addTag(criteria.unitWeightContains, unitWeightInput)" />
-            <button type="button" @click="addTag(criteria.unitWeightContains, unitWeightInput)" class="text-xs font-semibold text-teal-600">Add</button>
+            <input v-model="unitWeightInput" class="flex-1 border rounded-lg px-3 py-1.5 text-sm" placeholder="e.g. 1g" @keydown.enter.prevent="addUnitWeight()" />
+            <button type="button" @click="addUnitWeight()" class="text-xs font-semibold text-teal-600">Add</button>
           </div>
           <div class="flex flex-wrap gap-1">
             <span v-for="(tag, i) in criteria.unitWeightContains" :key="tag" class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-green-100 text-green-700 text-xs font-semibold">
