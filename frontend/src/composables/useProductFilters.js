@@ -13,8 +13,6 @@
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useProductsStore } from '@/stores/products'
-import { useBundlesStore } from '@/stores/bundles'
-import { bundlesEnabled } from '@/composables/useFeatureFlags'
 
 function toArray(val) {
   if (!val) return []
@@ -135,17 +133,6 @@ export function useProductFilters(categoryFn) {
         if (bn) return -1
         return asc ? a.Quantity - b.Quantity : b.Quantity - a.Quantity
       })
-    }
-
-    // ── Deal boost: float active-deal products to top when in default order ──
-    if (!sort && bundlesEnabled.value) {
-      const activeBundles = useBundlesStore().activeBundles
-      if (activeBundles.length) {
-        const isDeal = (p) => activeBundles.some(b =>
-          b.match({ name: p.Name, category: p.Category, unitWeight: p['Unit Weight'] ?? '', price: p.Price ?? 0, qty: 1 })
-        )
-        list = [...list.filter(isDeal), ...list.filter(p => !isDeal(p))]
-      }
     }
 
     return list
