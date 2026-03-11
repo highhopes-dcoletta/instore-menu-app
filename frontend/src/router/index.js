@@ -14,6 +14,8 @@ import AnalyticsView from '@/views/AnalyticsView.vue'
 import CartShareView from '@/views/CartShareView.vue'
 import GuidedView from '@/views/GuidedView.vue'
 
+const DEFAULT_TITLE = 'High Hopes Menu'
+
 const router = createRouter({
   history: createWebHistory(),
   routes: [
@@ -27,11 +29,22 @@ const router = createRouter({
     { path: '/tinctures-and-topicals', component: TincturesTopicalsView },
     { path: '/sleep', component: SleepView },
     { path: '/pain', component: PainView },
-    { path: '/budtender', component: BudtenderView },
-    { path: '/bundles', component: BundlesView },
-    { path: '/analytics', component: AnalyticsView },
+    { path: '/budtender', component: BudtenderView, meta: { title: 'Budtender at High Hopes' } },
+    { path: '/bundles', component: BundlesView, meta: { title: 'Bundles at High Hopes' } },
+    { path: '/analytics', component: AnalyticsView, meta: { title: 'Analytics at High Hopes' } },
     { path: '/cart/:sessionId', component: CartShareView },
   ],
+})
+
+export function envPrefix() {
+  const host = window.location.hostname
+  if (host.includes('-stage') || host.includes('.stage')) return '[stage] '
+  if (host === 'localhost' || host === '127.0.0.1') return '[local] '
+  return ''
+}
+
+router.afterEach((to) => {
+  document.title = envPrefix() + (to.meta.title || DEFAULT_TITLE)
 })
 
 export default router
