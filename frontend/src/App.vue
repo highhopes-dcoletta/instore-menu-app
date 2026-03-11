@@ -95,5 +95,5 @@ onUnmounted(() => {
     </div>
   </template>
 
-  <span data-version class="fixed bottom-1 left-1 text-[10px] text-gray-300 pointer-events-none select-none z-50">{{ version }}</span>
+  <span data-version class="fixed bottom-2 left-6 text-[10px] text-gray-300 pointer-events-none select-none z-50">{{ version }}</span>
 </template>
