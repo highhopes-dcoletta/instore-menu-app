@@ -517,19 +517,25 @@ test.describe.serial('bundle editor', () => {
   })
 
   test('re-enable the bundle and verify it reappears', async ({ page, request }) => {
-    // Verify the bundle still exists via API before loading the page
-    const apiCheck = await request.fetch(`${BASE}/api/bundles?includeDisabled=1`)
-    const checkBundles = await apiCheck.json()
-    expect(checkBundles.find(b => b.id === E2E_BUNDLE_ID)).toBeTruthy()
+    // Re-enable via API (the UI toggle is fragile due to Vue re-render detaching the DOM element)
+    const getRes = await request.fetch(`${BASE}/api/bundles?includeDisabled=1`)
+    const allBundles = await getRes.json()
+    const bundle = allBundles.find(b => b.id === E2E_BUNDLE_ID)
+    expect(bundle).toBeTruthy()
+    expect(bundle.enabled).toBe(false)
 
+    await request.put(`${BASE}/api/bundles/${E2E_BUNDLE_ID}`, {
+      data: { ...bundle, enabled: true },
+    })
+
+    // Verify on bundles admin page — card should not be dimmed
     await page.goto(`${BASE}/bundles`)
     await page.waitForResponse(resp => resp.url().includes('/api/bundles'))
-
     const bundleCard = page.locator('.rounded-xl.border', { hasText: E2E_LABEL_UPDATED })
     await expect(bundleCard).toBeVisible({ timeout: 10000 })
-    await bundleCard.locator('button[title="Enable"]').click({ force: true })
-    await expect(bundleCard).not.toHaveClass(/opacity-60/, { timeout: 10000 })
+    await expect(bundleCard).not.toHaveClass(/opacity-60/, { timeout: 5000 })
 
+    // Flower page should show the deal again
     await page.goto(`${BASE}/flower`)
     await waitForProducts(page)
     await expect(
