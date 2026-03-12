@@ -25,6 +25,11 @@ const MENU_QUERY = `
         description
         effects
         staffPick
+        terpenes {
+          value
+          unitSymbol
+          terpene { name aromas effects potentialHealthBenefits description }
+        }
         variants {
           id
           option
@@ -105,6 +110,17 @@ function normalizeVariant(product, variant) {
     'Pre-Ground?': isPreGround ? 'Yes' : null,
     'Infused Preroll?': isInfused ? 'Yes' : null,
     Quantity: variant.quantity ?? null,
+    Terpenes: (product.terpenes ?? [])
+      .filter(t => t.value > 0 && t.terpene?.name)
+      .map(t => ({
+        name: t.terpene.name,
+        value: t.value,
+        unit: t.unitSymbol || '%',
+        aromas: t.terpene.aromas ?? [],
+        effects: t.terpene.effects ?? [],
+        healthBenefits: t.terpene.potentialHealthBenefits ?? [],
+        description: t.terpene.description ?? '',
+      })),
   }
 }
 

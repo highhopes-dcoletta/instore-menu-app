@@ -14,6 +14,7 @@ import AnalyticsView from '@/views/AnalyticsView.vue'
 import CartShareView from '@/views/CartShareView.vue'
 import GuidedView from '@/views/GuidedView.vue'
 import ScatterView from '@/views/ScatterView.vue'
+import TerpenesView from '@/views/TerpenesView.vue'
 import { useAuth, checkSessionExpiry, clearStaffSession } from '@/composables/useAuth'
 
 const DEFAULT_TITLE = 'High Hopes Menu'
@@ -32,6 +33,7 @@ const router = createRouter({
     { path: '/sleep', component: SleepView },
     { path: '/pain', component: PainView },
     { path: '/explore', component: ScatterView },
+    { path: '/terpenes', component: TerpenesView },
     { path: '/budtender', component: BudtenderView, meta: { title: 'Budtender at High Hopes', requiresAuth: true } },
     { path: '/bundles', component: BundlesView, meta: { title: 'Bundles at High Hopes', requiresAuth: true } },
     { path: '/analytics', component: AnalyticsView, meta: { title: 'Analytics at High Hopes', requiresAuth: true } },

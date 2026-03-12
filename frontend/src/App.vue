@@ -12,7 +12,8 @@ import { useAnalytics } from '@/composables/useAnalytics'
 import { envPrefix } from '@/router/index.js'
 
 const { t } = useI18n()
-const version = (envPrefix() + __APP_VERSION__).trim()
+const version = (envPrefix() + __APP_VERSION__ + ' · ' + __RELEASE_NAME__).trim()
+function copyVersion() { navigator.clipboard.writeText(version) }
 
 const route = useRoute()
 const router = useRouter()
@@ -95,5 +96,7 @@ onUnmounted(() => {
     </div>
   </template>
 
-  <span data-version class="fixed bottom-2 left-6 text-[10px] text-gray-300 pointer-events-none select-none z-50">{{ version }}</span>
+  <span data-version class="fixed bottom-2 left-6 text-[10px] text-gray-300 pointer-events-none select-none z-50">{{ version }}
+    <svg @click.stop="copyVersion" class="inline-block w-2.5 h-2.5 ml-0.5 -mt-px pointer-events-auto cursor-pointer text-gray-400 hover:text-gray-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+  </span>
 </template>
