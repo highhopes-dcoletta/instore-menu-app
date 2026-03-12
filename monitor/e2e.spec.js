@@ -4,9 +4,11 @@ const BASE = process.env.E2E_BASE_URL ?? 'https://menu2.highhopesma.com'
 
 // Inject a fresh staff_login_at timestamp so the auth guard treats
 // the browser as authenticated (bypasses Microsoft SSO for e2e tests).
+// Uses addInitScript so it runs before any app code on every page load.
 async function fakeStaffSession(page) {
-  await page.goto(BASE)
-  await page.evaluate(() => localStorage.setItem('staff_login_at', Date.now().toString()))
+  await page.addInitScript(() => {
+    localStorage.setItem('staff_login_at', Date.now().toString())
+  })
 }
 
 // Wait for the product table to have at least one row (Dutchie fetch ~5-15s)
