@@ -6,7 +6,7 @@ module.exports = defineConfig({
   timeout: 60000,
   retries: 1,
   fullyParallel: true,
-  workers: 4,
+  workers: 6,
   use: {
     headless: true,
     screenshot: 'only-on-failure',
