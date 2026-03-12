@@ -44,7 +44,7 @@ async function fetchSessions() {
     const res = await fetch('/api/sessions', { cache: 'no-store' })
     if (res.ok) {
       const all = await res.json()
-      sessions.value = all.filter(s => !s.sessionId.startsWith('e2e-'))
+      sessions.value = all.filter(s => !s.sessionId.startsWith('e2e-') && !s.sessionId.startsWith('test-'))
     }
   } catch (e) {}
 }
