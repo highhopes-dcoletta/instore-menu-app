@@ -13,6 +13,7 @@ import BundlesView from '@/views/BundlesView.vue'
 import AnalyticsView from '@/views/AnalyticsView.vue'
 import CartShareView from '@/views/CartShareView.vue'
 import GuidedView from '@/views/GuidedView.vue'
+import { useAuth, checkSessionExpiry, clearStaffSession } from '@/composables/useAuth'
 
 const DEFAULT_TITLE = 'High Hopes Menu'
 
@@ -29,10 +30,12 @@ const router = createRouter({
     { path: '/tinctures-and-topicals', component: TincturesTopicalsView },
     { path: '/sleep', component: SleepView },
     { path: '/pain', component: PainView },
-    { path: '/budtender', component: BudtenderView, meta: { title: 'Budtender at High Hopes' } },
-    { path: '/bundles', component: BundlesView, meta: { title: 'Bundles at High Hopes' } },
-    { path: '/analytics', component: AnalyticsView, meta: { title: 'Analytics at High Hopes' } },
+    { path: '/budtender', component: BudtenderView, meta: { title: 'Budtender at High Hopes', requiresAuth: true } },
+    { path: '/bundles', component: BundlesView, meta: { title: 'Bundles at High Hopes', requiresAuth: true } },
+    { path: '/analytics', component: AnalyticsView, meta: { title: 'Analytics at High Hopes', requiresAuth: true } },
     { path: '/cart/:sessionId', component: CartShareView },
+    { path: '/login', component: () => import('@/views/LoginView.vue'), meta: { title: 'Sign In' } },
+    { path: '/auth', component: () => import('@/views/AuthCallbackView.vue'), meta: { title: 'Signing in...' } },
   ],
 })
 
@@ -42,6 +45,33 @@ export function envPrefix() {
   if (host === 'localhost' || host === '127.0.0.1') return '[local] '
   return ''
 }
+
+// MSAL is already initialized in main.js before the router is installed.
+// The guard only needs to check the auth state.
+router.beforeEach((to) => {
+  // Expire stale staff sessions (30 min)
+  checkSessionExpiry()
+
+  const { isAuthenticated } = useAuth()
+
+  // Authenticated user landed on /login or /auth — send them to their target
+  if ((to.path === '/login' || to.path === '/auth') && isAuthenticated.value) {
+    const target = to.query.redirect || sessionStorage.getItem('auth_redirect') || '/budtender'
+    sessionStorage.removeItem('auth_redirect')
+    return { path: target, replace: true }
+  }
+
+  // Protected route — send unauthenticated users to login
+  if (to.meta.requiresAuth && !isAuthenticated.value) {
+    return { path: '/login', query: { redirect: to.fullPath } }
+  }
+
+  // Public kiosk route — clear any leftover staff session so the kiosk
+  // browser doesn't stay signed in if a staff member used it by mistake
+  if (!to.meta.requiresAuth && to.path !== '/login' && to.path !== '/auth' && isAuthenticated.value) {
+    clearStaffSession()
+  }
+})
 
 router.afterEach((to) => {
   const base = envPrefix() + (to.meta.title || DEFAULT_TITLE)

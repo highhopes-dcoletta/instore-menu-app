@@ -6,7 +6,10 @@
 import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { computeAppliedDeals } from '@/composables/useBundles'
 import { useFeatureFlags } from '@/composables/useFeatureFlags'
+import { useAuth } from '@/composables/useAuth'
 import QRCode from 'qrcode'
+
+const { account, logout } = useAuth()
 
 const sessions = ref([])
 const qrCodes = ref({})   // sessionId → data URL
@@ -89,8 +92,10 @@ onUnmounted(() => clearInterval(pollTimer))
     <div class="flex items-center justify-between mb-4">
       <h1 class="text-2xl font-black tracking-wide">Active Orders</h1>
       <div class="flex items-center gap-4">
+        <span v-if="account" class="text-sm text-gray-400">{{ account.name }}</span>
         <a href="/bundles" class="text-sm font-semibold text-teal-600 hover:text-teal-800 transition-colors">Bundles →</a>
         <a href="/analytics" class="text-sm font-semibold text-teal-600 hover:text-teal-800 transition-colors">Analytics →</a>
+        <button @click="logout" class="text-sm font-semibold text-gray-400 hover:text-gray-600 transition-colors">Sign Out</button>
         <button
           v-if="sessions.length > 0"
           @click="clearAll"

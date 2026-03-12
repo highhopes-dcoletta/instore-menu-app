@@ -2,7 +2,10 @@
 import { ref, computed, onMounted } from 'vue'
 import { useBundlesStore } from '@/stores/bundles'
 import { useProductsStore } from '@/stores/products'
+import { useAuth } from '@/composables/useAuth'
 import BundleForm from '@/components/BundleForm.vue'
+
+const { account, logout } = useAuth()
 
 const bundlesStore = useBundlesStore()
 const productsStore = useProductsStore()
@@ -135,6 +138,7 @@ const groupedBundles = computed(() => {
     <div class="flex items-center justify-between mb-6">
       <h1 class="text-2xl font-black tracking-wide">Bundle Deals</h1>
       <div class="flex items-center gap-4">
+        <span v-if="account" class="text-sm text-gray-400">{{ account.name }}</span>
         <a href="/budtender" class="text-sm font-semibold text-teal-600 hover:text-teal-800 transition-colors">← Orders</a>
         <button
           v-if="canPush"
@@ -146,6 +150,7 @@ const groupedBundles = computed(() => {
           @click="startCreate"
           class="px-4 py-2 rounded-lg bg-teal-600 text-white text-sm font-bold hover:bg-teal-700 transition-colors"
         >+ New Bundle</button>
+        <button @click="logout" class="text-sm font-semibold text-gray-400 hover:text-gray-600 transition-colors">Sign Out</button>
       </div>
     </div>
 

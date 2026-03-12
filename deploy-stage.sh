@@ -11,8 +11,8 @@ WEB_DIR="/var/www/highhopes-menu-stage"
 SERVICE="highhopes-menu-stage"
 SSHOPTS="-o IdentityAgent=SSH_AUTH_SOCK"
 
-echo "==> Building frontend..."
-(cd frontend && npm run build)
+echo "==> Building frontend (staging mode)..."
+(cd frontend && npx vite build --mode staging)
 
 echo "==> Provisioning staging server..."
 ssh $SSHOPTS "$HOST" bash << EOF

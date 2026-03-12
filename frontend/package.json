@@ -11,6 +11,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@azure/msal-browser": "^5.4.0",
     "pinia": "^2.3.0",
     "qrcode": "^1.5.4",
     "vue": "^3.5.0",

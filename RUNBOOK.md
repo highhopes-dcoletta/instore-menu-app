@@ -1,6 +1,6 @@
 # High Hopes Menu — Incident Runbook
 
-**Last updated:** 2026-03-11 · **Version:** 1.0
+**Last updated:** 2026-03-12 · **Version:** 1.1
 
 ---
 
@@ -352,6 +352,32 @@ Acknowledge the alert in PagerTree to stop escalation. The kiosk has graceful de
 - **Full outage**: Kiosk shows loading screen. Staff can take orders manually.
 
 This is an in-store display, not an e-commerce site. A few minutes of downtime is inconvenient, not catastrophic.
+
+---
+
+## Scenario 11: Staff can't sign in to budtender/bundles/analytics
+
+**Symptoms:** Staff click "Sign in with Microsoft" but get an error, or the login loop redirects back to the sign-in page.
+
+**Common causes and fixes:**
+
+1. **Azure app registration misconfigured** — Verify the redirect URIs are registered as **SPA** (not Web) platform type in the Azure portal under the app registration's Authentication page. Required URIs:
+   - `http://localhost:5173/auth` (dev)
+   - `https://menu2-stage.highhopesma.com/auth` (staging)
+   - `https://menu2.highhopesma.com/auth` (production)
+
+2. **MSAL env vars missing from build** — The frontend must be built with the correct env vars. Check:
+   - `frontend/.env` has `VITE_MSAL_CLIENT_ID` and `VITE_MSAL_TENANT_ID`
+   - The correct `.env.production` or `.env.staging` has the right `VITE_MSAL_REDIRECT_URI`
+   - Rebuild and redeploy if missing
+
+3. **Staff session expired** — Sessions last 30 minutes. Staff simply need to sign in again. This is by design.
+
+4. **Kiosk inactivity cleared the session** — If someone used the kiosk browser for staff pages, the 2-minute kiosk inactivity timer clears the MSAL session. Staff should use a separate browser/tab for admin pages.
+
+5. **Microsoft Entra ID outage** — Check [Azure status](https://status.azure.com). If Microsoft's login service is down, staff auth won't work, but this does not affect kiosk customers at all.
+
+**Note:** Staff authentication is entirely client-side (MSAL browser library + localStorage). There is no server-side component. The Flask backend is not involved.
 
 ---
 

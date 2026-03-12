@@ -1,5 +1,8 @@
 <script setup>
 import { ref } from 'vue'
+import { useAuth } from '@/composables/useAuth'
+
+const { account, logout } = useAuth()
 
 const analytics = ref(null)
 const analyticsDays = ref(30)
@@ -36,6 +39,8 @@ function pct(n, total) {
     <div class="flex items-center justify-between mb-6">
       <h1 class="text-2xl font-black tracking-wide">Analytics</h1>
       <div class="flex items-center gap-3">
+        <span v-if="account" class="text-sm text-gray-400">{{ account.name }}</span>
+        <button @click="logout" class="text-sm font-semibold text-gray-400 hover:text-gray-600 transition-colors">Sign Out</button>
         <select
           v-model="analyticsDays"
           @change="fetchAnalytics"
