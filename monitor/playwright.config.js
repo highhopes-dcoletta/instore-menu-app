@@ -5,6 +5,8 @@ module.exports = defineConfig({
   testMatch: '**/*.spec.js',
   timeout: 60000,
   retries: 1,
+  fullyParallel: true,
+  workers: 4,
   use: {
     headless: true,
     screenshot: 'only-on-failure',

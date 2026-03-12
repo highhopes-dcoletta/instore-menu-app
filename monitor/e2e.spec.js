@@ -30,6 +30,11 @@ async function waitForHomeView(page) {
   await expect(page.getByText('Not sure where to start?')).toBeVisible({ timeout: 25000 })
 }
 
+// Wait for table row count to change from a known value
+async function waitForRowCountChange(page, fromCount) {
+  await expect(page.locator('table tbody tr')).not.toHaveCount(fromCount, { timeout: 5000 })
+}
+
 // ─── Group 1: Navigation & entry points ──────────────────────────────────────
 
 test.describe('home page', () => {
@@ -180,13 +185,13 @@ test.describe('filtering on /flower', () => {
     const initialCount = await allRows.count()
 
     await page.getByPlaceholder(/search/i).fill('og')
-    await page.waitForTimeout(300)
+    await waitForRowCountChange(page, initialCount)
     const filteredCount = await allRows.count()
-    expect(filteredCount).toBeLessThanOrEqual(initialCount)
+    expect(filteredCount).toBeLessThan(initialCount)
 
     await page.getByPlaceholder(/search/i).clear()
-    await page.waitForTimeout(300)
-    expect(await allRows.count()).toBeGreaterThanOrEqual(filteredCount)
+    await waitForRowCountChange(page, filteredCount)
+    expect(await allRows.count()).toBeGreaterThanOrEqual(initialCount)
   })
 
   test('strain filter reduces product list', async ({ page }) => {
@@ -196,33 +201,38 @@ test.describe('filtering on /flower', () => {
     const firstChip = page.locator('button.chip-off').first()
     const strainLabel = (await firstChip.textContent()).trim()
     await firstChip.click()
-    await page.waitForTimeout(300)
+    await waitForRowCountChange(page, initialCount)
     const filteredCount = await allRows.count()
-    expect(filteredCount).toBeLessThanOrEqual(initialCount)
+    expect(filteredCount).toBeLessThan(initialCount)
 
     // Deactivate
     await page.locator('button.chip-on').filter({ hasText: strainLabel }).click()
-    await page.waitForTimeout(300)
-    expect(await allRows.count()).toBeGreaterThanOrEqual(filteredCount)
+    await waitForRowCountChange(page, filteredCount)
+    expect(await allRows.count()).toBeGreaterThanOrEqual(initialCount)
   })
 
   test('multiple strain filters stack (more filters = same or fewer results)', async ({ page }) => {
-    const chips = page.locator('button.chip-off')
-    if (await chips.count() < 2) return
+    // Scope to strain section to avoid clicking brand/other filter chips
+    const strainSection = page.locator('div', { has: page.locator('.label', { hasText: /strain/i }) })
+    const strainChips = strainSection.locator('button.chip-off')
+    if (await strainChips.count() < 2) return
 
-    await chips.nth(0).click()
-    await page.waitForTimeout(200)
-    const firstCount = await page.locator('table tbody tr').count()
+    const allRows = page.locator('table tbody tr')
+    const initialCount = await allRows.count()
 
-    await chips.nth(1).click()
-    await page.waitForTimeout(200)
-    expect(await page.locator('table tbody tr').count()).toBeLessThanOrEqual(firstCount)
+    await strainChips.nth(0).click()
+    await waitForRowCountChange(page, initialCount)
+    const firstCount = await allRows.count()
+
+    // After first click, re-query unselected strain chips
+    await strainSection.locator('button.chip-off').nth(0).click()
+    await waitForRowCountChange(page, firstCount)
+    expect(await allRows.count()).toBeLessThanOrEqual(firstCount)
   })
 
   test('"No products match your filters" appears when no results', async ({ page }) => {
     await page.getByPlaceholder(/search/i).fill('xxxxxxxxxxx_no_match')
-    await page.waitForTimeout(300)
-    await expect(page.getByText(/no products match/i)).toBeVisible()
+    await expect(page.getByText(/no products match/i)).toBeVisible({ timeout: 5000 })
   })
 
   test('High Hopes Only brand filter reduces results', async ({ page }) => {
@@ -230,11 +240,12 @@ test.describe('filtering on /flower', () => {
     const initialCount = await allRows.count()
 
     await page.getByRole('button', { name: 'High Hopes Only' }).click()
-    await page.waitForTimeout(300)
-    expect(await allRows.count()).toBeLessThanOrEqual(initialCount)
+    await waitForRowCountChange(page, initialCount)
+    expect(await allRows.count()).toBeLessThan(initialCount)
 
+    const filteredCount = await allRows.count()
     await page.getByRole('button', { name: 'High Hopes Only' }).click()
-    await page.waitForTimeout(300)
+    await waitForRowCountChange(page, filteredCount)
     expect(await allRows.count()).toBeGreaterThanOrEqual(1)
   })
 })
@@ -250,33 +261,29 @@ test.describe('sorting on /flower', () => {
   test('clicking Name header sets sort=name in URL', async ({ page }) => {
     // The column header is a <button> inside a <th>
     await page.getByRole('button', { name: 'Name' }).click()
-    await page.waitForTimeout(300)
-    expect(page.url()).toContain('sort=name')
+    await expect(page).toHaveURL(/sort=name/)
   })
 
   test('clicking Name header twice sets dir=desc', async ({ page }) => {
     const btn = page.getByRole('button', { name: 'Name' })
     await btn.click()
-    await page.waitForTimeout(200)
+    await expect(page).toHaveURL(/sort=name/)
     await btn.click()
-    await page.waitForTimeout(300)
-    expect(page.url()).toContain('dir=desc')
+    await expect(page).toHaveURL(/dir=desc/)
   })
 
   test('Popularity button appears after sorting and clears sort on click', async ({ page }) => {
     await page.getByRole('button', { name: 'Name' }).click()
-    await page.waitForTimeout(200)
     const popBtn = page.getByRole('button', { name: /popularity/i })
     await expect(popBtn).toBeVisible()
     await popBtn.click()
-    await page.waitForTimeout(200)
-    expect(page.url()).not.toContain('sort=')
+    await expect(page).not.toHaveURL(/sort=/)
     await expect(popBtn).not.toBeVisible()
   })
 
   test('sort params persist after page refresh', async ({ page }) => {
     await page.getByRole('button', { name: 'Name' }).click()
-    await page.waitForTimeout(200)
+    await expect(page).toHaveURL(/sort=name/)
     const url = page.url()
     await page.reload()
     await waitForProducts(page)
@@ -286,15 +293,13 @@ test.describe('sorting on /flower', () => {
   test('Price header sets sort=price', async ({ page }) => {
     // Scope to thead to avoid matching GroupableList grouper buttons (💰 Price)
     await page.locator('thead').getByRole('button', { name: 'Price', exact: true }).click()
-    await page.waitForTimeout(300)
-    expect(page.url()).toContain('sort=price')
+    await expect(page).toHaveURL(/sort=price/)
   })
 
   test('Potency header sets sort=potency', async ({ page }) => {
     // Scope to thead to avoid matching GroupableList grouper buttons (⚡ Potency)
     await page.locator('thead').getByRole('button', { name: 'Potency (TAC)', exact: true }).click()
-    await page.waitForTimeout(300)
-    expect(page.url()).toContain('sort=potency')
+    await expect(page).toHaveURL(/sort=potency/)
   })
 })
 
