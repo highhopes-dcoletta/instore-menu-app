@@ -72,9 +72,9 @@ const FOCUS_CENTER_X = W / 2
 const FOCUS_CENTER_Y = 450
 const FOCUS_BALL_R = 60
 const FOCUS_RING_START = 160
-const FOCUS_RING_GAP = 90
+const FOCUS_RING_GAP = 100
 const FOCUS_PRODUCT_R = 16
-const PRODUCTS_PER_RING = 12
+const BASE_PRODUCTS_PER_RING = 8 // ring 0; outer rings scale with circumference
 
 const TRANSITION_MS = 700
 const FLY_MS = 500
@@ -195,20 +195,45 @@ function sortedByTerpValue(products, terpName) {
   })
 }
 
-const FOCUS_R_SHRINK = 3 // each ring shrinks product dot by this much
+const FOCUS_R_SHRINK = 2 // each ring shrinks product dot by this much
+
+// How many products fit on a given ring (scales with circumference)
+function ringCapacity(ring) {
+  const radius = FOCUS_RING_START + ring * FOCUS_RING_GAP
+  return Math.max(BASE_PRODUCTS_PER_RING, Math.floor(2 * Math.PI * radius / 120))
+}
+
+// Map flat index to { ring, posInRing, ringCount }
+function ringAssignment(i, n) {
+  let remaining = n
+  let ring = 0
+  let offset = 0
+  while (remaining > 0) {
+    const cap = ringCapacity(ring)
+    const count = Math.min(cap, remaining)
+    if (i < offset + count) {
+      return { ring, posInRing: i - offset, ringCount: count }
+    }
+    offset += count
+    remaining -= count
+    ring++
+  }
+  return { ring: 0, posInRing: 0, ringCount: 1 }
+}
 
 function focusPos(i, n) {
-  const ring = Math.floor(i / PRODUCTS_PER_RING)
-  const posInRing = i % PRODUCTS_PER_RING
-  const ringCount = Math.min(PRODUCTS_PER_RING, n - ring * PRODUCTS_PER_RING)
+  const { ring, posInRing, ringCount } = ringAssignment(i, n)
   const radius = FOCUS_RING_START + ring * FOCUS_RING_GAP
   const angleStep = (2 * Math.PI) / ringCount
   const angle = angleStep * posInRing - Math.PI / 2
   const dotR = Math.max(6, FOCUS_PRODUCT_R - ring * FOCUS_R_SHRINK)
+  const labelBelow = posInRing % 2 === 0 // alternate above/below
   return {
     x: FOCUS_CENTER_X + Math.cos(angle) * radius,
     y: FOCUS_CENTER_Y + Math.sin(angle) * radius,
     r: dotR,
+    labelBelow,
+    ring,
   }
 }
 
@@ -426,6 +451,8 @@ const focusProducts = computed(() => {
     return {
       product: p,
       x: pos.x, y: pos.y, r: pos.r,
+      labelBelow: pos.labelBelow,
+      ring: pos.ring,
       color: g.color,
       terpValue: p.Terpenes?.find(t => t.name === g.name)?.value ?? 0,
     }
@@ -436,9 +463,15 @@ const focusProducts = computed(() => {
 const effectiveH = computed(() => {
   const g = focusedTerpene.value
   if (!g || (mode.value !== 'focus' && mode.value !== 'zooming-in' && mode.value !== 'zooming-out')) return H
-  const rings = Math.ceil(g.products.length / PRODUCTS_PER_RING)
-  const maxRadius = FOCUS_RING_START + (rings - 1) * FOCUS_RING_GAP
-  const needed = FOCUS_CENTER_Y + maxRadius + FOCUS_PRODUCT_R + 80 // padding for labels + info text
+  // Count rings needed with dynamic capacity
+  let remaining = g.products.length
+  let ring = 0
+  while (remaining > 0) {
+    remaining -= ringCapacity(ring)
+    ring++
+  }
+  const maxRadius = FOCUS_RING_START + (ring - 1) * FOCUS_RING_GAP
+  const needed = FOCUS_CENTER_Y + maxRadius + FOCUS_PRODUCT_R + 80
   return Math.max(H, needed)
 })
 
@@ -495,6 +528,43 @@ function terpColor(name) {
 
 // Product modal state
 const modalProduct = ref(null)
+
+// ── Draggable info panel ─────────────────────────────────────────────────────
+const panelPos = ref({ x: null, y: null }) // null = default position (top-right)
+let dragState = null // { startX, startY, origX, origY }
+
+function onPanelPointerDown(e) {
+  const el = e.currentTarget
+  const rect = el.getBoundingClientRect()
+  // Initialize position from current rendered location if first drag
+  if (panelPos.value.x === null) {
+    panelPos.value = { x: rect.left, y: rect.top }
+  }
+  dragState = {
+    startX: e.clientX,
+    startY: e.clientY,
+    origX: panelPos.value.x,
+    origY: panelPos.value.y,
+  }
+  el.setPointerCapture(e.pointerId)
+}
+
+function onPanelPointerMove(e) {
+  if (!dragState) return
+  panelPos.value = {
+    x: dragState.origX + (e.clientX - dragState.startX),
+    y: dragState.origY + (e.clientY - dragState.startY),
+  }
+}
+
+function onPanelPointerUp() {
+  dragState = null
+}
+
+// Reset panel position when switching terpenes
+watch(focusedTerpene, () => {
+  panelPos.value = { x: null, y: null }
+})
 </script>
 
 <template>
@@ -597,10 +667,12 @@ const modalProduct = ref(null)
             fill="transparent" style="cursor: pointer" @click="addToShelf(fp.product, fp.x, fp.y)" />
           <circle :cx="fp.x" :cy="fp.y" :r="fp.r"
             :fill="fp.color" fill-opacity="0.85" filter="url(#glow)" style="pointer-events: none" />
-          <text :x="fp.x" :y="fp.y + fp.r + 13"
+          <text :x="fp.x" :y="fp.labelBelow ? fp.y + fp.r + 13 : fp.y - fp.r - 14"
             text-anchor="middle" fill="white" fill-opacity="0.85" font-size="9"
-            style="pointer-events: none">{{ fp.product.Name }}</text>
-          <text :x="fp.x" :y="fp.y + fp.r + 24"
+            :textLength="fp.product.Name.length > 28 ? '180' : undefined"
+            :lengthAdjust="fp.product.Name.length > 28 ? 'spacingAndGlyphs' : undefined"
+            style="pointer-events: none">{{ fp.product.Name.length > 32 ? fp.product.Name.slice(0, 30) + '…' : fp.product.Name }}</text>
+          <text :x="fp.x" :y="fp.labelBelow ? fp.y + fp.r + 24 : fp.y - fp.r - 4"
             text-anchor="middle" fill="white" fill-opacity="0.5" font-size="8"
             style="pointer-events: none">{{ fp.terpValue }}%</text>
         </g>
@@ -626,10 +698,19 @@ const modalProduct = ref(null)
         fill="#fff" :fill-opacity="flyDot.opacity" filter="url(#glow)" />
     </svg>
 
-    <!-- ════════ TERPENE INFO PANEL (upper right, HTML overlay) ════════ -->
+    <!-- ════════ TERPENE INFO PANEL (draggable, defaults to upper right) ════════ -->
     <div v-if="focusInfo && (mode === 'focus' || mode === 'zooming-in' || mode === 'zooming-out')"
-      class="absolute top-3 right-3 w-72 rounded-xl border border-gray-600 bg-gray-900/90 backdrop-blur-sm p-4 transition-opacity duration-300"
-      :style="{ opacity: infoOpacity }">
+      class="w-72 rounded-xl border border-gray-600 bg-gray-900/90 backdrop-blur-sm p-4 transition-opacity duration-300 touch-none select-none"
+      :class="panelPos.x === null ? 'absolute top-3 right-3' : 'fixed'"
+      :style="{
+        opacity: infoOpacity,
+        ...(panelPos.x !== null ? { left: panelPos.x + 'px', top: panelPos.y + 'px' } : {}),
+        cursor: 'grab',
+      }"
+      @pointerdown="onPanelPointerDown"
+      @pointermove="onPanelPointerMove"
+      @pointerup="onPanelPointerUp"
+      @pointercancel="onPanelPointerUp">
       <div class="flex items-center gap-2 mb-3">
         <div class="w-3 h-3 rounded-full flex-shrink-0" :style="{ backgroundColor: focusInfo.color }" />
         <h3 class="text-white font-bold text-sm">{{ focusInfo.name }}</h3>
