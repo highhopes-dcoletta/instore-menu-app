@@ -21,7 +21,7 @@ const VIEWPORT = { width: 1180, height: 820 }
 // recognizable label so the screenshots look realistic.
 const SUFFIX = Date.now().toString().slice(-6)
 const BUNDLE_ID = `screenshot-bundle-${SUFFIX}`
-const BUNDLE_LABEL = `Screenshot Drinks Deal ${SUFFIX}`
+const BUNDLE_LABEL = `Any 4 Drinks — $20`
 
 // Helpers
 const p = (f) => path.join(OUT, f)
@@ -40,7 +40,8 @@ async function main() {
     await page.goto(`${BASE}/bundles`)
     await page.waitForResponse(r => r.url().includes('/api/bundles'))
     await wait(500)
-    await page.screenshot({ path: p('01-bundles-list.png'), fullPage: true })
+    // Clip to the visible viewport — full-page screenshot is too tall for a PDF
+    await page.screenshot({ path: p('01-bundles-list.png') })
 
     // ── 2. New bundle form (empty) ────────────────────────────────────────────
     console.log('2/11 New bundle form (empty)')
@@ -105,11 +106,12 @@ async function main() {
     })
 
     // ── 6. Bundle card close-up ───────────────────────────────────────────────
+    // Use our test bundle's unique schedule text to find it among duplicates
     console.log('6/11 Bundle card close-up')
     await page.goto(`${BASE}/bundles`)
     await page.waitForResponse(r => r.url().includes('/api/bundles'))
     await wait(500)
-    const card = page.locator('.rounded-xl.border', { hasText: BUNDLE_LABEL })
+    const card = page.locator('.rounded-xl.border', { hasText: '10th, 15th of month' })
     await card.waitFor({ state: 'visible', timeout: 10000 })
     await card.screenshot({ path: p('06-bundle-card.png') })
 
@@ -117,8 +119,7 @@ async function main() {
     console.log('7/11 Disabled bundle')
     await card.locator('button[title="Disable"]').click({ force: true })
     await wait(800)
-    // Re-query after DOM update
-    const disabledCard = page.locator('.rounded-xl.border.opacity-60', { hasText: BUNDLE_LABEL })
+    const disabledCard = page.locator('.rounded-xl.border.opacity-60', { hasText: '10th, 15th of month' })
     await disabledCard.waitFor({ state: 'visible', timeout: 10000 })
     await disabledCard.screenshot({ path: p('07-disabled-bundle.png') })
 
@@ -135,7 +136,7 @@ async function main() {
     await page.goto(`${BASE}/bundles`)
     await page.waitForResponse(r => r.url().includes('/api/bundles'))
     await wait(500)
-    const deleteCard = page.locator('.rounded-xl.border', { hasText: BUNDLE_LABEL })
+    const deleteCard = page.locator('.rounded-xl.border', { hasText: '10th, 15th of month' })
     await deleteCard.waitFor({ state: 'visible', timeout: 10000 })
     await deleteCard.getByRole('button', { name: 'Delete' }).click()
     await wait(300)
