@@ -4,9 +4,9 @@ After=network.target
 
 [Service]
 User=root
-WorkingDirectory=/home/highhopes/highhopes-menu-stage/backend
-EnvironmentFile=/home/highhopes/highhopes-menu-stage/backend/.env
-ExecStart=/home/highhopes/highhopes-menu-stage/backend/venv/bin/waitress-serve --host 127.0.0.1 --port 5002 app:app
+WorkingDirectory=/home/highhopes/highhopes-menu-stage/current/backend
+EnvironmentFile=/home/highhopes/highhopes-menu-stage/shared/backend.env
+ExecStart=/home/highhopes/highhopes-menu-stage/shared/backend-venv/bin/waitress-serve --host 127.0.0.1 --port 5002 app:app
 Restart=always
 RestartSec=5
 TimeoutStopSec=5

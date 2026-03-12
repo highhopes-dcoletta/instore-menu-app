@@ -20,7 +20,7 @@ sessions: dict = {}
 # Order counter: 1–99, wraps around
 order_counter: int = 0
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "analytics.db")
+DB_PATH = os.getenv("DB_PATH", os.path.join(os.path.dirname(__file__), "analytics.db"))
 
 
 def _init_db() -> None:

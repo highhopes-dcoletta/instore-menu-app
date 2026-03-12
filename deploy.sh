@@ -1,85 +1,122 @@
 #!/bin/bash
-# deploy.sh — provision or update the High Hopes menu app on the VPS
+# deploy.sh — versioned deploy of High Hopes menu app to production
 # Usage: ./deploy.sh
+#
+# Requires: the server has been bootstrapped with infra/bootstrap-server.sh
 
 set -e
 
 HOST="root@104.236.29.111"
-REMOTE_DIR="/home/highhopes/highhopes-menu"
-WEB_DIR="/var/www/highhopes-menu"
-REPO="https://github.com/highhopes-dcoletta/instore-menu-app.git"
+BASE="/home/highhopes/highhopes-menu"
 SERVICE="highhopes-menu"
+KEEP_RELEASES=10
+KEEP_BACKUPS=30
 # Use macOS keychain agent (bypasses 1Password IdentityAgent override in ~/.ssh/config)
 SSHOPTS="-o IdentityAgent=SSH_AUTH_SOCK"
 
+# ── Release name ─────────────────────────────────────────────────────────────
+SHORT_SHA=$(git rev-parse --short HEAD)
+TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+RELEASE="${TIMESTAMP}-${SHORT_SHA}"
+echo "==> Release: $RELEASE"
+
+# ── Check for uncommitted changes ────────────────────────────────────────────
+if [ -n "$(git status --porcelain)" ]; then
+  echo "WARNING: You have uncommitted changes. Deploy will use the last commit ($SHORT_SHA)."
+  read -p "Continue? [y/N] " -n 1 -r
+  echo
+  [[ $REPLY =~ ^[Yy]$ ]] || exit 1
+fi
+
+# ── Build frontend ───────────────────────────────────────────────────────────
 echo "==> Building frontend..."
 (cd frontend && npm run build)
 
-echo "==> Setting up server..."
-ssh $SSHOPTS "$HOST" bash << EOF
-set -e
+# ── Create release dir and rsync files ───────────────────────────────────────
+echo "==> Creating release directory on server..."
+ssh $SSHOPTS "$HOST" "mkdir -p $BASE/releases/$RELEASE"
 
-# Install system deps (includes git)
-apt-get install -y -q git nginx python3-venv python3-pip > /dev/null 2>&1 || true
+echo "==> Syncing backend..."
+rsync -az \
+  --exclude '__pycache__' \
+  --exclude '*.pyc' \
+  --exclude '.venv' \
+  --exclude 'venv' \
+  --exclude 'analytics.db' \
+  -e "ssh $SSHOPTS" \
+  backend/ "$HOST:$BASE/releases/$RELEASE/backend/"
 
-# Clone or update repo
-export GIT_TERMINAL_PROMPT=0
-if [ -d "$REMOTE_DIR/.git" ]; then
-    echo "  Pulling latest..."
-    cd $REMOTE_DIR && git pull
-else
-    echo "  Cloning repo..."
-    git clone $REPO $REMOTE_DIR
-fi
+echo "==> Syncing frontend dist..."
+rsync -az --delete -e "ssh $SSHOPTS" frontend/dist/ "$HOST:$BASE/releases/$RELEASE/frontend-dist/"
 
-# Set timezone
-timedatectl set-timezone America/New_York
-
-# Create web root
-mkdir -p $WEB_DIR
-
-# Set up Python venv
-if [ ! -d "$REMOTE_DIR/backend/venv" ]; then
-    echo "  Creating virtual environment..."
-    python3 -m venv $REMOTE_DIR/backend/venv
-fi
-
-echo "  Installing Python dependencies..."
-$REMOTE_DIR/backend/venv/bin/pip install --quiet -r $REMOTE_DIR/backend/requirements.txt
-
-# Install systemd service
-cp $REMOTE_DIR/infra/$SERVICE.service /etc/systemd/system/$SERVICE.service
-systemctl daemon-reload
-systemctl enable $SERVICE
-
-# Install nginx config
-cp $REMOTE_DIR/infra/nginx.conf /etc/nginx/sites-available/$SERVICE
-ln -sf /etc/nginx/sites-available/$SERVICE /etc/nginx/sites-enabled/$SERVICE
-rm -f /etc/nginx/sites-enabled/default
-nginx -t
-systemctl reload nginx 2>/dev/null || systemctl start nginx
-
-echo "  Done."
-EOF
-
-echo "==> Syncing frontend..."
-rsync -az --delete -e "ssh $SSHOPTS" frontend/dist/ "$HOST:$WEB_DIR/"
-
-echo "==> Verifying sync..."
+echo "==> Verifying frontend sync..."
 LOCAL_HASH=$(md5 -q frontend/dist/index.html)
-REMOTE_HASH=$(ssh $SSHOPTS "$HOST" "md5sum $WEB_DIR/index.html | cut -d' ' -f1")
+REMOTE_HASH=$(ssh $SSHOPTS "$HOST" "md5sum $BASE/releases/$RELEASE/frontend-dist/index.html | cut -d' ' -f1")
 if [ "$LOCAL_HASH" != "$REMOTE_HASH" ]; then
   echo "ERROR: index.html mismatch after rsync (local=$LOCAL_HASH remote=$REMOTE_HASH)" >&2
   exit 1
 fi
 echo "  index.html verified."
 
-echo "==> Copying .env to server..."
-scp $SSHOPTS backend/.env "$HOST:$REMOTE_DIR/backend/.env"
+# ── Write deploy metadata ───────────────────────────────────────────────────
+ssh $SSHOPTS "$HOST" bash <<EOF
+cat > $BASE/releases/$RELEASE/.deploy-meta <<METAEOF
+sha=$(git rev-parse HEAD)
+short_sha=$SHORT_SHA
+timestamp=$TIMESTAMP
+deployer=$(whoami)@$(hostname)
+METAEOF
+EOF
 
+# ── Pre-deploy DB backup ────────────────────────────────────────────────────
+echo "==> Backing up database..."
+ssh $SSHOPTS "$HOST" bash <<EOF
+set -e
+mkdir -p $BASE/backups/db
+if [ -f "$BASE/shared/analytics.db" ]; then
+  cp $BASE/shared/analytics.db $BASE/backups/db/analytics-${RELEASE}-pre-deploy.db
+  echo "  DB backed up."
+else
+  echo "  No existing DB to back up."
+fi
+EOF
+
+# ── Install pip deps into shared venv ────────────────────────────────────────
+echo "==> Installing Python dependencies..."
+ssh $SSHOPTS "$HOST" bash <<EOF
+set -e
+if [ ! -d "$BASE/shared/backend-venv" ]; then
+  python3 -m venv $BASE/shared/backend-venv
+fi
+$BASE/shared/backend-venv/bin/pip install --quiet -r $BASE/releases/$RELEASE/backend/requirements.txt
+EOF
+
+# ── Copy backend .env to shared ──────────────────────────────────────────────
+echo "==> Copying backend .env to shared..."
+scp $SSHOPTS backend/.env "$HOST:$BASE/shared/backend.env"
+
+# ── Atomic symlink swap ──────────────────────────────────────────────────────
+echo "==> Swapping symlink to new release..."
+ssh $SSHOPTS "$HOST" "ln -sfn $BASE/releases/$RELEASE $BASE/current"
+
+# ── Install systemd + nginx configs ──────────────────────────────────────────
+echo "==> Installing service configs..."
+ssh $SSHOPTS "$HOST" bash <<EOF
+set -e
+cp $BASE/current/infra/$SERVICE.service /etc/systemd/system/$SERVICE.service
+systemctl daemon-reload
+
+cp $BASE/current/infra/nginx.conf /etc/nginx/sites-available/$SERVICE
+ln -sf /etc/nginx/sites-available/$SERVICE /etc/nginx/sites-enabled/$SERVICE
+nginx -t
+systemctl reload nginx
+EOF
+
+# ── Restart service ──────────────────────────────────────────────────────────
 echo "==> Restarting service..."
-ssh $SSHOPTS "$HOST" "systemctl daemon-reload; systemctl restart $SERVICE"
+ssh $SSHOPTS "$HOST" "systemctl restart $SERVICE"
 
+# ── Health check ─────────────────────────────────────────────────────────────
 echo "==> Waiting for API..."
 for i in $(seq 1 30); do
   if ssh $SSHOPTS "$HOST" "nc -z 127.0.0.1 5001" 2>/dev/null; then
@@ -88,11 +125,42 @@ for i in $(seq 1 30); do
   fi
   if [ $i -eq 30 ]; then
     echo "ERROR: API did not respond after 30s" >&2
+    echo "Rolling back to previous release..."
+    PREV=$(ssh $SSHOPTS "$HOST" "ls -1d $BASE/releases/*/ | sort | tail -2 | head -1 | sed 's|/$||'")
+    ssh $SSHOPTS "$HOST" "ln -sfn $PREV $BASE/current && systemctl restart $SERVICE"
+    echo "Rolled back to $(basename $PREV). Investigate the failure."
     exit 1
   fi
   sleep 1
 done
 
+# ── Prune old releases ──────────────────────────────────────────────────────
+echo "==> Pruning old releases (keeping $KEEP_RELEASES)..."
+ssh $SSHOPTS "$HOST" bash <<EOF
+set -e
+cd $BASE/releases
+CURRENT_RELEASE=\$(readlink $BASE/current | xargs basename)
+ls -1d */ | sort | head -n -$KEEP_RELEASES | while read dir; do
+  dir_name=\$(basename "\$dir")
+  if [ "\$dir_name" != "\$CURRENT_RELEASE" ]; then
+    echo "  Removing \$dir_name"
+    rm -rf "\$dir"
+  fi
+done
+EOF
+
+echo "==> Pruning old backups (keeping $KEEP_BACKUPS)..."
+ssh $SSHOPTS "$HOST" bash <<EOF
+cd $BASE/backups/db 2>/dev/null || exit 0
+ls -1t *.db 2>/dev/null | tail -n +\$(($KEEP_BACKUPS + 1)) | xargs -r rm -f
+EOF
+
+# ── Download DB backup locally ───────────────────────────────────────────────
+echo "==> Downloading DB backup locally..."
+mkdir -p .db-backups
+scp $SSHOPTS "$HOST:$BASE/backups/db/analytics-${RELEASE}-pre-deploy.db" ".db-backups/" 2>/dev/null || \
+  echo "  No backup to download (first deploy?)."
+
 echo ""
-echo "==> Done! http://menu2.highhopesma.com"
-echo "    (Run 'sudo certbot --nginx -d menu2.highhopesma.com' on the server to add SSL)"
+echo "==> Done! https://menu2.highhopesma.com"
+echo "    Release: $RELEASE"
