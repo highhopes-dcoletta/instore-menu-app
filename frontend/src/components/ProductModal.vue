@@ -19,6 +19,29 @@ const { track } = useAnalytics()
 
 const qty = computed(() => session.selections[props.product.id]?.qty ?? 0)
 
+const maxTerpValue = computed(() => {
+  if (!props.product.Terpenes?.length) return 1
+  return Math.max(...props.product.Terpenes.map(t => t.value)) || 1
+})
+
+const pricePerGram = computed(() => {
+  const price = props.product.Price
+  const weight = props.product['Unit Weight']
+  if (!price || !weight) return null
+  const match = weight.match(/([\d.\/]+)\s*(oz|g)/i)
+  if (!match) return null
+  let grams
+  if (match[2].toLowerCase() === 'g') {
+    grams = parseFloat(match[1])
+  } else {
+    const parts = match[1].split('/')
+    const oz = parts.length === 2 ? parseFloat(parts[0]) / parseFloat(parts[1]) : parseFloat(parts[0])
+    grams = oz * 28.3495
+  }
+  if (!grams || grams <= 0) return null
+  return (price / grams).toFixed(2)
+})
+
 function updateQty(delta, event) {
   if (delta > 0) {
     const wasEmpty = session.selectionCount === 0
@@ -87,6 +110,32 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
         <div v-if="product.Price != null" class="mb-4">
           <span class="text-lg text-gray-700">${{ product.Price }}</span>
           <span v-if="perUnitLabel(product)" class="ml-2 text-sm text-gray-400">{{ perUnitLabel(product) }}</span>
+        </div>
+
+        <!-- Details -->
+        <div class="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600 mb-4"
+          v-if="product.Potency || product.Strain || pricePerGram">
+          <span v-if="product.Potency">
+            THC {{ product.Potency }}{{ product['Potency Unit'] || '%' }}
+          </span>
+          <span v-if="product.Strain">{{ product.Strain }}</span>
+          <span v-if="pricePerGram">${{ pricePerGram }}/g</span>
+        </div>
+
+        <!-- Terpenes -->
+        <div v-if="product.Terpenes?.length" class="mb-4">
+          <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Terpenes</h3>
+          <div class="space-y-1.5">
+            <div v-for="terp in product.Terpenes" :key="terp.name"
+              class="flex items-center gap-2">
+              <span class="text-xs text-gray-500 w-24 truncate text-right flex-shrink-0">{{ terp.name }}</span>
+              <div class="flex-1 h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                <div class="h-full bg-teal-400 rounded-full"
+                  :style="{ width: (terp.value / maxTerpValue * 100) + '%' }" />
+              </div>
+              <span class="text-xs text-gray-400 w-10 flex-shrink-0">{{ terp.value }}%</span>
+            </div>
+          </div>
         </div>
 
         <!-- Description -->

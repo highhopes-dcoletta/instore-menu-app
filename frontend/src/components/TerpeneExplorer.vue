@@ -1,8 +1,6 @@
 <script setup>
 import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
-import { useSessionStore } from '@/stores/session'
-
-const session = useSessionStore()
+import ProductModal from '@/components/ProductModal.vue'
 
 const props = defineProps({
   products: { type: Array, required: true },
@@ -495,56 +493,8 @@ function terpColor(name) {
   return terpColorMap.value[name] || '#888'
 }
 
-function pricePerGram(product) {
-  const price = product.Price
-  const weight = product['Unit Weight']
-  if (!price || !weight) return null
-  const match = weight.match(/([\d.\/]+)\s*(oz|g)/i)
-  if (!match) return null
-  let grams
-  if (match[2].toLowerCase() === 'g') {
-    grams = parseFloat(match[1])
-  } else {
-    // oz — handle fractions like 1/8
-    const parts = match[1].split('/')
-    const oz = parts.length === 2 ? parseFloat(parts[0]) / parseFloat(parts[1]) : parseFloat(parts[0])
-    grams = oz * 28.3495
-  }
-  if (!grams || grams <= 0) return null
-  return (price / grams).toFixed(2)
-}
-
-// Size picker popup state
-const sizePickerProduct = ref(null)
-
-function openSizePicker(product) {
-  if (product.variants.length === 1) {
-    // Only one size — add directly
-    addToCart(product.variants[0])
-    return
-  }
-  sizePickerProduct.value = product
-}
-
-function closeSizePicker() {
-  sizePickerProduct.value = null
-}
-
-function addToCart(variant) {
-  session.updateQuantity(variant.id, {
-    name: variant.Name ?? '',
-    unitWeight: variant['Unit Weight'] ?? '',
-    price: variant.Price ?? 0,
-    image: variant.Image ?? null,
-    category: variant.Category ?? '',
-    subcategory: variant.Subcategory ?? '',
-  }, 1)
-  sizePickerProduct.value = null
-}
-
-function anyVariantInCart(product) {
-  return (product.variants || []).some(v => (session.selections[v.id]?.qty ?? 0) > 0)
-}
+// Product modal state
+const modalProduct = ref(null)
 </script>
 
 <template>
@@ -740,47 +690,15 @@ function anyVariantInCart(product) {
               <span class="text-[9px] text-gray-500 w-8 flex-shrink-0">{{ terp.value }}%</span>
             </div>
           </div>
-          <button @click="openSizePicker(sp)"
-            class="w-full text-[11px] font-semibold py-1.5 rounded-md transition-colors"
-            :class="anyVariantInCart(sp)
-              ? 'bg-green-800 text-green-200 cursor-default'
-              : 'bg-indigo-600 hover:bg-indigo-500 text-white'">
-            {{ anyVariantInCart(sp) ? 'In Cart' : 'Add to Cart' }}
+          <button @click="modalProduct = sp"
+            class="w-full text-[11px] font-semibold py-1.5 rounded-md bg-indigo-600 hover:bg-indigo-500 text-white transition-colors">
+            Learn More
           </button>
         </div>
       </div>
     </div>
 
-    <!-- ════════ SIZE PICKER POPUP ════════ -->
-    <Teleport to="body">
-      <div v-if="sizePickerProduct" class="fixed inset-0 z-50 flex items-center justify-center"
-        @click.self="closeSizePicker">
-        <div class="absolute inset-0 bg-black/60" @click="closeSizePicker" />
-        <div class="relative bg-gray-900 border border-gray-600 rounded-xl p-5 w-80 max-w-[90vw] z-10">
-          <button @click="closeSizePicker"
-            class="absolute top-2 right-3 text-gray-400 hover:text-white text-lg">×</button>
-          <h3 class="text-white font-bold text-sm mb-1 pr-6 truncate">{{ sizePickerProduct.Name }}</h3>
-          <p class="text-gray-400 text-[11px] mb-3">Choose a size</p>
-          <div class="space-y-2">
-            <button v-for="v in sizePickerProduct.variants" :key="v.id"
-              @click="addToCart(v)"
-              class="w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition-colors"
-              :class="(session.selections[v.id]?.qty ?? 0) > 0
-                ? 'bg-green-900/50 border border-green-700'
-                : 'bg-gray-800 hover:bg-gray-700 border border-gray-700'">
-              <div class="text-left">
-                <span class="text-white text-xs font-medium">{{ v['Unit Weight'] || 'Standard' }}</span>
-                <span v-if="pricePerGram(v)" class="text-gray-400 text-[10px] ml-2">${{ pricePerGram(v) }}/g</span>
-              </div>
-              <div class="text-right">
-                <span v-if="(session.selections[v.id]?.qty ?? 0) > 0"
-                  class="text-green-300 text-[10px] mr-2">In Cart</span>
-                <span class="text-white text-xs font-semibold">${{ v.Price?.toFixed(2) ?? '—' }}</span>
-              </div>
-            </button>
-          </div>
-        </div>
-      </div>
-    </Teleport>
+    <!-- ════════ PRODUCT MODAL ════════ -->
+    <ProductModal v-if="modalProduct" :product="modalProduct" @close="modalProduct = null" />
   </div>
 </template>
