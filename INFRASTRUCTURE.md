@@ -187,7 +187,7 @@ There are two independent monitoring systems for redundancy.
 Runs a full Playwright e2e test suite (`monitor/e2e.spec.js`) against production every 15 minutes. The schedule trigger is supplemented by an **external cron service** (cron-job.org) calling the `workflow_dispatch` endpoint, because GitHub's built-in cron scheduler is unreliable for free-tier repos.
 
 On failure:
-- Sends a PagerDuty alert (critical severity)
+- Sends a PagerTree alert (critical severity)
 - Uploads failure screenshots as GitHub artifacts (7-day retention)
 
 **E2E test coverage** (~50 tests):
@@ -209,7 +209,7 @@ A lightweight bash script that checks:
 3. Session create/read/delete lifecycle works
 4. SSL certificate has >14 days until expiry
 
-Designed to run via server-side cron (`*/5 * * * *`). Alerts via PagerDuty on failure.
+Designed to run via server-side cron (`*/5 * * * *`). Alerts via PagerTree on failure.
 
 ---
 
@@ -218,7 +218,7 @@ Designed to run via server-side cron (`*/5 * * * *`). Alerts via PagerDuty on fa
 | Service | Purpose | Credentials |
 |---------|---------|-------------|
 | **Dutchie GraphQL API** | Product catalog | `VITE_DUTCHIE_BEARER_TOKEN`, `VITE_DUTCHIE_RETAILER_ID` |
-| **PagerDuty** | Incident alerting | `PAGERDUTY_ROUTING_KEY` (GitHub secret + server env) |
+| **PagerTree** | Incident alerting | `PAGERTREE_INTEGRATION_URL` (GitHub secret + server env var) |
 | **GitHub** | Source code, CI/CD | SSH key (deploy), PAT (cron trigger) |
 | **cron-job.org** | Reliable 15-min e2e trigger | GitHub PAT with Actions write scope |
 | **Let's Encrypt** | SSL certificates | Managed by Certbot on VPS |

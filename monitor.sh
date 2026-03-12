@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Synthetic monitor for menu2.highhopesma.com
 #
-# Tests the full session lifecycle. Alerts via PagerDuty on failure.
+# Tests the full session lifecycle. Alerts via PagerTree on failure.
 #
 # Environment variables (sourced from /etc/highhopes-monitor.env):
-#   PAGERDUTY_ROUTING_KEY  — PagerDuty Events API v2 integration key
+#   PAGERTREE_INTEGRATION_URL  — PagerTree webhook integration endpoint
 #
 # Cron example (every 5 minutes, on the server):
 #   */5 * * * * . /etc/highhopes-monitor.env && /usr/local/bin/highhopes-monitor \
@@ -13,7 +13,7 @@
 set -uo pipefail
 
 BASE="https://menu2.highhopesma.com"
-PAGERDUTY_ROUTING_KEY="${PAGERDUTY_ROUTING_KEY:-}"
+PAGERTREE_INTEGRATION_URL="${PAGERTREE_INTEGRATION_URL:-}"
 SESSION_ID="monitor-test-$(date +%s)"
 PASS=0
 FAIL=0
@@ -87,21 +87,15 @@ if [ "$FAIL" -gt 0 ]; then
   echo "[ALERT] $SUMMARY" >&2
   echo "$DETAILS" >&2
 
-  if [ -n "$PAGERDUTY_ROUTING_KEY" ]; then
-    curl -sf -X POST "https://events.pagerduty.com/v2/enqueue" \
+  if [ -n "$PAGERTREE_INTEGRATION_URL" ]; then
+    curl -sf -X POST "$PAGERTREE_INTEGRATION_URL" \
       -H "Content-Type: application/json" \
       -d "{
-        \"routing_key\": \"${PAGERDUTY_ROUTING_KEY}\",
-        \"event_action\": \"trigger\",
-        \"payload\": {
-          \"summary\": \"${SUMMARY}\",
-          \"source\": \"menu2.highhopesma.com\",
-          \"severity\": \"critical\",
-          \"custom_details\": {
-            \"errors\": \"$(printf '%b' "$DETAILS" | sed 's/"/\\"/g')\"
-          }
-        }
-      }" >/dev/null 2>&1 || echo "WARNING: PagerDuty API call failed"
+        \"event_type\": \"create\",
+        \"Id\": \"monitor-$(date +%s)\",
+        \"Title\": \"${SUMMARY}\",
+        \"Description\": \"$(printf '%b' "$DETAILS" | sed 's/"/\\"/g')\"
+      }" >/dev/null 2>&1 || echo "WARNING: PagerTree API call failed"
   fi
 
   exit 1

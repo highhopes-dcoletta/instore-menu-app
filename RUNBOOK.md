@@ -297,7 +297,7 @@ bash deploy.sh
 
 ## Scenario 8: E2E tests failing but site looks fine
 
-**Symptoms:** PagerDuty alert from GitHub Actions, but you visit the site and it works.
+**Symptoms:** PagerTree alert from GitHub Actions, but you visit the site and it works.
 
 This usually means:
 1. **Flaky test** — a timing issue in the Playwright tests, not a real outage
@@ -343,9 +343,9 @@ EOF
 
 ---
 
-## Scenario 10: PagerDuty alert but you can't investigate right now
+## Scenario 10: PagerTree alert but you can't investigate right now
 
-Acknowledge the alert in PagerDuty to stop escalation. The kiosk has graceful degradation:
+Acknowledge the alert in PagerTree to stop escalation. The kiosk has graceful degradation:
 
 - **Flask down**: Kiosk shows loading spinner. Customers can't browse but the physical store is unaffected.
 - **Dutchie down**: Kiosk shows cached product list with an amber banner. Customers can still browse and order.
