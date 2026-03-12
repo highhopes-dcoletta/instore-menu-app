@@ -11,6 +11,15 @@ async function fakeStaffSession(page) {
   })
 }
 
+// Override crypto.randomUUID so any session created by add-to-cart
+// gets an e2e- prefix, which the budtender view filters out.
+async function useE2eSessionId(page) {
+  await page.addInitScript(() => {
+    const origRandomUUID = crypto.randomUUID.bind(crypto)
+    crypto.randomUUID = () => `e2e-${origRandomUUID()}`
+  })
+}
+
 // Wait for the product table to have at least one row (Dutchie fetch ~5-15s)
 async function waitForProducts(page) {
   await expect(page.locator('table tbody tr').first()).toBeVisible({ timeout: 25000 })
@@ -145,6 +154,7 @@ test.describe('guided flow', () => {
   })
 
   test('adding a product from results enables Send to Budtender', async ({ page }) => {
+    await useE2eSessionId(page)
     await page.goto(`${BASE}/guide`)
     await page.getByRole('button', { name: /regular user/i }).click()
     await page.getByRole('button', { name: /relax.*unwind/i }).click()
@@ -300,6 +310,7 @@ test.describe('product modal on /flower', () => {
   }
 
   test.beforeEach(async ({ page }) => {
+    await useE2eSessionId(page)
     await page.goto(`${BASE}/flower`)
     await waitForProducts(page)
   })
@@ -359,6 +370,7 @@ test('products load from Dutchie', async ({ page }) => {
 })
 
 test('add to cart and send-to-budtender button activates', async ({ page }) => {
+  await useE2eSessionId(page)
   await page.goto(`${BASE}/flower`, { waitUntil: 'domcontentloaded' })
   const firstRow = page.locator('table tbody tr').first()
   await expect(firstRow).toBeVisible({ timeout: 25000 })
