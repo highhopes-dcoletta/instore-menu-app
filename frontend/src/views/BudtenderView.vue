@@ -42,7 +42,10 @@ watch(sessions, (list) => {
 async function fetchSessions() {
   try {
     const res = await fetch('/api/sessions', { cache: 'no-store' })
-    if (res.ok) sessions.value = await res.json()
+    if (res.ok) {
+      const all = await res.json()
+      sessions.value = all.filter(s => !s.sessionId.startsWith('e2e-'))
+    }
   } catch (e) {}
 }
 

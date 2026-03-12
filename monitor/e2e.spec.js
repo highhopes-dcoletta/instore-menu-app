@@ -370,7 +370,7 @@ test('add to cart and send-to-budtender button activates', async ({ page }) => {
 
 test('budtender view shows and dismisses an order', async ({ page, request }) => {
   await fakeStaffSession(page)
-  const sessionId = `e2e-budtender-${Date.now()}`
+  const sessionId = `test-budtender-${Date.now()}`
   const post = await request.post(`${BASE}/api/session`, {
     data: {
       sessionId,
@@ -390,7 +390,7 @@ test('budtender view shows and dismisses an order', async ({ page, request }) =>
 })
 
 test('cart share page loads for a valid session', async ({ page, request }) => {
-  const sessionId = `e2e-monitor-${Date.now()}`
+  const sessionId = `test-monitor-${Date.now()}`
   const post = await request.post(`${BASE}/api/session`, {
     data: {
       sessionId,
