@@ -2,6 +2,13 @@ const { test, expect } = require('@playwright/test')
 
 const BASE = process.env.E2E_BASE_URL ?? 'https://menu2.highhopesma.com'
 
+// Inject a fresh staff_login_at timestamp so the auth guard treats
+// the browser as authenticated (bypasses Microsoft SSO for e2e tests).
+async function fakeStaffSession(page) {
+  await page.goto(BASE)
+  await page.evaluate(() => localStorage.setItem('staff_login_at', Date.now().toString()))
+}
+
 // Wait for the product table to have at least one row (Dutchie fetch ~5-15s)
 async function waitForProducts(page) {
   await expect(page.locator('table tbody tr').first()).toBeVisible({ timeout: 25000 })
@@ -360,6 +367,7 @@ test('add to cart and send-to-budtender button activates', async ({ page }) => {
 })
 
 test('budtender view shows and dismisses an order', async ({ page, request }) => {
+  await fakeStaffSession(page)
   const sessionId = `e2e-budtender-${Date.now()}`
   const post = await request.post(`${BASE}/api/session`, {
     data: {
@@ -408,6 +416,10 @@ const E2E_LABEL = `${E2E_BUNDLE_ID} Test Deal`
 const E2E_LABEL_UPDATED = `${E2E_BUNDLE_ID} Updated Deal`
 
 test.describe.serial('bundle editor', () => {
+  test.beforeEach(async ({ page }) => {
+    await fakeStaffSession(page)
+  })
+
   // Clean up any leftover test bundles before and after the suite
   async function cleanupTestBundles(request) {
     const res = await request.fetch(`${BASE}/api/bundles?includeDisabled=1`)
