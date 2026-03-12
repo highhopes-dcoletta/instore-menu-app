@@ -258,40 +258,27 @@ The only data lost is analytics events and bundle definitions. Bundles would nee
 
 **Symptoms:** Site was working, you deployed, now it's broken.
 
-**Rollback to previous version:**
+Each deploy creates a timestamped release directory on the server. Rolling back swaps the symlink to a previous release — no rebuild needed.
+
+**List available releases:**
 
 ```bash
-ssh -o IdentityAgent=SSH_AUTH_SOCK root@104.236.29.111 bash <<'EOF'
-cd /home/highhopes/highhopes-menu
-
-echo "=== Current commit ==="
-git log --oneline -1
-
-echo ""
-echo "=== Previous commits (pick one to roll back to) ==="
-git log --oneline -10
-EOF
+bash rollback.sh            # production
+bash rollback.sh --stage    # staging
 ```
 
-Then roll back:
+This shows all releases with the current one marked `*`.
+
+**Roll back:**
 
 ```bash
-# Replace COMMIT_SHA with the hash you want to revert to
-ssh -o IdentityAgent=SSH_AUTH_SOCK root@104.236.29.111 bash <<'EOF'
-cd /home/highhopes/highhopes-menu
-git checkout COMMIT_SHA
-/home/highhopes/highhopes-menu/backend/venv/bin/pip install --quiet -r backend/requirements.txt
-systemctl restart highhopes-menu
-EOF
+bash rollback.sh 20260312       # partial match on release name (production)
+bash rollback.sh --stage 0311   # staging, match by date fragment
 ```
 
-For frontend rollback, you also need to rebuild and re-sync from that commit locally:
+The script backs up the database, installs the target release's Python dependencies, swaps the symlink, restarts the service, and verifies the API responds.
 
-```bash
-git checkout COMMIT_SHA
-cd frontend && npm run build && cd ..
-bash deploy.sh
-```
+> **Note:** The deploy script also rolls back automatically if its post-deploy health check fails.
 
 ---
 
