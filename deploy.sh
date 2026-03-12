@@ -58,6 +58,9 @@ if [ "$LOCAL_HASH" != "$REMOTE_HASH" ]; then
 fi
 echo "  index.html verified."
 
+# ── Set permissions for nginx ────────────────────────────────────────────────
+ssh $SSHOPTS "$HOST" "chmod -R o+rX $BASE/releases/$RELEASE"
+
 # ── Write deploy metadata ───────────────────────────────────────────────────
 ssh $SSHOPTS "$HOST" bash <<EOF
 cat > $BASE/releases/$RELEASE/.deploy-meta <<METAEOF

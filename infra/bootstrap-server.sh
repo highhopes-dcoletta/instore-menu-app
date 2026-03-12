@@ -39,13 +39,13 @@ mkdir -p "$BASE/releases"
 mkdir -p "$BASE/shared"
 mkdir -p "$BASE/backups/db"
 
-# ── Move venv to shared ─────────────────────────────────────────────────────
-if [ -d "$OLD_VENV" ] && [ ! -d "$BASE/shared/backend-venv" ]; then
-  echo "==> Moving venv to shared/backend-venv..."
-  mv "$OLD_VENV" "$BASE/shared/backend-venv"
-elif [ ! -d "$BASE/shared/backend-venv" ]; then
-  echo "==> Creating new shared venv..."
+# ── Create shared venv ──────────────────────────────────────────────────────
+# Always create a fresh venv (moving an old one breaks shebangs).
+# Old venv is removed since it's no longer needed.
+if [ ! -d "$BASE/shared/backend-venv" ]; then
+  echo "==> Creating shared venv..."
   python3 -m venv "$BASE/shared/backend-venv"
+  [ -d "$OLD_VENV" ] && rm -rf "$OLD_VENV"
 fi
 
 # ── Move analytics.db to shared ─────────────────────────────────────────────
@@ -108,6 +108,19 @@ METAEOF
 else
   echo "==> Symlink already exists, skipping initial release creation."
 fi
+
+# ── Install pip deps ─────────────────────────────────────────────────────────
+if [ -f "$BASE/current/backend/requirements.txt" ]; then
+  echo "==> Installing Python dependencies into shared venv..."
+  "$BASE/shared/backend-venv/bin/pip" install --quiet -r "$BASE/current/backend/requirements.txt"
+fi
+
+# ── Fix permissions for nginx ────────────────────────────────────────────────
+# nginx runs as www-data and needs to traverse the path to frontend-dist
+echo "==> Setting permissions for nginx..."
+chmod o+x /home/highhopes
+chmod o+x "$BASE"
+chmod -R o+rX "$BASE/releases"
 
 # ── Install updated systemd service ─────────────────────────────────────────
 if [ -f "$BASE/current/infra/$SERVICE.service" ]; then
