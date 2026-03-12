@@ -272,9 +272,12 @@ This shows all releases with the current one marked `*`.
 **Roll back:**
 
 ```bash
-bash rollback.sh 20260312       # partial match on release name (production)
-bash rollback.sh --stage 0311   # staging, match by date fragment
+# List releases first, then copy the full name (or enough to be unique)
+bash rollback.sh 20260312-143052   # match by timestamp (production)
+bash rollback.sh --stage c8eae26   # match by git SHA (staging)
 ```
+
+If a partial match hits multiple releases, the script picks the latest one. Use a longer fragment to be precise.
 
 The script backs up the database, installs the target release's Python dependencies, swaps the symlink, restarts the service, and verifies the API responds.
 
