@@ -24,6 +24,8 @@ const DEFAULTS = {
     EDIBLES: 56,
     TINCTURES: 1,
   },
+  'dutchie.retailerId': import.meta.env.VITE_DUTCHIE_RETAILER_ID ?? '',
+  'dutchie.bearerToken': import.meta.env.VITE_DUTCHIE_BEARER_TOKEN ?? '',
 }
 
 export { DEFAULTS as SETTINGS_DEFAULTS }
@@ -70,6 +72,8 @@ export const useSettingsStore = defineStore('settings', () => {
   const maxScatterDots = computed(() => get('display.maxScatterDots'))
   const dailyLimitG = computed(() => get('regulatory.dailyLimitG'))
   const categoryFactors = computed(() => get('regulatory.categoryFactors'))
+  const dutchieRetailerId = computed(() => get('dutchie.retailerId'))
+  const dutchieBearerToken = computed(() => get('dutchie.bearerToken'))
 
   return {
     settings,
@@ -91,5 +95,7 @@ export const useSettingsStore = defineStore('settings', () => {
     maxScatterDots,
     dailyLimitG,
     categoryFactors,
+    dutchieRetailerId,
+    dutchieBearerToken,
   }
 })

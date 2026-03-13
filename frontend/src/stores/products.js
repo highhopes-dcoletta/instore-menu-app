@@ -2,9 +2,9 @@ import { ref } from 'vue'
 import { defineStore } from 'pinia'
 import { useSessionStore } from './session'
 
+import { useSettingsStore } from './settings'
+
 const DUTCHIE_URL = 'https://plus.dutchie.com/plus/2021-07/graphql'
-const RETAILER_ID = import.meta.env.VITE_DUTCHIE_RETAILER_ID
-const BEARER_TOKEN = import.meta.env.VITE_DUTCHIE_BEARER_TOKEN
 
 const MENU_QUERY = `
   query GetMenu($retailerId: ID!) {
@@ -47,8 +47,6 @@ const MENU_QUERY = `
     }
   }
 `
-
-import { useSettingsStore } from './settings'
 
 // Parse a Dutchie formatted potency string like "31.74%" or "103mg"
 // into a numeric value and unit string for use with the existing display logic.
@@ -175,15 +173,16 @@ export const useProductsStore = defineStore('products', () => {
   // ─── Core fetch ──────────────────────────────────────────────────────────────
 
   async function _fetchAll() {
+    const settingsStore = useSettingsStore()
     const res = await fetch(DUTCHIE_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${BEARER_TOKEN}`,
+        Authorization: `Bearer ${settingsStore.dutchieBearerToken}`,
       },
       body: JSON.stringify({
         query: MENU_QUERY,
-        variables: { retailerId: RETAILER_ID },
+        variables: { retailerId: settingsStore.dutchieRetailerId },
       }),
     })
 

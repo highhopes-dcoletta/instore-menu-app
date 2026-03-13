@@ -77,6 +77,8 @@ describe('settings store', () => {
     expect(keys).toContain('display.maxDealsPerCategory')
     expect(keys).toContain('regulatory.dailyLimitG')
     expect(keys).toContain('regulatory.categoryFactors')
+    expect(keys).toContain('dutchie.retailerId')
+    expect(keys).toContain('dutchie.bearerToken')
   })
 
   it('categoryFactors computed returns object with expected categories', () => {

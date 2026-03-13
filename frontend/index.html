@@ -5,15 +5,17 @@
     <meta name="viewport" content="width=1024" />
     <title>High Hopes Menu</title>
     <script>
-      // The app targets 1024px kiosk iPads. Phones (< 768px) keep
-      // width=1024 so they see a scaled-down version. iPads and larger
-      // use device-width to avoid unnecessary scaling (a standard iPad
-      // at 768px was being shrunk to 75% with the forced 1024).
-      // Cap at 1024 so ultra-wide screens don't stretch the layout.
-      var sw = window.screen.width
+      // The app targets 1024px kiosk iPads in landscape. Phones keep
+      // width=1024 so they see a scaled-down version. Tablets and
+      // larger use their landscape dimension (capped at 1024) so the
+      // layout renders at native size without scaling.
+      // iOS reports screen.width as portrait width regardless of
+      // orientation, so we use min/max to get the true dimensions.
+      var sw = Math.min(screen.width, screen.height)   // portrait
+      var lw = Math.max(screen.width, screen.height)   // landscape
       if (sw >= 768) {
         document.querySelector('meta[name="viewport"]').content =
-          'width=' + Math.min(sw, 1024)
+          'width=' + Math.min(lw, 1024)
       }
     </script>
   </head>

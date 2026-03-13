@@ -39,6 +39,8 @@ function buildFormFromStore() {
     }
   }
   f['regulatory.categoryFactors'] = { ...settingsStore.get('regulatory.categoryFactors') }
+  f['dutchie.retailerId'] = settingsStore.get('dutchie.retailerId')
+  f['dutchie.bearerToken'] = settingsStore.get('dutchie.bearerToken')
   return f
 }
 
@@ -76,6 +78,8 @@ const hasChanges = computed(() => {
   for (const key of Object.keys(currentFactors)) {
     if (currentFactors[key] !== formFactors[key]) return true
   }
+  if (settingsStore.get('dutchie.retailerId') !== form.value['dutchie.retailerId']) return true
+  if (settingsStore.get('dutchie.bearerToken') !== form.value['dutchie.bearerToken']) return true
   return false
 })
 
@@ -90,6 +94,8 @@ async function save() {
       }
     }
     data['regulatory.categoryFactors'] = { ...form.value['regulatory.categoryFactors'] }
+    data['dutchie.retailerId'] = form.value['dutchie.retailerId']
+    data['dutchie.bearerToken'] = form.value['dutchie.bearerToken']
     await settingsStore.saveSettings(data)
     saveResult.value = { success: true, message: 'Settings saved. Changes take effect on next kiosk reload.' }
   } catch (e) {
@@ -124,6 +130,8 @@ function resetToDefaults() {
     }
   }
   f['regulatory.categoryFactors'] = { ...SETTINGS_DEFAULTS['regulatory.categoryFactors'] }
+  f['dutchie.retailerId'] = SETTINGS_DEFAULTS['dutchie.retailerId']
+  f['dutchie.bearerToken'] = SETTINGS_DEFAULTS['dutchie.bearerToken']
   form.value = f
 }
 
@@ -192,6 +200,37 @@ onMounted(async () => {
               class="w-24 text-right border border-gray-300 rounded-lg px-3 py-1.5 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
             />
             <span class="text-xs text-gray-400 w-16">factor</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dutchie API -->
+      <div>
+        <h2 class="text-sm font-bold uppercase tracking-widest text-gray-400 mb-4">Dutchie API</h2>
+        <div class="space-y-4">
+          <div class="flex items-start gap-4">
+            <div class="flex-1">
+              <label for="dutchie.retailerId" class="block text-sm font-semibold text-gray-700">Retailer ID</label>
+              <p class="text-xs text-gray-400">Dutchie retailer UUID for menu queries</p>
+            </div>
+            <input
+              id="dutchie.retailerId"
+              v-model="form['dutchie.retailerId']"
+              type="text"
+              class="w-96 border border-gray-300 rounded-lg px-3 py-1.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+            />
+          </div>
+          <div class="flex items-start gap-4">
+            <div class="flex-1">
+              <label for="dutchie.bearerToken" class="block text-sm font-semibold text-gray-700">Bearer Token</label>
+              <p class="text-xs text-gray-400">Authorization token for Dutchie GraphQL API</p>
+            </div>
+            <input
+              id="dutchie.bearerToken"
+              v-model="form['dutchie.bearerToken']"
+              type="password"
+              class="w-96 border border-gray-300 rounded-lg px-3 py-1.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+            />
           </div>
         </div>
       </div>
