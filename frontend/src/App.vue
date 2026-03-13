@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, onUnmounted } from 'vue'
+import { computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useProductsStore } from '@/stores/products'
@@ -39,10 +39,30 @@ async function onInactivity() {
   const itemCount = sessionStore.selectionCount
   if (itemCount > 0) track('session_abandoned', { item_count: itemCount })
   await sessionStore.clearSession()
-  router.push('/')
+  window.location.replace('/')
 }
 
 const ACTIVITY_EVENTS = ['click', 'touchstart', 'keydown', 'scroll']
+
+// ─── Heartbeat (route tracking for budtender view) ──────────────────────────
+
+const HEARTBEAT_INTERVAL_MS = 30 * 1000
+let heartbeatTimer = null
+
+function sendHeartbeat(routePath) {
+  if (isKioskFree.value) return
+  const id = sessionStore.sessionId
+  if (!id) return
+  fetch('/api/session/heartbeat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sessionId: id, route: routePath }),
+  }).catch(() => {}) // fire-and-forget
+}
+
+watch(() => route.path, (newPath) => {
+  sendHeartbeat(newPath)
+})
 
 onMounted(async () => {
   // Budtender page is designed to run on a separate device/tab.
@@ -51,6 +71,8 @@ onMounted(async () => {
   // It also doesn't need the inactivity timer.
   if (!isKioskFree.value) {
     await sessionStore.initialize()
+    sendHeartbeat(route.path) // initial heartbeat
+    heartbeatTimer = setInterval(() => sendHeartbeat(route.path), HEARTBEAT_INTERVAL_MS)
     for (const evt of ACTIVITY_EVENTS) {
       window.addEventListener(evt, resetTimer, { passive: true })
     }
@@ -63,6 +85,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
   clearTimeout(inactivityTimer)
+  clearInterval(heartbeatTimer)
   for (const evt of ACTIVITY_EVENTS) {
     window.removeEventListener(evt, resetTimer)
   }
