@@ -229,12 +229,24 @@ function displayPrice(p) {
           <!-- Info -->
           <div class="p-3 flex flex-col gap-1 flex-1">
             <p class="text-white font-bold text-sm leading-tight line-clamp-2" :class="{ 'deal-glow-dark': bundlesEnabled && activeBundlesForProduct(p).length }">{{ p.Name }}</p>
-            <div v-if="bundlesEnabled && activeBundlesForProduct(p).length" class="flex flex-wrap gap-1 mt-1">
+            <div v-if="bundlesEnabled && activeBundlesForProduct(p).length || p.CBD || p.Cannabinoids?.some(c => c.name === 'CBN')" class="flex flex-wrap gap-1 mt-1">
               <span
                 v-for="bundle in activeBundlesForProduct(p)"
                 :key="bundle.id"
                 class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs font-bold leading-none bg-amber-500/20 border border-amber-500/30 text-amber-300"
               >🎉 {{ bundle.label }}</span>
+              <span
+                v-if="p.CBD"
+                class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-bold leading-none bg-blue-500/20 border border-blue-500/30 text-blue-300"
+              >CBD</span>
+              <span
+                v-if="p.Cannabinoids?.some(c => c.name === 'CBN')"
+                class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-bold leading-none bg-indigo-500/20 border border-indigo-500/30 text-indigo-300"
+              >CBN</span>
+              <span
+                v-if="p.HighCBG"
+                class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-bold leading-none bg-emerald-500/20 border border-emerald-500/30 text-emerald-300"
+              >CBG</span>
             </div>
             <div class="flex items-center gap-1.5 flex-wrap mt-0.5">
               <span

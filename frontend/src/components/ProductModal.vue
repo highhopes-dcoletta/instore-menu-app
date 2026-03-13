@@ -115,12 +115,26 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
 
         <!-- Details -->
         <div class="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600 mb-4"
-          v-if="product.Potency || product.Strain || pricePerGram">
+          v-if="product.Potency || product.CBD || product.Strain || pricePerGram">
           <span v-if="product.Potency">
             THC {{ product.Potency }}{{ product['Potency Unit'] || '%' }}
           </span>
+          <span v-if="product.CBD">
+            CBD {{ product.CBD }}{{ product['CBD Unit'] || '%' }}
+          </span>
           <span v-if="product.Strain">{{ product.Strain }}</span>
           <span v-if="pricePerGram">${{ pricePerGram }}/g</span>
+        </div>
+
+        <!-- Cannabinoids -->
+        <div v-if="product.Cannabinoids?.length" class="mb-4">
+          <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Cannabinoids</h3>
+          <div class="flex flex-wrap gap-2">
+            <span
+              v-for="c in product.Cannabinoids" :key="c.name"
+              class="px-2.5 py-1 rounded-lg bg-purple-50 border border-purple-100 text-purple-700 text-xs font-semibold"
+            >{{ c.name }} {{ c.value }}{{ c.unit }}</span>
+          </div>
         </div>
 
         <!-- Terpenes -->

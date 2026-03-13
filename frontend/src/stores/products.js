@@ -21,6 +21,12 @@ const MENU_QUERY = `
         strainType
         brand { name }
         potencyThc { formatted }
+        potencyCbd { formatted }
+        cannabinoids {
+          value
+          unit
+          cannabinoid { name }
+        }
         image
         description
         effects
@@ -67,8 +73,12 @@ function normalizeOption(category, option) {
 }
 
 // Flatten one (product, variant) pair into the field shape the app expects.
+// Map Dutchie cannabinoid unit enum to display symbol
+const UNIT_MAP = { PERCENTAGE: '%', MILLIGRAMS: 'mg', MILLIGRAMS_PER_GRAM: 'mg/g', MILLIGRAMS_PER_ML: 'mg/mL' }
+
 function normalizeVariant(product, variant) {
   const { value: potencyVal, unit: potencyUnit } = parsePotency(product.potencyThc?.formatted)
+  const { value: cbdVal, unit: cbdUnit } = parsePotency(product.potencyCbd?.formatted)
   const effects = product.effects ?? []
 
   // Pre-Ground?: Dutchie subcategory PRE_GROUND, or name contains "pre-ground"/"preground"
@@ -103,6 +113,16 @@ function normalizeVariant(product, variant) {
     SalePrice: variant.specialPriceRec ?? null,
     Potency: potencyVal,
     'Potency Unit': potencyUnit,
+    CBD: cbdVal,
+    'CBD Unit': cbdUnit,
+    Cannabinoids: (product.cannabinoids ?? [])
+      .filter(c => c.value > 0 && c.cannabinoid?.name
+        && !/^THC/i.test(c.cannabinoid.name) && !/^CBD/i.test(c.cannabinoid.name))
+      .map(c => ({
+        name: c.cannabinoid.name.replace(/\s*\(.*\)/, ''),  // "CBG (Cannabigerol)" → "CBG"
+        value: c.value,
+        unit: UNIT_MAP[c.unit] || c.unit || '%',
+      })),
     Image: product.image ?? null,
     Description: product.description ?? null,
     Tags: tags,
@@ -193,7 +213,30 @@ export const useProductsStore = defineStore('products', () => {
       }
     }
 
+    // Flag top-10% CBG products (only compare within same unit to avoid apples-to-oranges)
+    _stampHighCBG(all)
+
     return all
+  }
+
+  function _stampHighCBG(list) {
+    // Group CBG values by unit, compute 90th percentile per unit
+    const byUnit = {}
+    for (const p of list) {
+      const cbg = p.Cannabinoids?.find(c => c.name === 'CBG')
+      if (cbg) {
+        ;(byUnit[cbg.unit] ??= []).push(cbg.value)
+      }
+    }
+    const thresholds = {}
+    for (const [unit, vals] of Object.entries(byUnit)) {
+      vals.sort((a, b) => b - a)
+      thresholds[unit] = vals[Math.floor(vals.length * 0.1)] ?? vals[vals.length - 1]
+    }
+    for (const p of list) {
+      const cbg = p.Cannabinoids?.find(c => c.name === 'CBG')
+      p.HighCBG = cbg ? cbg.value >= (thresholds[cbg.unit] ?? Infinity) : false
+    }
   }
 
   // ─── Initial load ────────────────────────────────────────────────────────────
@@ -223,6 +266,7 @@ export const useProductsStore = defineStore('products', () => {
     const cached = loadCache()
     if (cached?.length) {
       console.warn('Dutchie API unavailable — using cached product list')
+      _stampHighCBG(cached)
       products.value = cached
       usingCache.value = true
       loading.value = false

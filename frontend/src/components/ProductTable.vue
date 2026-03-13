@@ -265,6 +265,18 @@ function potency(product) {
                       class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-amber-100 border border-amber-200 text-amber-700 text-xs font-bold leading-none"
                     >🎉 {{ bundle.label }}</span>
                   </template>
+                  <span
+                    v-if="product.CBD"
+                    class="inline-flex items-center px-1.5 py-0.5 rounded bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold leading-none"
+                  >CBD</span>
+                  <span
+                    v-if="product.Cannabinoids?.some(c => c.name === 'CBN')"
+                    class="inline-flex items-center px-1.5 py-0.5 rounded bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-bold leading-none"
+                  >CBN</span>
+                  <span
+                    v-if="product.HighCBG"
+                    class="inline-flex items-center px-1.5 py-0.5 rounded bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold leading-none"
+                  >CBG</span>
                 </div>
               </div>
             </div>
