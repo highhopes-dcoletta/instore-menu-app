@@ -3,6 +3,7 @@ import { computed, ref, watch, nextTick } from 'vue'
 import { useProductsStore } from '@/stores/products'
 import { useSessionStore } from '@/stores/session'
 import { useAnalytics } from '@/composables/useAnalytics'
+import ProductModal from './ProductModal.vue'
 
 const props = defineProps({
   bundle: { type: Object, required: true },
@@ -13,6 +14,7 @@ const productsStore = useProductsStore()
 const session = useSessionStore()
 const { track } = useAnalytics()
 const canvas = ref(null)
+const selectedProduct = ref(null)
 
 const matchingProducts = computed(() =>
   productsStore.products.filter(p =>
@@ -204,7 +206,7 @@ function pickForMe() {
             />
             <div v-else class="w-12 h-12 rounded-lg bg-gray-100 shrink-0" />
             <div class="flex-1 min-w-0">
-              <p class="text-sm font-semibold text-gray-800 leading-snug">{{ product.Name }}</p>
+              <p class="text-sm font-semibold text-teal-700 leading-snug cursor-pointer hover:underline" @click="selectedProduct = product">{{ product.Name }}</p>
               <p class="text-xs text-gray-400">{{ product['Unit Weight'] }}</p>
             </div>
             <div class="flex items-center gap-2 shrink-0">
@@ -238,5 +240,6 @@ function pickForMe() {
 
       </div>
     </div>
+    <ProductModal v-if="selectedProduct" :product="selectedProduct" @close="selectedProduct = null" />
   </Teleport>
 </template>
