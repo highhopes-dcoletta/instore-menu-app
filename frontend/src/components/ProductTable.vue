@@ -33,6 +33,10 @@ const { t } = useI18n()
 
 const modalProduct = ref(null)
 
+function openModal(product) {
+  modalProduct.value = product
+}
+
 // ── Sorting ───────────────────────────────────────────────────────────────────
 
 const SORT_DEFAULTS = { name: 'asc', strain: 'asc', potency: 'desc', price: 'asc', stock: 'asc' }
@@ -43,6 +47,7 @@ function sortBy(col) {
   const dir = isActive
     ? (route.query.dir === 'asc' ? 'desc' : 'asc')
     : SORT_DEFAULTS[col]
+  session.reportJourney('sort', `Sorted by ${col} ${dir === 'desc' ? '↓' : '↑'}`)
   router.replace({ query: { ...route.query, sort: col, dir } })
 }
 
@@ -93,7 +98,7 @@ function updateQty(product, delta, event) {
       image: product.Image ?? null,
       category: product.Category ?? '',
       subcategory: product.Subcategory ?? '',
-    }, delta), BUBBLE_DURATION)
+    }, delta, 'browse'), BUBBLE_DURATION)
   } else {
     session.updateQuantity(product.id, {
       name: product.Name ?? '',
@@ -102,7 +107,7 @@ function updateQty(product, delta, event) {
       image: product.Image ?? null,
       category: product.Category ?? '',
       subcategory: product.Subcategory ?? '',
-    }, delta)
+    }, delta, 'browse')
   }
 }
 
@@ -118,7 +123,7 @@ function onRowPointerDown(product, e) {
       image: product.Image ?? null,
       category: product.Category ?? '',
       subcategory: product.Subcategory ?? '',
-    }, 1)
+    }, 1, 'drag')
   })
 }
 
@@ -238,7 +243,7 @@ function potency(product) {
           <td
             v-if="columns.includes('name')"
             class="py-4 pr-6 cursor-pointer hover:text-teal-600 transition-colors text-slate-800"
-            @click="modalProduct = product"
+            @click="openModal(product)"
           >
             <div class="flex items-center gap-3">
               <img

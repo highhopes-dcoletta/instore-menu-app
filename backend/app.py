@@ -14,7 +14,7 @@ CORS(app, origins=["https://menu2.highhopesma.com", "https://menu2-stage.highhop
 
 SESSION_TIMEOUT_MINUTES = int(os.getenv("SESSION_TIMEOUT_MINUTES", 15))
 
-# In-memory session store: sessionId -> { updatedAt, selections, ready, orderNumber }
+# In-memory session store: sessionId -> { updatedAt, startedAt, currentRoute, phase, selections, ready, orderNumber }
 sessions: dict = {}
 
 # Order counter: 1–99, wraps around
@@ -79,13 +79,78 @@ def create_or_update_session():
     if not session_id:
         return jsonify({"error": "sessionId required"}), 400
 
+    now = datetime.now(timezone.utc)
+    existing = sessions.get(session_id)
     sessions[session_id] = {
-        "updatedAt": datetime.now(timezone.utc),
+        "updatedAt": now,
+        "startedAt": existing.get("startedAt", now) if existing else now,
+        "currentRoute": existing.get("currentRoute") if existing else None,
         "selections": selections,
         "ready": False,
         "orderNumber": None,
+        "journey": existing.get("journey", []) if existing else [],
     }
     return "", 200
+
+
+@app.route("/api/session/heartbeat", methods=["POST"])
+def session_heartbeat():
+    data = request.get_json(force=True)
+    session_id = data.get("sessionId")
+    route = data.get("route")
+
+    if not session_id:
+        return "", 400
+
+    now = datetime.now(timezone.utc)
+    if session_id in sessions:
+        sessions[session_id]["updatedAt"] = now
+        if route is not None:
+            sessions[session_id]["currentRoute"] = route
+            # Append navigate step if route changed (dedup)
+            journey = sessions[session_id].setdefault("journey", [])
+            last_nav = None
+            for step in reversed(journey):
+                if step["type"] == "navigate":
+                    last_nav = step
+                    break
+            if not last_nav or last_nav["label"] != route:
+                journey.append({"type": "navigate", "label": route, "ts": now.isoformat()})
+    else:
+        # Browse-only session (no cart items yet)
+        journey = []
+        if route is not None:
+            journey.append({"type": "navigate", "label": route, "ts": now.isoformat()})
+        sessions[session_id] = {
+            "updatedAt": now,
+            "startedAt": now,
+            "currentRoute": route,
+            "selections": {},
+            "ready": False,
+            "orderNumber": None,
+            "journey": journey,
+        }
+    return "", 204
+
+
+@app.route("/api/session/journey", methods=["POST"])
+def session_journey():
+    data = request.get_json(force=True)
+    session_id = data.get("sessionId")
+    step_type = data.get("type")
+    label = data.get("label")
+
+    if not session_id or not step_type or not label:
+        return "", 400
+
+    if session_id in sessions:
+        now = datetime.now(timezone.utc)
+        sessions[session_id].setdefault("journey", []).append(
+            {"type": step_type, "label": label, "ts": now.isoformat()}
+        )
+        sessions[session_id]["updatedAt"] = now
+
+    return "", 204
 
 
 @app.route("/api/session/<session_id>", methods=["GET"])
@@ -93,6 +158,16 @@ def get_session(session_id):
     s = sessions.get(session_id)
     if not s or not s["selections"]:
         return jsonify({"error": "not found"}), 404
+
+    # Append a journey step the first time the cart share is viewed
+    journey = s.setdefault("journey", [])
+    if not any(step["type"] == "share" for step in journey):
+        journey.append({
+            "type": "share",
+            "label": "Cart shared to phone",
+            "ts": datetime.now(timezone.utc).isoformat(),
+        })
+
     return jsonify({
         "sessionId": session_id,
         "updatedAt": s["updatedAt"].isoformat(),
@@ -115,9 +190,13 @@ def submit_session(session_id):
         return jsonify({"error": "session not found"}), 404
 
     order_counter = (order_counter % 99) + 1
+    now = datetime.now(timezone.utc)
     sessions[session_id]["ready"] = True
     sessions[session_id]["orderNumber"] = order_counter
-    sessions[session_id]["updatedAt"] = datetime.now(timezone.utc)
+    sessions[session_id]["updatedAt"] = now
+    sessions[session_id].setdefault("journey", []).append(
+        {"type": "submit", "label": f"Order #{str(order_counter).zfill(2)}", "ts": now.isoformat()}
+    )
 
     return jsonify({"orderNumber": order_counter})
 
@@ -133,18 +212,21 @@ def get_sessions():
     _purge_expired()
     result = []
     for sid, s in sessions.items():
-        if s["selections"]:
-            result.append(
-                {
-                    "sessionId": sid,
-                    "updatedAt": s["updatedAt"].isoformat(),
-                    "selections": s["selections"],
-                    "ready": s.get("ready", False),
-                    "orderNumber": s.get("orderNumber"),
-                }
-            )
-    # Ready orders first, then by updatedAt
-    result.sort(key=lambda x: (not x["ready"], x["updatedAt"]))
+        result.append(
+            {
+                "sessionId": sid,
+                "updatedAt": s["updatedAt"].isoformat(),
+                "startedAt": s.get("startedAt", s["updatedAt"]).isoformat(),
+                "currentRoute": s.get("currentRoute"),
+                "phase": "submitted" if s.get("ready") else s.get("phase") or ("shopping" if s["selections"] else "browsing"),
+                "selections": s["selections"],
+                "ready": s.get("ready", False),
+                "orderNumber": s.get("orderNumber"),
+                "journey": s.get("journey", []),
+            }
+        )
+    # Ready orders first, then sessions with items, then by updatedAt
+    result.sort(key=lambda x: (not x["ready"], not bool(x["selections"]), x["updatedAt"]))
     return jsonify(result)
 
 

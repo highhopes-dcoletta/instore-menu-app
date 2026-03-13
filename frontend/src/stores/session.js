@@ -43,6 +43,15 @@ export const useSessionStore = defineStore('session', () => {
     }
   }
 
+  function reportJourney(type, label) {
+    if (!sessionId.value) return
+    fetch(`${API_BASE}/session/journey`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionId: sessionId.value, type, label }),
+    }).catch(() => {}) // fire-and-forget
+  }
+
   // ─── Public API ──────────────────────────────────────────────────────────────
 
   /**
@@ -55,7 +64,14 @@ export const useSessionStore = defineStore('session', () => {
       await _delete(stored)
       localStorage.removeItem('sessionId')
     }
-    sessionId.value = null
+    // Eagerly create a sessionId so heartbeats can track browsing before cart activity
+    const newId = crypto.randomUUID?.() ??
+      'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+        const r = Math.random() * 16 | 0
+        return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16)
+      })
+    sessionId.value = newId
+    localStorage.setItem('sessionId', newId)
     selections.value = {}
   }
 
@@ -64,7 +80,22 @@ export const useSessionStore = defineStore('session', () => {
    * delta: +1 to add, -1 to remove one. Removes product when qty reaches 0.
    * productData: { name, unitWeight, price, category, subcategory, image }
    */
-  async function updateQuantity(productId, productData, delta) {
+  const SOURCE_LABELS = {
+    browse: 'from list',
+    drag: 'via drag',
+    modal: 'from details',
+    guided: 'from guide',
+    group_card: 'from group',
+    cross_sell: 'from suggested',
+    bundle: 'from deal',
+    cart: 'in cart',
+  }
+
+  async function updateQuantity(productId, productData, delta, source) {
+    const srcLabel = source ? ` ${SOURCE_LABELS[source] || source}` : ''
+    if (delta > 0) reportJourney('add', `${productData.name} +1${srcLabel}`)
+    else if (delta < 0) reportJourney('remove', `${productData.name} -1${srcLabel}`)
+
     const currentQty = selections.value[productId]?.qty ?? 0
     const newQty = currentQty + delta
 
@@ -104,6 +135,11 @@ export const useSessionStore = defineStore('session', () => {
    */
   async function removeSelections(productIds) {
     if (!productIds.length) return
+
+    for (const id of productIds) {
+      const item = selections.value[id]
+      if (item) reportJourney('remove', `${item.name} (out of stock)`)
+    }
 
     const updated = { ...selections.value }
     for (const id of productIds) delete updated[id]
@@ -181,5 +217,6 @@ export const useSessionStore = defineStore('session', () => {
     clearSession,
     submitOrder,
     restoreSession,
+    reportJourney,
   }
 })

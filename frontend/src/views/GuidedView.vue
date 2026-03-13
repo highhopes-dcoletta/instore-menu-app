@@ -64,9 +64,11 @@ const currentStep = computed(() => STEPS[step.value - 1])
 const showResults = computed(() => step.value > 3)
 
 function choose(key, value) {
+  session.reportJourney('guide', `Guide: ${key} → ${value}`)
   answers.value[key] = value
   step.value++
   if (step.value > 3) {
+    session.reportJourney('guide', 'Completed Guide')
     track('guided_view_completed', { ...answers.value })
   }
 }
@@ -114,7 +116,7 @@ function add(product, event) {
     image: product.Image ?? null,
     category: product.Category ?? '',
     subcategory: product.Subcategory ?? '',
-  }, 1), BUBBLE_DURATION)
+  }, 1, 'guided'), BUBBLE_DURATION)
 }
 
 function remove(product) {
@@ -125,7 +127,7 @@ function remove(product) {
     image: product.Image ?? null,
     category: product.Category ?? '',
     subcategory: product.Subcategory ?? '',
-  }, -1)
+  }, -1, 'guided')
 }
 
 // ── Strain badge color ────────────────────────────────────────────────────────

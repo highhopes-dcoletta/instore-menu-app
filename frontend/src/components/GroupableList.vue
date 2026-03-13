@@ -112,7 +112,7 @@ function addToCart(product, event) {
     image:       product.Image ?? null,
     category:    product.Category ?? '',
     subcategory: product.Subcategory ?? '',
-  }, 1), BUBBLE_DURATION)
+  }, 1, 'group_card'), BUBBLE_DURATION)
 }
 
 function removeFromCart(product) {
@@ -123,7 +123,7 @@ function removeFromCart(product) {
     image:      product.Image ?? null,
     category:   product.Category ?? '',
     subcategory: product.Subcategory ?? '',
-  }, -1)
+  }, -1, 'group_card')
 }
 
 function strainColor(strain) {
@@ -157,6 +157,7 @@ function displayPrice(p) {
 const showGrouperPicker = ref(false)
 
 function selectGrouper(g) {
+  session.reportJourney('group', `Grouped by ${g.label}`)
   showGrouperPicker.value = false
   activeGrouperKey.value = g.key
   expandedKey.value = null
@@ -400,7 +401,7 @@ async function exitGroupView() {
         class="ph-card"
         :class="{ 'ph-card--active': grouped }"
         :style="`--i:${i}`"
-        @click="grouped ? (expandedKey = g.key, subExpandedKey = null) : undefined"
+        @click="grouped ? (session.reportJourney('group', `Drilled into ${g.label}`), expandedKey = g.key, subExpandedKey = null) : undefined"
       >
         <div class="ph-back ph-back-2" :style="{ background: g.bg }">
           <img v-if="g.products[2]?.Image" :src="g.products[2].Image" class="ph-back-img" />
@@ -435,7 +436,7 @@ async function exitGroupView() {
         :key="g.key"
         class="ph-card ph-card--active"
         :style="`--i:${i}`"
-        @click="subExpandedKey = g.key"
+        @click="session.reportJourney('group', `Drilled into ${g.label}`); subExpandedKey = g.key"
       >
         <div class="ph-back ph-back-2" :style="{ background: g.bg }">
           <img v-if="g.products[2]?.Image" :src="g.products[2].Image" class="ph-back-img" />

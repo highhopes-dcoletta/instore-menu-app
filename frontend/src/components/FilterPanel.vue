@@ -20,8 +20,10 @@ import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { strainLabel } from '@/utils/strainLabels'
 import { useAnalytics } from '@/composables/useAnalytics'
+import { useSessionStore } from '@/stores/session'
 
 const { t } = useI18n()
+const session = useSessionStore()
 
 const props = defineProps({
   filters: { type: Array, default: () => [] },
@@ -42,10 +44,12 @@ function toArray(val) {
 
 function set(key, value) {
   track('filter_applied', { filter: key, value })
+  session.reportJourney('filter', `Filter: ${key} = ${value}`)
   router.replace({ query: { ...route.query, [key]: value } })
 }
 
 function clear(key) {
+  session.reportJourney('filter', `Cleared filter: ${key}`)
   const q = { ...route.query }
   delete q[key]
   router.replace({ query: q })
@@ -53,7 +57,9 @@ function clear(key) {
 
 function toggleMulti(key, value) {
   const current = toArray(route.query[key])
-  if (!current.includes(value)) track('filter_applied', { filter: key, value })
+  const adding = !current.includes(value)
+  if (adding) track('filter_applied', { filter: key, value })
+  session.reportJourney('filter', adding ? `Filter: ${key} = ${value}` : `Removed filter: ${key} = ${value}`)
   const next = current.includes(value)
     ? current.filter((v) => v !== value)
     : [...current, value]

@@ -50,7 +50,10 @@ const bundlesStore = useBundlesStore()
 
 function openBundleModal(dealId) {
   const bundle = bundlesStore.bundles.find(b => b.id === dealId) ?? null
-  if (bundle) track('bundle_modal_opened', { bundle_id: bundle.id, bundle_label: bundle.label, source: 'cart_nudge' })
+  if (bundle) {
+    track('bundle_modal_opened', { bundle_id: bundle.id, bundle_label: bundle.label, source: 'cart_nudge' })
+    session.reportJourney('bundle', `Opened deal: ${bundle.label}`)
+  }
   selectedBundle.value = bundle
 }
 
@@ -100,6 +103,10 @@ const crossSellProducts = computed(() => {
 
 const modalProduct = ref(null)
 
+function openCrossSellModal(product) {
+  modalProduct.value = product
+}
+
 function addCrossSell(product) {
   session.updateQuantity(product.id, {
     name: product.Name,
@@ -108,7 +115,7 @@ function addCrossSell(product) {
     image: product.Image ?? null,
     category: product.Category ?? '',
     subcategory: product.Subcategory ?? '',
-  }, 1)
+  }, 1, 'cross_sell')
   track('add_to_cart', { source: 'cross_sell', product_id: product.id, product_name: product.Name, category: product.Category })
 }
 
@@ -251,19 +258,24 @@ async function goBackToPreviousOrder() {
 
 function decreaseQty(id, item) {
   if ((item.qty ?? 1) > 1) {
-    session.updateQuantity(id, item, -1)
+    session.updateQuantity(id, item, -1, 'cart')
     return
   }
   const el = document.querySelector(`[data-cart-item="${id}"]`)
-  if (!el) { session.updateQuantity(id, item, -1); return }
+  if (!el) { session.updateQuantity(id, item, -1, 'cart'); return }
   el.style.animation = 'poof 0.4s ease-out forwards'
-  setTimeout(() => session.updateQuantity(id, item, -1), 380)
+  setTimeout(() => session.updateQuantity(id, item, -1, 'cart'), 380)
 }
 
 function resetToMenu() {
   clearInterval(countdownTimer)
   orderNumber.value = null
   router.push('/')
+}
+
+function handleGoBack() {
+  session.reportJourney('action', 'Returned to previous order')
+  goBackToPreviousOrder()
 }
 
 // ── Inactivity reminder ───────────────────────────────────────────────────────
@@ -401,7 +413,7 @@ onUnmounted(() => {
                 >−</button>
                 <span class="w-5 text-center text-sm font-semibold tabular-nums text-gray-800">{{ item.qty }}</span>
                 <button
-                  @click="session.updateQuantity(id, item, 1)"
+                  @click="session.updateQuantity(id, item, 1, 'cart')"
                   class="w-6 h-6 rounded-full bg-teal-500 text-white hover:bg-teal-600 transition-colors text-sm flex items-center justify-center"
                 >+</button>
               </div>
@@ -473,7 +485,7 @@ onUnmounted(() => {
               v-for="p in crossSellProducts"
               :key="p.id"
               class="flex items-center gap-2.5 cursor-pointer"
-              @click="modalProduct = p"
+              @click="openCrossSellModal(p)"
             >
               <img
                 v-if="p.Image"
@@ -533,7 +545,7 @@ onUnmounted(() => {
           {{ t('cart.startNewOrder') }}
         </button>
         <button
-          @click="goBackToPreviousOrder"
+          @click="handleGoBack"
           class="shrink-0 px-8 py-3 border border-gray-600 hover:border-gray-400 text-gray-400 hover:text-gray-200 font-semibold rounded-xl text-base transition-colors"
         >
           {{ t('cart.goBackToPrevious') }}

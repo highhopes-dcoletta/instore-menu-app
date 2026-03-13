@@ -125,7 +125,7 @@ function adjust(product, delta) {
     image: product.Image ?? null,
     category: product.Category ?? '',
     subcategory: product.Subcategory ?? '',
-  }, delta)
+  }, delta, 'bundle')
 }
 
 // Distribute `needed` items across matching products, cycling from index 0
@@ -133,6 +133,7 @@ function pickForMe() {
   const products = matchingProducts.value
   if (!products.length) return
   const count = needed.value
+  session.reportJourney('bundle', `Pick for Me: ${props.bundle.label}`)
   track('bundle_pick_for_me_used', { bundle_id: props.bundle.id, bundle_label: props.bundle.label, items_added: count })
   let remaining = count
   let i = 0

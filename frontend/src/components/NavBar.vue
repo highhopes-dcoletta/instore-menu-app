@@ -1,8 +1,10 @@
 <script setup>
 import { useI18n } from 'vue-i18n'
 import { setLocale } from '@/i18n'
+import { useSessionStore } from '@/stores/session'
 
 const { t, locale } = useI18n()
+const session = useSessionStore()
 
 const LOCALES = [
   { code: 'en', label: 'EN' },
@@ -11,6 +13,8 @@ const LOCALES = [
 ]
 
 function switchLocale(code) {
+  const labels = { en: 'English', es: 'Español', pt: 'Português' }
+  session.reportJourney('locale', `Language: ${labels[code] || code}`)
   setLocale(code)
 }
 </script>

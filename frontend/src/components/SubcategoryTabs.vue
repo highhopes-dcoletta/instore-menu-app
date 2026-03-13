@@ -2,6 +2,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useSessionStore } from '@/stores/session'
 
 const props = defineProps({
   // [{ value: 'GUMMIES', label: 'Gummies' }, ...]
@@ -10,10 +11,13 @@ const props = defineProps({
 
 const route = useRoute()
 const router = useRouter()
+const session = useSessionStore()
 
 const activeTab = computed(() => route.query.subcategory || props.tabs[0]?.value)
 
 function select(value) {
+  const label = props.tabs.find(t => t.value === value)?.label ?? value
+  session.reportJourney('tab', `Tab: ${label}`)
   // Spec: changing tabs clears search-for
   const q = { ...route.query, subcategory: value }
   delete q['search-for']

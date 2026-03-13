@@ -6,19 +6,26 @@
 <script setup>
 import { useRoute, useRouter } from 'vue-router'
 import { useProductFilters } from '@/composables/useProductFilters'
+import { useSessionStore } from '@/stores/session'
 import ProductTable from '@/components/ProductTable.vue'
 
 const route = useRoute()
 const router = useRouter()
+const session = useSessionStore()
 
 const { filtered: tinctures } = useProductFilters((p) => p.Category === 'TINCTURES')
 const { filtered: topicals }  = useProductFilters((p) => p.Category === 'TOPICALS')
 
+let searchDebounce = null
 function onSearch(e) {
   const q = { ...route.query }
   if (e.target.value) q['search-for'] = e.target.value
   else delete q['search-for']
   router.replace({ query: q })
+  clearTimeout(searchDebounce)
+  if (e.target.value) {
+    searchDebounce = setTimeout(() => session.reportJourney('search', `Searched "${e.target.value}"`), 600)
+  }
 }
 </script>
 

@@ -1,6 +1,9 @@
 <script setup>
 import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
 import ProductModal from '@/components/ProductModal.vue'
+import { useSessionStore } from '@/stores/session'
+
+const session = useSessionStore()
 
 const props = defineProps({
   products: { type: Array, required: true },
@@ -112,6 +115,7 @@ const flyingProduct = ref(null) // { product, fromX, fromY, startTime }
 function addToShelf(product, svgX, svgY) {
   // Don't add duplicates (check by Name+Brand since products are deduplicated)
   if (shelfProducts.value.some(p => p.Name === product.Name && p.Brand === product.Brand)) return
+  session.reportJourney('terpene', `Shelved ${product.Name}`)
   // Start fly animation
   flyingProduct.value = {
     product,
@@ -269,6 +273,7 @@ watch(transitionProgress, (p) => {
 // ── Trigger zoom in ──────────────────────────────────────────────────────────
 function onBallClick(group) {
   if (mode.value !== 'overview') return
+  session.reportJourney('terpene', `Explored ${group.name}`)
   focusedTerpene.value = group
 
   const t = time.value

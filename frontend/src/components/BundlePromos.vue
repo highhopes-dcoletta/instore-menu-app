@@ -4,11 +4,13 @@ import { useBundlesStore } from '@/stores/bundles'
 import BundleDealModal from '@/components/BundleDealModal.vue'
 import { useAnalytics } from '@/composables/useAnalytics'
 import { useFeatureFlags } from '@/composables/useFeatureFlags'
+import { useSessionStore } from '@/stores/session'
 
 const props = defineProps({ products: { type: Array, default: () => [] } })
 
 const { track } = useAnalytics()
 const { bundlesEnabled } = useFeatureFlags()
+const session = useSessionStore()
 const selectedBundle = ref(null)
 
 const showAll = ref(false)
@@ -28,6 +30,7 @@ watch(() => props.products, () => { showAll.value = false; nextTick(checkOverflo
 
 function openModal(bundle) {
   track('bundle_modal_opened', { bundle_id: bundle.id, bundle_label: bundle.label, source: 'page_banner' })
+  session.reportJourney('bundle', `Opened deal: ${bundle.label}`)
   selectedBundle.value = bundle
 }
 

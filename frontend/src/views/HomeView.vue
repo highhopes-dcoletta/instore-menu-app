@@ -2,10 +2,12 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useBundlesStore } from '@/stores/bundles'
+import { useSessionStore } from '@/stores/session'
 import BundleDealModal from '@/components/BundleDealModal.vue'
 import { useFeatureFlags } from '@/composables/useFeatureFlags'
 
 const { t } = useI18n()
+const session = useSessionStore()
 
 const CATEGORIES = [
   { path: '/flower',                  labelKey: 'nav.flower' },
@@ -73,7 +75,7 @@ function visibleDeals(group) {
               v-for="deal in visibleDeals(group)"
               :key="deal.id"
               class="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-300 hover:bg-amber-500/25 hover:border-amber-500/50 transition-colors text-left"
-              @click="selectedBundle = deal"
+              @click="session.reportJourney('bundle', `Opened deal: ${deal.label}`); selectedBundle = deal"
             >
               <span class="text-sm leading-none">🎉</span>
               <span class="font-bold text-xs leading-snug flex-1">{{ deal.label }}</span>

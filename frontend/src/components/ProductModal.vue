@@ -55,7 +55,7 @@ function updateQty(delta, event) {
       image: props.product.Image ?? null,
       category: props.product.Category ?? '',
       subcategory: props.product.Subcategory ?? '',
-    }, delta), BUBBLE_DURATION)
+    }, delta, 'modal'), BUBBLE_DURATION)
   } else {
     session.updateQuantity(props.product.id, {
       name: props.product.Name ?? '',
@@ -64,7 +64,7 @@ function updateQty(delta, event) {
       image: props.product.Image ?? null,
       category: props.product.Category ?? '',
       subcategory: props.product.Subcategory ?? '',
-    }, delta)
+    }, delta, 'modal')
   }
 }
 
@@ -74,6 +74,7 @@ function onKey(e) {
 onMounted(() => {
   window.addEventListener('keydown', onKey)
   track('product_modal_opened', { product_id: props.product.id, product_name: props.product.Name, category: props.product.Category })
+  session.reportJourney('view', `Viewed ${props.product.Name}`)
 })
 onUnmounted(() => window.removeEventListener('keydown', onKey))
 </script>

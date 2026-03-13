@@ -2,16 +2,23 @@
 <script setup>
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import { useSessionStore } from '@/stores/session'
 
 const route = useRoute()
 const router = useRouter()
 const { t } = useI18n()
+const session = useSessionStore()
 
+let searchDebounce = null
 function onSearch(e) {
   const q = { ...route.query }
   if (e.target.value) q['search-for'] = e.target.value
   else delete q['search-for']
   router.replace({ query: q })
+  clearTimeout(searchDebounce)
+  if (e.target.value) {
+    searchDebounce = setTimeout(() => session.reportJourney('search', `Searched "${e.target.value}"`), 600)
+  }
 }
 </script>
 
