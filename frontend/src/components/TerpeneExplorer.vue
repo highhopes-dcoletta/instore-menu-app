@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
 import ProductModal from '@/components/ProductModal.vue'
+import TerpeneVisualizer from '@/components/TerpeneVisualizer.vue'
 import { useSessionStore } from '@/stores/session'
 
 const session = useSessionStore()
@@ -51,15 +52,6 @@ const terpeneGroups = computed(() => {
   return [...map.values()]
     .sort((a, b) => b.products.length - a.products.length)
     .map((g, i) => ({ ...g, color: TERP_COLORS[i % TERP_COLORS.length] }))
-})
-
-// Terpene name → color lookup (for bar charts)
-const terpColorMap = computed(() => {
-  const map = {}
-  for (const g of terpeneGroups.value) {
-    map[g.name] = g.color
-  }
-  return map
 })
 
 // ── Layout constants ─────────────────────────────────────────────────────────
@@ -516,21 +508,6 @@ const flyDot = computed(() => {
   }
 })
 
-// ── Shelf bar chart helpers ──────────────────────────────────────────────────
-function maxTerpValue() {
-  let max = 0
-  for (const p of shelfProducts.value) {
-    for (const t of (p.Terpenes || [])) {
-      if (t.value > max) max = t.value
-    }
-  }
-  return max || 1
-}
-
-function terpColor(name) {
-  return terpColorMap.value[name] || '#888'
-}
-
 // Product modal state
 const modalProduct = ref(null)
 
@@ -762,20 +739,7 @@ watch(focusedTerpene, () => {
             <span v-if="sp.Potency">THC {{ sp.Potency }}{{ sp['Potency Unit'] || '%' }}</span>
             <span v-if="sp.Brand">{{ sp.Brand }}</span>
           </div>
-          <div class="space-y-1 mb-2">
-            <div v-for="terp in sp.Terpenes" :key="terp.name"
-              class="flex items-center gap-1.5">
-              <span class="text-[9px] text-gray-400 w-16 truncate flex-shrink-0 text-right">{{ terp.name }}</span>
-              <div class="flex-1 h-2.5 bg-gray-700 rounded-full overflow-hidden">
-                <div class="h-full rounded-full transition-all"
-                  :style="{
-                    width: (terp.value / maxTerpValue() * 100) + '%',
-                    backgroundColor: terpColor(terp.name),
-                  }" />
-              </div>
-              <span class="text-[9px] text-gray-500 w-8 flex-shrink-0">{{ terp.value }}%</span>
-            </div>
-          </div>
+          <TerpeneVisualizer :terpenes="sp.Terpenes" compact dark class="mb-2" />
           <button @click="modalProduct = sp"
             class="w-full text-[11px] font-semibold py-1.5 rounded-md bg-indigo-600 hover:bg-indigo-500 text-white transition-colors">
             Learn More
