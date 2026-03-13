@@ -9,12 +9,11 @@ frontend/.env.*.local
 backend/.env
 
 # Node
-frontend/node_modules/
+node_modules/
 frontend/dist/
 
 # OS
 .DS_Store
-monitor/node_modules/
 
 # Runtime data
 backend/analytics.db
