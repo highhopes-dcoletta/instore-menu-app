@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { calcQuota } from '@/utils/quotaCalc'
+import { useSettingsStore } from '@/stores/settings'
 import { useAnalytics } from '@/composables/useAnalytics'
 import { computeAppliedDeals } from '@/composables/useBundles'
 import { useFeatureFlags } from '@/composables/useFeatureFlags'
@@ -41,7 +42,11 @@ const subtotal = computed(() => {
   )
 })
 
-const quota = computed(() => session.value ? calcQuota(session.value.selections) : null)
+const settingsStore = useSettingsStore()
+const quota = computed(() => session.value ? calcQuota(session.value.selections, {
+  dailyLimitG: settingsStore.dailyLimitG,
+  categoryFactors: settingsStore.categoryFactors,
+}) : null)
 
 const appliedDeals = computed(() =>
   session.value ? computeAppliedDeals(session.value.selections) : []

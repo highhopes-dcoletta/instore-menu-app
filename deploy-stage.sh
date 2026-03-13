@@ -90,6 +90,8 @@ EOF
 # ── Copy backend .env to shared ──────────────────────────────────────────────
 echo "==> Copying backend .env to shared..."
 scp $SSHOPTS backend/.env "$HOST:$BASE/shared/backend.env"
+# Ensure DB_PATH points to shared DB (survives deploys)
+ssh $SSHOPTS "$HOST" "grep -q DB_PATH $BASE/shared/backend.env || echo 'DB_PATH=$BASE/shared/analytics.db' >> $BASE/shared/backend.env"
 # Add PROD_DB_PATH for push-to-prod feature (stage points to prod DB)
 ssh $SSHOPTS "$HOST" "grep -q PROD_DB_PATH $BASE/shared/backend.env || echo 'PROD_DB_PATH=/home/highhopes/highhopes-menu/shared/analytics.db' >> $BASE/shared/backend.env"
 

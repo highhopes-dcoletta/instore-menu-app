@@ -37,6 +37,7 @@ const router = createRouter({
     { path: '/budtender', component: BudtenderView, meta: { title: 'Budtender at High Hopes', requiresAuth: true } },
     { path: '/bundles', component: BundlesView, meta: { title: 'Bundles at High Hopes', requiresAuth: true } },
     { path: '/analytics', component: AnalyticsView, meta: { title: 'Analytics at High Hopes', requiresAuth: true } },
+    { path: '/settings', component: () => import('@/views/SettingsView.vue'), meta: { title: 'Settings at High Hopes', requiresAuth: true } },
     { path: '/cart/:sessionId', component: CartShareView },
     { path: '/login', component: () => import('@/views/LoginView.vue'), meta: { title: 'Sign In' } },
     { path: '/auth', component: () => import('@/views/AuthCallbackView.vue'), meta: { title: 'Signing in...' } },

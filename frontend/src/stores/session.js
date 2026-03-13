@@ -1,6 +1,7 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { useAnalytics } from '@/composables/useAnalytics'
+import { useSettingsStore } from './settings'
 
 const API_BASE = '/api'
 
@@ -26,10 +27,11 @@ export const useSessionStore = defineStore('session', () => {
       })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
     } catch (e) {
+      const { sessionPostRetries, sessionRetryBackoffMs } = useSettingsStore()
       console.error(`Session POST failed (attempt ${attempt}):`, e)
-      if (attempt < 3 && sessionId.value) {
-        setTimeout(() => _post(attempt + 1), 1000 * attempt)
-      } else if (attempt >= 3) {
+      if (attempt < sessionPostRetries && sessionId.value) {
+        setTimeout(() => _post(attempt + 1), sessionRetryBackoffMs * attempt)
+      } else if (attempt >= sessionPostRetries) {
         useAnalytics().track('api_error', { endpoint: 'POST /api/session', message: e.message })
       }
     }

@@ -1,4 +1,5 @@
 import { ref, nextTick } from 'vue'
+import { useSettingsStore } from '@/stores/settings'
 
 const toastTrigger = ref(0)
 const toastVisible = ref(false)
@@ -22,7 +23,7 @@ export function useCartAnimation() {
     toastMessage.value = message
     clearTimeout(toastTimer)
     toastVisible.value = true
-    toastTimer = setTimeout(() => (toastVisible.value = false), 3500)
+    toastTimer = setTimeout(() => (toastVisible.value = false), useSettingsStore().cartToastDurationMs)
   }
 
   function dismissToast() {

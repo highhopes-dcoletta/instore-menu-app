@@ -40,6 +40,8 @@ function pct(n, total) {
       <h1 class="text-2xl font-black tracking-wide">Analytics</h1>
       <div class="flex items-center gap-3">
         <span v-if="account" class="text-sm text-gray-400">{{ account.name }}</span>
+        <a href="/budtender" class="text-sm font-semibold text-teal-600 hover:text-teal-800 transition-colors">← Orders</a>
+        <a href="/settings" class="text-sm font-semibold text-teal-600 hover:text-teal-800 transition-colors">Settings →</a>
         <button @click="logout" class="text-sm font-semibold text-gray-400 hover:text-gray-600 transition-colors">Sign Out</button>
         <select
           v-model="analyticsDays"

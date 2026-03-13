@@ -7,6 +7,7 @@ import { useProductsStore } from '@/stores/products'
 import { useCartAnimation } from '@/composables/useCartAnimation'
 import { useDragToCart } from '@/composables/useDragToCart'
 import { calcQuota } from '@/utils/quotaCalc'
+import { useSettingsStore } from '@/stores/settings'
 import { useAnalytics } from '@/composables/useAnalytics'
 import { useBundles } from '@/composables/useBundles'
 import { useBundlesStore } from '@/stores/bundles'
@@ -39,8 +40,12 @@ const subtotal = computed(() =>
     (sum, item) => sum + (item.price ?? 0) * (item.qty ?? 1), 0
   )
 )
+const settingsStore = useSettingsStore()
 const isEmpty = computed(() => Object.keys(session.selections).length === 0)
-const quota = computed(() => calcQuota(session.selections))
+const quota = computed(() => calcQuota(session.selections, {
+  dailyLimitG: settingsStore.dailyLimitG,
+  categoryFactors: settingsStore.categoryFactors,
+}))
 
 const { appliedDeals, totalDiscount, nearDeals } = useBundles(computed(() => session.selections))
 const { bundlesEnabled } = useFeatureFlags()

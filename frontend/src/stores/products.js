@@ -48,8 +48,7 @@ const MENU_QUERY = `
   }
 `
 
-const REFRESH_INTERVAL_MS = 60 * 1000
-const MAX_RETRIES = 3
+import { useSettingsStore } from './settings'
 
 // Parse a Dutchie formatted potency string like "31.74%" or "103mg"
 // into a numeric value and unit string for use with the existing display logic.
@@ -245,7 +244,8 @@ export const useProductsStore = defineStore('products', () => {
     loading.value = true
     error.value = false
 
-    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    const maxRetries = useSettingsStore().dutchieFetchRetries
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         const data = await _fetchAll()
         saveCache(data)
@@ -255,8 +255,8 @@ export const useProductsStore = defineStore('products', () => {
         _startRefreshTimer()
         return
       } catch (e) {
-        console.error(`Dutchie fetch attempt ${attempt}/${MAX_RETRIES} failed:`, e)
-        if (attempt < MAX_RETRIES) {
+        console.error(`Dutchie fetch attempt ${attempt}/${maxRetries} failed:`, e)
+        if (attempt < maxRetries) {
           await new Promise((r) => setTimeout(r, 1000 * attempt))
         }
       }
@@ -305,7 +305,7 @@ export const useProductsStore = defineStore('products', () => {
 
   function _startRefreshTimer() {
     if (refreshTimer) clearInterval(refreshTimer)
-    refreshTimer = setInterval(_backgroundRefresh, REFRESH_INTERVAL_MS)
+    refreshTimer = setInterval(_backgroundRefresh, useSettingsStore().productRefreshIntervalMs)
   }
 
   // ─── Exports ─────────────────────────────────────────────────────────────────

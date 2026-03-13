@@ -52,20 +52,25 @@ export function parseWeightToGrams(str) {
  * Compute quota usage from the current cart selections.
  *
  * @param {Object} selections - session.selections (productId → { category, unitWeight, qty, ... })
- * @returns {{ usedGrams: number, limitGrams: number, pct: number }}
+ * @param {Object} [options] - optional overrides for regulatory constants
+ * @param {number} [options.dailyLimitG] - daily limit in grams (default: DAILY_LIMIT_G)
+ * @param {Object} [options.categoryFactors] - category conversion factors (default: CATEGORY_FACTORS)
+ * @returns {{ usedGrams: number, limitGrams: number, pct: number, overLimit: boolean }}
  */
-export function calcQuota(selections) {
+export function calcQuota(selections, { dailyLimitG, categoryFactors } = {}) {
+  const limit = dailyLimitG ?? DAILY_LIMIT_G
+  const factors = categoryFactors ?? CATEGORY_FACTORS
   let usedGrams = 0
   for (const item of Object.values(selections)) {
     const grams = parseWeightToGrams(item.unitWeight)
     if (grams == null) continue
-    const factor = CATEGORY_FACTORS[item.category] ?? 1
+    const factor = factors[item.category] ?? 1
     usedGrams += grams * factor * (item.qty ?? 1)
   }
   return {
     usedGrams,
-    limitGrams: DAILY_LIMIT_G,
-    pct: Math.min(usedGrams / DAILY_LIMIT_G, 1),
-    overLimit: usedGrams > DAILY_LIMIT_G,
+    limitGrams: limit,
+    pct: Math.min(usedGrams / limit, 1),
+    overLimit: usedGrams > limit,
   }
 }

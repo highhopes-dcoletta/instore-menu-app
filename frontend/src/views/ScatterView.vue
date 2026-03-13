@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed } from 'vue'
+import { useSettingsStore } from '@/stores/settings'
 import { useProductFilters } from '@/composables/useProductFilters'
 import ProductControls from '@/components/ProductControls.vue'
 import FilterPanel from '@/components/FilterPanel.vue'
@@ -7,8 +8,7 @@ import ProductModal from '@/components/ProductModal.vue'
 import ScatterChart from '@/components/ScatterChart.vue'
 
 const { filtered, categoryProducts, facets } = useProductFilters(() => true)
-
-const MAX_DOTS = 60
+const settingsStore = useSettingsStore()
 
 const allPlottable = computed(() =>
   filtered.value.filter(p => p.Price != null && p.Potency != null && p['Potency Unit'] === '%')
@@ -17,7 +17,8 @@ const allPlottable = computed(() =>
 // Deterministic shuffle seeded by product IDs so the sample is stable across re-renders
 const plottable = computed(() => {
   const all = allPlottable.value
-  if (all.length <= MAX_DOTS) return all
+  const maxDots = settingsStore.maxScatterDots
+  if (all.length <= maxDots) return all
 
   const shuffled = all.map(p => {
     let h = 0
@@ -26,7 +27,7 @@ const plottable = computed(() => {
     return { product: p, h: Math.abs(h) }
   })
   shuffled.sort((a, b) => a.h - b.h)
-  return shuffled.slice(0, MAX_DOTS).map(s => s.product)
+  return shuffled.slice(0, maxDots).map(s => s.product)
 })
 
 const skippedCount = computed(() => filtered.value.length - plottable.value.length)

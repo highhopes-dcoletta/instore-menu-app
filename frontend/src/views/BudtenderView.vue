@@ -7,9 +7,11 @@ import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { computeAppliedDeals } from '@/composables/useBundles'
 import { useFeatureFlags } from '@/composables/useFeatureFlags'
 import { useAuth } from '@/composables/useAuth'
+import { useSettingsStore } from '@/stores/settings'
 import QRCode from 'qrcode'
 
 const { account, logout } = useAuth()
+const settingsStore = useSettingsStore()
 
 const sessions = ref([])
 const qrCodes = ref({})   // sessionId → data URL
@@ -79,12 +81,12 @@ function duration(iso) {
 
 function isActive(iso) {
   if (!iso) return false
-  return (Date.now() - new Date(iso).getTime()) < 10000
+  return (Date.now() - new Date(iso).getTime()) < settingsStore.activeSessionThresholdMs
 }
 
 function isIdle(iso) {
   if (!iso) return true
-  return (Date.now() - new Date(iso).getTime()) > 30000
+  return (Date.now() - new Date(iso).getTime()) > settingsStore.idleSessionThresholdMs
 }
 
 const ROUTE_LABELS = {
@@ -169,7 +171,7 @@ function formatItem(item) {
 
 onMounted(() => {
   fetchSessions()
-  pollTimer = setInterval(fetchSessions, 1000)
+  pollTimer = setInterval(fetchSessions, settingsStore.budtenderPollIntervalMs)
 })
 
 onUnmounted(() => clearInterval(pollTimer))
@@ -184,6 +186,7 @@ onUnmounted(() => clearInterval(pollTimer))
         <span v-if="account" class="text-sm text-gray-400">{{ account.name }}</span>
         <a href="/bundles" class="text-sm font-semibold text-teal-600 hover:text-teal-800 transition-colors">Bundles →</a>
         <a href="/analytics" class="text-sm font-semibold text-teal-600 hover:text-teal-800 transition-colors">Analytics →</a>
+        <a href="/settings" class="text-sm font-semibold text-teal-600 hover:text-teal-800 transition-colors">Settings →</a>
         <button @click="logout" class="text-sm font-semibold text-gray-400 hover:text-gray-600 transition-colors">Sign Out</button>
         <button
           v-if="sessions.length > 0"

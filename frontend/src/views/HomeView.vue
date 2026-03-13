@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useBundlesStore } from '@/stores/bundles'
 import { useSessionStore } from '@/stores/session'
+import { useSettingsStore } from '@/stores/settings'
 import BundleDealModal from '@/components/BundleDealModal.vue'
 import { useFeatureFlags } from '@/composables/useFeatureFlags'
 
@@ -37,14 +38,14 @@ const dealsByCategory = computed(() => {
 
 const { bundlesEnabled } = useFeatureFlags()
 const selectedBundle = ref(null)
+const settingsStore = useSettingsStore()
 
-const MAX_DEALS = 3
 const showAll = ref(false)
 
-const hasMoreDeals = computed(() => dealsByCategory.value.some(g => g.deals.length > MAX_DEALS))
+const hasMoreDeals = computed(() => dealsByCategory.value.some(g => g.deals.length > settingsStore.maxDealsPerCategory))
 
 function visibleDeals(group) {
-  return showAll.value ? group.deals : group.deals.slice(0, MAX_DEALS)
+  return showAll.value ? group.deals : group.deals.slice(0, settingsStore.maxDealsPerCategory)
 }
 </script>
 

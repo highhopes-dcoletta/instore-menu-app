@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n'
 import { useProductsStore } from '@/stores/products'
 import { useSessionStore } from '@/stores/session'
 import { useBundlesStore } from '@/stores/bundles'
+import { useSettingsStore } from '@/stores/settings'
 import NavBar from '@/components/NavBar.vue'
 import CartPanel from '@/components/CartPanel.vue'
 import CartAnimation from '@/components/CartAnimation.vue'
@@ -20,19 +21,19 @@ const router = useRouter()
 const sessionStore = useSessionStore()
 const productsStore = useProductsStore()
 const bundlesStore = useBundlesStore()
+const settingsStore = useSettingsStore()
 
-const isKioskFree = computed(() => route.path === '/budtender' || route.path === '/analytics' || route.path === '/bundles' || route.path === '/login' || route.path === '/auth' || route.path.startsWith('/cart/'))
+const isKioskFree = computed(() => route.path === '/budtender' || route.path === '/analytics' || route.path === '/bundles' || route.path === '/settings' || route.path === '/login' || route.path === '/auth' || route.path.startsWith('/cart/'))
 const { track } = useAnalytics()
 const showNavBar = computed(() => !isKioskFree.value)
 
-// ─── Inactivity timeout (2 minutes) ─────────────────────────────────────────
+// ─── Inactivity timeout ─────────────────────────────────────────────────────
 
-const INACTIVITY_MS = 2 * 60 * 1000
 let inactivityTimer = null
 
 function resetTimer() {
   clearTimeout(inactivityTimer)
-  inactivityTimer = setTimeout(onInactivity, INACTIVITY_MS)
+  inactivityTimer = setTimeout(onInactivity, settingsStore.inactivityMs)
 }
 
 async function onInactivity() {
@@ -46,7 +47,6 @@ const ACTIVITY_EVENTS = ['click', 'touchstart', 'keydown', 'scroll']
 
 // ─── Heartbeat (route tracking for budtender view) ──────────────────────────
 
-const HEARTBEAT_INTERVAL_MS = 30 * 1000
 let heartbeatTimer = null
 
 function sendHeartbeat(routePath) {
@@ -65,6 +65,8 @@ watch(() => route.path, (newPath) => {
 })
 
 onMounted(async () => {
+  await settingsStore.loadSettings()
+
   // Budtender page is designed to run on a separate device/tab.
   // It must NOT run initialize() — that would delete the kiosk's active session
   // from Flask (localStorage is shared across same-origin tabs).
@@ -72,7 +74,7 @@ onMounted(async () => {
   if (!isKioskFree.value) {
     await sessionStore.initialize()
     sendHeartbeat(route.path) // initial heartbeat
-    heartbeatTimer = setInterval(() => sendHeartbeat(route.path), HEARTBEAT_INTERVAL_MS)
+    heartbeatTimer = setInterval(() => sendHeartbeat(route.path), settingsStore.heartbeatIntervalMs)
     for (const evt of ACTIVITY_EVENTS) {
       window.addEventListener(evt, resetTimer, { passive: true })
     }

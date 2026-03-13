@@ -14,6 +14,31 @@ CORS(app, origins=["https://menu2.highhopesma.com", "https://menu2-stage.highhop
 
 SESSION_TIMEOUT_MINUTES = int(os.getenv("SESSION_TIMEOUT_MINUTES", 15))
 
+SETTINGS_DEFAULTS = {
+    "timeouts.inactivityMs": 120000,
+    "timeouts.heartbeatIntervalMs": 30000,
+    "timeouts.productRefreshIntervalMs": 60000,
+    "timeouts.budtenderPollIntervalMs": 1000,
+    "timeouts.activeSessionThresholdMs": 10000,
+    "timeouts.idleSessionThresholdMs": 30000,
+    "timeouts.sessionTimeoutMinutes": SESSION_TIMEOUT_MINUTES,
+    "timeouts.cartToastDurationMs": 3500,
+    "timeouts.dutchieFetchRetries": 3,
+    "timeouts.sessionPostRetries": 3,
+    "timeouts.sessionRetryBackoffMs": 1000,
+    "display.maxDealsPerCategory": 3,
+    "display.maxScatterDots": 60,
+    "regulatory.dailyLimitG": 28,
+    "regulatory.categoryFactors": {
+        "FLOWER": 1,
+        "PRE_ROLLS": 1,
+        "CONCENTRATES": 5.6,
+        "VAPORIZERS": 5.6,
+        "EDIBLES": 56,
+        "TINCTURES": 1,
+    },
+}
+
 # In-memory session store: sessionId -> { updatedAt, startedAt, currentRoute, phase, selections, ready, orderNumber }
 sessions: dict = {}
 
@@ -57,14 +82,36 @@ def _init_db() -> None:
             )
             """
         )
+        con.execute(
+            """
+            CREATE TABLE IF NOT EXISTS settings (
+              key TEXT PRIMARY KEY,
+              value TEXT NOT NULL,
+              updated_at TEXT DEFAULT (datetime('now'))
+            )
+            """
+        )
         con.commit()
 
 
 _init_db()
 
 
+def _get_settings() -> dict:
+    merged = dict(SETTINGS_DEFAULTS)
+    try:
+        with sqlite3.connect(DB_PATH) as con:
+            rows = con.execute("SELECT key, value FROM settings").fetchall()
+            for key, val in rows:
+                merged[key] = json.loads(val)
+    except Exception:
+        pass
+    return merged
+
+
 def _purge_expired() -> None:
-    cutoff = datetime.now(timezone.utc) - timedelta(minutes=SESSION_TIMEOUT_MINUTES)
+    timeout = _get_settings().get("timeouts.sessionTimeoutMinutes", SESSION_TIMEOUT_MINUTES)
+    cutoff = datetime.now(timezone.utc) - timedelta(minutes=timeout)
     expired = [sid for sid, s in sessions.items() if s["updatedAt"] < cutoff]
     for sid in expired:
         del sessions[sid]
@@ -398,6 +445,57 @@ def push_to_prod():
                     row["schedule_days"], row["schedule_dates"],
                     row["match_criteria"], row["sort_order"], row["enabled"],
                 ),
+            )
+        dst.commit()
+
+    return jsonify({"pushed": len(rows)})
+
+
+# ── Settings ─────────────────────────────────────────────────────────────────
+
+
+@app.route("/api/settings", methods=["GET"])
+def get_settings():
+    return jsonify(_get_settings())
+
+
+@app.route("/api/settings", methods=["PUT"])
+def update_settings():
+    data = request.get_json(force=True)
+    if not isinstance(data, dict):
+        return jsonify({"error": "expected JSON object"}), 400
+
+    with sqlite3.connect(DB_PATH) as con:
+        for key, value in data.items():
+            con.execute(
+                "INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES (?, ?, datetime('now'))",
+                (key, json.dumps(value)),
+            )
+        con.commit()
+
+    return "", 200
+
+
+@app.route("/api/settings/push-to-prod", methods=["POST"])
+def push_settings_to_prod():
+    if not PROD_DB_PATH:
+        return jsonify({"error": "push-to-prod not configured"}), 501
+
+    with sqlite3.connect(DB_PATH) as src:
+        rows = src.execute("SELECT key, value FROM settings").fetchall()
+
+    with sqlite3.connect(PROD_DB_PATH) as dst:
+        dst.execute(
+            """CREATE TABLE IF NOT EXISTS settings (
+              key TEXT PRIMARY KEY,
+              value TEXT NOT NULL,
+              updated_at TEXT DEFAULT (datetime('now'))
+            )"""
+        )
+        for key, value in rows:
+            dst.execute(
+                "INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES (?, ?, datetime('now'))",
+                (key, value),
             )
         dst.commit()
 
