@@ -289,7 +289,7 @@ function potency(product) {
             {{ potency(product) }}
           </td>
           <td v-if="columns.includes('price')" class="py-4 tabular-nums text-slate-700">
-            <div>{{ product.Price != null ? `$${product.Price}` : '—' }}</div>
+            <div>{{ product.Price != null ? `$${Number(product.Price).toFixed(2)}` : '—' }}</div>
             <div v-if="perUnitLabel(product)" class="text-xs text-gray-400">{{ perUnitLabel(product) }}</div>
           </td>
 

@@ -208,7 +208,7 @@ function pickForMe() {
               <p class="text-xs text-gray-400">{{ product['Unit Weight'] }}</p>
             </div>
             <div class="flex items-center gap-2 shrink-0">
-              <span class="text-sm font-semibold text-gray-600 tabular-nums">${{ product.Price }}</span>
+              <span class="text-sm font-semibold text-gray-600 tabular-nums">${{ Number(product.Price).toFixed(2) }}</span>
               <div class="flex items-center gap-1">
                 <button
                   @click="adjust(product, -1)"

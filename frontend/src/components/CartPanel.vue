@@ -498,7 +498,7 @@ onUnmounted(() => {
                 <p class="text-xs text-gray-400">{{ p['Unit Weight'] || p.Category?.toLowerCase().replace('_', ' ') }}</p>
               </div>
               <div class="flex items-center gap-1.5 shrink-0">
-                <span v-if="p.Price != null" class="text-xs font-semibold text-gray-600 tabular-nums">${{ p.Price }}</span>
+                <span v-if="p.Price != null" class="text-xs font-semibold text-gray-600 tabular-nums">${{ Number(p.Price).toFixed(2) }}</span>
                 <button
                   @click.stop="addCrossSell(p)"
                   class="w-6 h-6 rounded-full bg-teal-500 text-white hover:bg-teal-600 transition-colors text-sm flex items-center justify-center leading-none"

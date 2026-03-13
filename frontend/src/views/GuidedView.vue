@@ -143,7 +143,7 @@ function strainColor(strain) {
 
 function displayPrice(p) {
   const price = p.SalePrice ?? p.Price
-  return price ? `$${price}` : null
+  return price ? `$${Number(price).toFixed(2)}` : null
 }
 
 </script>

@@ -236,7 +236,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
 
         <!-- Price -->
         <div v-if="product.Price != null" class="mb-4">
-          <span class="text-lg text-gray-700">${{ product.Price }}</span>
+          <span class="text-lg text-gray-700">${{ Number(product.Price).toFixed(2) }}</span>
           <span v-if="perUnitLabel(product)" class="ml-2 text-sm text-gray-400">{{ perUnitLabel(product) }}</span>
         </div>
 

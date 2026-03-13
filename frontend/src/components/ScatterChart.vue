@@ -310,7 +310,7 @@ function lensY(d) {
             <text
               :x="lensX(d) + 16" :y="lensY(d) + 9"
               text-anchor="start" fill="#6b7280" font-size="8"
-            >${{ d.product.Price }} · {{ d.product.Potency }}%</text>
+            >${{ Number(d.product.Price).toFixed(2) }} · {{ d.product.Potency }}%</text>
           </g>
         </g>
 
