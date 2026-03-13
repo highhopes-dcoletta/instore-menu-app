@@ -100,6 +100,8 @@ EOF
 # ── Copy backend .env to shared ──────────────────────────────────────────────
 echo "==> Copying backend .env to shared..."
 scp $SSHOPTS backend/.env "$HOST:$BASE/shared/backend.env"
+# Ensure DB_PATH points to the shared database
+ssh $SSHOPTS "$HOST" "grep -q '^DB_PATH=' $BASE/shared/backend.env || echo 'DB_PATH=$BASE/shared/analytics.db' >> $BASE/shared/backend.env"
 
 # ── Atomic symlink swap ──────────────────────────────────────────────────────
 echo "==> Swapping symlink to new release..."
