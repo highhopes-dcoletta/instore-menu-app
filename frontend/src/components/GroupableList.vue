@@ -6,6 +6,8 @@ import { useCartAnimation } from '@/composables/useCartAnimation'
 import { useAnalytics } from '@/composables/useAnalytics'
 import { strainLabel } from '@/utils/strainLabels'
 import { getPotencyLevel, perItemPotency } from '@/utils/potencyLevel'
+import { useProductBundles } from '@/composables/useBundles'
+import { useFeatureFlags } from '@/composables/useFeatureFlags'
 import ProductTable from './ProductTable.vue'
 import ProductModal from './ProductModal.vue'
 
@@ -85,6 +87,8 @@ const cardProducts = computed(() =>
 const session = useSessionStore()
 const { fire: fireCartAnimation, fireToast, BUBBLE_DURATION } = useCartAnimation()
 const { track } = useAnalytics()
+const { activeBundlesForProduct } = useProductBundles()
+const { bundlesEnabled } = useFeatureFlags()
 const modalProduct = ref(null)
 
 function qty(id) { return session.selections[id]?.qty ?? 0 }
@@ -482,7 +486,7 @@ async function exitGroupView() {
 
         <!-- Info -->
         <div class="p-3 flex flex-col gap-1 flex-1">
-          <p class="font-bold text-sm leading-tight line-clamp-2">{{ p.Name }}</p>
+          <p class="font-bold text-sm leading-tight line-clamp-2" :class="{ 'deal-glow': bundlesEnabled && activeBundlesForProduct(p).length }">{{ p.Name }}</p>
 
           <span
             v-if="p.StaffPick"

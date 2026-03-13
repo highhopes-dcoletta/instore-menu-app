@@ -5,3 +5,19 @@
 body {
   @apply bg-stone-50;
 }
+
+/* Bundle deal glow — subtle pulse on product names with active deals */
+@keyframes deal-glow {
+  0%, 100% { color: inherit; text-shadow: none; }
+  50% { color: #d97706; text-shadow: 0 0 6px rgba(245, 158, 11, 0.4); }
+}
+@keyframes deal-glow-dark {
+  0%, 100% { color: #fff; text-shadow: none; }
+  50% { color: #fbbf24; text-shadow: 0 0 8px rgba(245, 158, 11, 0.5); }
+}
+.deal-glow {
+  animation: deal-glow 3s ease-in-out infinite;
+}
+.deal-glow-dark {
+  animation: deal-glow-dark 3s ease-in-out infinite;
+}

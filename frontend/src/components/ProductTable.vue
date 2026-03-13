@@ -252,7 +252,7 @@ function potency(product) {
                 class="w-10 h-10 rounded-lg object-cover shrink-0 bg-white"
               />
               <div>
-                <div>{{ product.Name }}<span v-if="product['Unit Weight']" class="ml-1.5 font-bold"> {{ product['Unit Weight'] }}</span></div>
+                <div :class="{ 'deal-glow': bundlesEnabled && activeBundlesForProduct(product).length }">{{ product.Name }}<span v-if="product['Unit Weight']" class="ml-1.5 font-bold"> {{ product['Unit Weight'] }}</span></div>
                 <div class="flex flex-wrap gap-1 mt-1">
                   <span
                     v-if="product.StaffPick"
