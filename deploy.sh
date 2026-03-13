@@ -49,6 +49,9 @@ rsync -az \
 echo "==> Syncing frontend dist..."
 rsync -az --delete -e "ssh $SSHOPTS" frontend/dist/ "$HOST:$BASE/releases/$RELEASE/frontend-dist/"
 
+echo "==> Syncing infra configs..."
+rsync -az -e "ssh $SSHOPTS" infra/ "$HOST:$BASE/releases/$RELEASE/infra/"
+
 echo "==> Verifying frontend sync..."
 LOCAL_HASH=$(md5 -q frontend/dist/index.html)
 REMOTE_HASH=$(ssh $SSHOPTS "$HOST" "md5sum $BASE/releases/$RELEASE/frontend-dist/index.html | cut -d' ' -f1")
