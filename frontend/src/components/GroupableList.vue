@@ -6,7 +6,7 @@ import { useCartAnimation } from '@/composables/useCartAnimation'
 import { useAnalytics } from '@/composables/useAnalytics'
 import { strainLabel } from '@/utils/strainLabels'
 import { getPotencyLevel, perItemPotency } from '@/utils/potencyLevel'
-import { useProductBundles } from '@/composables/useBundles'
+import { useProductBundles, useBundleNumbers } from '@/composables/useBundles'
 import { useFeatureFlags } from '@/composables/useFeatureFlags'
 import ProductTable from './ProductTable.vue'
 import ProductModal from './ProductModal.vue'
@@ -89,6 +89,7 @@ const { fire: fireCartAnimation, fireToast, BUBBLE_DURATION } = useCartAnimation
 const { track } = useAnalytics()
 const { activeBundlesForProduct } = useProductBundles()
 const { bundlesEnabled } = useFeatureFlags()
+const bundleNumberMap = useBundleNumbers()
 const modalProduct = ref(null)
 
 function qty(id) { return session.selections[id]?.qty ?? 0 }
@@ -486,7 +487,17 @@ async function exitGroupView() {
 
         <!-- Info -->
         <div class="p-3 flex flex-col gap-1 flex-1">
-          <p class="font-bold text-sm leading-tight line-clamp-2" :class="{ 'deal-glow': bundlesEnabled && activeBundlesForProduct(p).length }">{{ p.Name }}</p>
+          <p class="font-bold text-sm leading-tight line-clamp-2 flex items-center gap-1" :class="{ 'deal-glow': bundlesEnabled && activeBundlesForProduct(p).length }">
+            <span>{{ p.Name }}</span>
+            <template v-if="bundlesEnabled">
+              <span
+                v-for="bundle in activeBundlesForProduct(p)"
+                :key="bundle.id"
+                class="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-amber-500 text-white text-[9px] font-black leading-none shrink-0"
+                :title="bundle.label"
+              >{{ bundleNumberMap[bundle.id] }}</span>
+            </template>
+          </p>
 
           <div class="flex flex-wrap gap-1 mt-0.5">
             <span

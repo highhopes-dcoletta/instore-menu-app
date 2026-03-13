@@ -7,6 +7,7 @@ import GroupableList from '@/components/GroupableList.vue'
 import GroupDrillButton from '@/components/GroupDrillButton.vue'
 import BundlePromos from '@/components/BundlePromos.vue'
 import SubcategoryTabs from '@/components/SubcategoryTabs.vue'
+import { provideBundleNumbers } from '@/composables/useBundles'
 
 const TABS = [
   { value: 'BADDER',       label: 'Badder' },
@@ -26,6 +27,7 @@ const TABS = [
 const COLUMNS = ['name', 'strain', 'potency', 'stock']
 
 const { filtered, categoryProducts, facets } = useProductFilters((p) => p.Category === 'CONCENTRATES')
+provideBundleNumbers(categoryProducts)
 const groupList = ref(null)
 </script>
 

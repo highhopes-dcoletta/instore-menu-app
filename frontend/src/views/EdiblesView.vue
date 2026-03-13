@@ -7,6 +7,7 @@ import GroupableList from '@/components/GroupableList.vue'
 import GroupDrillButton from '@/components/GroupDrillButton.vue'
 import BundlePromos from '@/components/BundlePromos.vue'
 import SubcategoryTabs from '@/components/SubcategoryTabs.vue'
+import { provideBundleNumbers } from '@/composables/useBundles'
 
 const TABS = [
   { value: 'GUMMIES',          label: 'Gummies' },
@@ -18,6 +19,7 @@ const TABS = [
 ]
 
 const { filtered, categoryProducts, facets } = useProductFilters((p) => p.Category === 'EDIBLES')
+provideBundleNumbers(categoryProducts)
 const groupList = ref(null)
 </script>
 

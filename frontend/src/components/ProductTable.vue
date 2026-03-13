@@ -8,7 +8,7 @@ import { strainLabel } from '@/utils/strainLabels'
 import { useCartAnimation } from '@/composables/useCartAnimation'
 import { useDragToCart } from '@/composables/useDragToCart'
 import { useAnalytics } from '@/composables/useAnalytics'
-import { useProductBundles } from '@/composables/useBundles'
+import { useProductBundles, useBundleNumbers } from '@/composables/useBundles'
 import { useFeatureFlags } from '@/composables/useFeatureFlags'
 import { perUnitLabel } from '@/composables/useProductGrouping'
 import { perItemPotency } from '@/utils/potencyLevel'
@@ -27,6 +27,7 @@ const { startDrag } = useDragToCart()
 const { track } = useAnalytics()
 const { activeBundlesForProduct } = useProductBundles()
 const { bundlesEnabled } = useFeatureFlags()
+const bundleNumberMap = useBundleNumbers()
 const { t } = useI18n()
 
 // ── Modal ─────────────────────────────────────────────────────────────────────
@@ -252,19 +253,23 @@ function potency(product) {
                 class="w-10 h-10 rounded-lg object-cover shrink-0 bg-white"
               />
               <div>
-                <div :class="{ 'deal-glow': bundlesEnabled && activeBundlesForProduct(product).length }">{{ product.Name }}<span v-if="product['Unit Weight']" class="ml-1.5 font-bold"> {{ product['Unit Weight'] }}</span></div>
-                <div class="flex flex-wrap gap-1 mt-1">
+                <div class="flex items-center gap-1.5" :class="{ 'deal-glow': bundlesEnabled && activeBundlesForProduct(product).length }">
+                  <span>{{ product.Name }}</span>
+                  <span v-if="product['Unit Weight']" class="font-bold">{{ product['Unit Weight'] }}</span>
+                  <template v-if="bundlesEnabled">
+                    <span
+                      v-for="bundle in activeBundlesForProduct(product)"
+                      :key="bundle.id"
+                      class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-amber-500 text-white text-[10px] font-black leading-none shrink-0"
+                      :title="bundle.label"
+                    >{{ bundleNumberMap[bundle.id] }}</span>
+                  </template>
+                </div>
+                <div v-if="product.StaffPick || product.CBD || product.Cannabinoids?.some(c => c.name === 'CBN') || product.HighCBG" class="flex flex-wrap gap-1 mt-0.5">
                   <span
                     v-if="product.StaffPick"
                     class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-yellow-100 border border-yellow-300 text-yellow-700 text-xs font-bold leading-none"
                   >⭐ Staff Pick</span>
-                  <template v-if="bundlesEnabled && activeBundlesForProduct(product).length">
-                    <span
-                      v-for="bundle in activeBundlesForProduct(product)"
-                      :key="bundle.id"
-                      class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-amber-100 border border-amber-200 text-amber-700 text-xs font-bold leading-none"
-                    >🎉 {{ bundle.label }}</span>
-                  </template>
                   <span
                     v-if="product.CBD"
                     class="inline-flex items-center px-1.5 py-0.5 rounded bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold leading-none"

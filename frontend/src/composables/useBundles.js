@@ -1,4 +1,4 @@
-import { computed } from 'vue'
+import { computed, provide, inject, ref } from 'vue'
 import { useBundlesStore } from '@/stores/bundles'
 
 // ── Shared schedule check ─────────────────────────────────────────────────────
@@ -134,4 +134,41 @@ export function useProductBundles() {
   }
 
   return { activeBundlesForProduct }
+}
+
+// ── Page-level bundle numbering (provide/inject) ──────────────────────────────
+
+const BUNDLE_NUMBER_KEY = Symbol('bundleNumberMap')
+
+/**
+ * Call from a category view to compute and provide a bundle→number map.
+ * Numbers are 1-based, ordered by position in the store, filtered to bundles
+ * that are schedule-active and match at least one product in the list.
+ */
+export function provideBundleNumbers(productsRef) {
+  const bundlesStore = useBundlesStore()
+
+  const numberMap = computed(() => {
+    const map = {}
+    let n = 1
+    for (const bundle of bundlesStore.bundles) {
+      if (!scheduleActive(bundle)) continue
+      const matches = productsRef.value.some(p =>
+        bundle.match({ name: p.Name, category: p.Category, subcategory: p.Subcategory ?? '', unitWeight: p['Unit Weight'] ?? '', price: p.Price ?? 0, qty: 1 })
+      )
+      if (matches) map[bundle.id] = n++
+    }
+    return map
+  })
+
+  provide(BUNDLE_NUMBER_KEY, numberMap)
+  return numberMap
+}
+
+/**
+ * Inject the bundle number map provided by the parent view.
+ * Returns a computed { [bundleId]: number } (empty object if no provider).
+ */
+export function useBundleNumbers() {
+  return inject(BUNDLE_NUMBER_KEY, ref({}))
 }

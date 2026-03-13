@@ -6,8 +6,10 @@ import ProductControls from '@/components/ProductControls.vue'
 import GroupableList from '@/components/GroupableList.vue'
 import GroupDrillButton from '@/components/GroupDrillButton.vue'
 import BundlePromos from '@/components/BundlePromos.vue'
+import { provideBundleNumbers } from '@/composables/useBundles'
 
 const { filtered, categoryProducts, facets } = useProductFilters((p) => p.Category === 'VAPORIZERS')
+provideBundleNumbers(categoryProducts)
 const groupList = ref(null)
 </script>
 

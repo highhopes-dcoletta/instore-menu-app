@@ -4,12 +4,14 @@ import { useBundlesStore } from '@/stores/bundles'
 import BundleDealModal from '@/components/BundleDealModal.vue'
 import { useAnalytics } from '@/composables/useAnalytics'
 import { useFeatureFlags } from '@/composables/useFeatureFlags'
+import { useBundleNumbers } from '@/composables/useBundles'
 import { useSessionStore } from '@/stores/session'
 
 const props = defineProps({ products: { type: Array, default: () => [] } })
 
 const { track } = useAnalytics()
 const { bundlesEnabled } = useFeatureFlags()
+const bundleNumberMap = useBundleNumbers()
 const session = useSessionStore()
 const selectedBundle = ref(null)
 
@@ -71,7 +73,7 @@ const relevantBundles = computed(() => {
         :class="bundle.type === 'quantity' ? 'hover:bg-amber-100 hover:border-amber-300 cursor-pointer' : 'cursor-default'"
         @click="bundle.type === 'quantity' && openModal(bundle)"
       >
-        <span class="text-base leading-none">🎉</span>
+        <span class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-amber-600 text-white text-[10px] font-black leading-none shrink-0">{{ bundleNumberMap[bundle.id] }}</span>
         <span class="text-xs font-semibold text-amber-800">{{ bundle.label }}</span>
         <span v-if="bundle.type === 'quantity'" class="text-amber-400 text-xs leading-none">›</span>
       </button>

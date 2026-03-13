@@ -6,12 +6,14 @@ import ProductControls from '@/components/ProductControls.vue'
 import GroupableList from '@/components/GroupableList.vue'
 import GroupDrillButton from '@/components/GroupDrillButton.vue'
 import BundlePromos from '@/components/BundlePromos.vue'
+import { provideBundleNumbers } from '@/composables/useBundles'
 
 const COLUMNS = ['name', 'potency', 'strain', 'price', 'stock']
 
 const { filtered, categoryProducts, facets } = useProductFilters(
   (p) => Array.isArray(p.Tags) && p.Tags.includes('Sleep')
 )
+provideBundleNumbers(categoryProducts)
 const groupList = ref(null)
 </script>
 
