@@ -30,8 +30,6 @@ function switchLocale(code) {
     <router-link to="/tinctures-and-topicals" class="px-3 py-1 hover:bg-gray-700 rounded">{{ t('nav.tincsAndTops') }}</router-link>
     <router-link to="/sleep" class="px-3 py-1 hover:bg-gray-700 rounded">{{ t('nav.sleep') }}</router-link>
     <router-link to="/pain" class="px-3 py-1 hover:bg-gray-700 rounded">{{ t('nav.pain') }}</router-link>
-    <router-link to="/explore" class="px-3 py-1 hover:bg-gray-700 rounded">{{ t('nav.explore') }}</router-link>
-    <router-link to="/terpenes" class="px-3 py-1 hover:bg-gray-700 rounded">{{ t('nav.terpenes') }}</router-link>
     <div class="ml-auto flex items-center gap-0.5">
       <button
         v-for="loc in LOCALES"
