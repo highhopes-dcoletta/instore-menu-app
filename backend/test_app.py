@@ -315,3 +315,156 @@ class TestAnalytics:
         data = client.get("/api/analytics?days=365").get_json()
         # 2020 is > 365 days ago, won't appear — but tests the param parsing
         assert data["period_days"] == 365
+
+
+# ─── Journey tracking ──────────────────────────────────────────────────────
+
+class TestJourneyHeartbeat:
+    def test_heartbeat_creates_navigate_step(self, client):
+        client.post("/api/session/heartbeat", json={"sessionId": "j1", "route": "/flower"})
+        import app as flask_app
+        journey = flask_app.sessions["j1"]["journey"]
+        assert len(journey) == 1
+        assert journey[0]["type"] == "navigate"
+        assert journey[0]["label"] == "/flower"
+        assert "ts" in journey[0]
+
+    def test_heartbeat_deduplicates_same_route(self, client):
+        client.post("/api/session/heartbeat", json={"sessionId": "j2", "route": "/flower"})
+        client.post("/api/session/heartbeat", json={"sessionId": "j2", "route": "/flower"})
+        client.post("/api/session/heartbeat", json={"sessionId": "j2", "route": "/flower"})
+        import app as flask_app
+        journey = flask_app.sessions["j2"]["journey"]
+        assert len(journey) == 1
+
+    def test_heartbeat_appends_on_route_change(self, client):
+        client.post("/api/session/heartbeat", json={"sessionId": "j3", "route": "/flower"})
+        client.post("/api/session/heartbeat", json={"sessionId": "j3", "route": "/edibles"})
+        client.post("/api/session/heartbeat", json={"sessionId": "j3", "route": "/vapes"})
+        import app as flask_app
+        journey = flask_app.sessions["j3"]["journey"]
+        assert len(journey) == 3
+        assert [s["label"] for s in journey] == ["/flower", "/edibles", "/vapes"]
+
+    def test_heartbeat_dedup_ignores_non_navigate_steps(self, client):
+        """Navigate dedup should only compare against navigate steps, not add/remove steps."""
+        client.post("/api/session/heartbeat", json={"sessionId": "j4", "route": "/flower"})
+        # Insert a non-navigate step
+        client.post("/api/session/journey", json={"sessionId": "j4", "type": "add", "label": "OG Kush +1"})
+        # Same route heartbeat should still be deduped
+        client.post("/api/session/heartbeat", json={"sessionId": "j4", "route": "/flower"})
+        import app as flask_app
+        journey = flask_app.sessions["j4"]["journey"]
+        nav_steps = [s for s in journey if s["type"] == "navigate"]
+        assert len(nav_steps) == 1
+
+    def test_heartbeat_without_route_skips_journey(self, client):
+        client.post("/api/session/heartbeat", json={"sessionId": "j5", "route": "/flower"})
+        client.post("/api/session/heartbeat", json={"sessionId": "j5"})
+        import app as flask_app
+        journey = flask_app.sessions["j5"]["journey"]
+        assert len(journey) == 1
+
+
+class TestJourneyEndpoint:
+    def test_appends_step(self, client):
+        client.post("/api/session", json={"sessionId": "j10", "selections": {"p1": {}}})
+        r = client.post("/api/session/journey", json={
+            "sessionId": "j10", "type": "add", "label": "OG Kush +1 from list"
+        })
+        assert r.status_code == 204
+        import app as flask_app
+        journey = flask_app.sessions["j10"]["journey"]
+        assert len(journey) == 1
+        assert journey[0] == {"type": "add", "label": "OG Kush +1 from list", "ts": journey[0]["ts"]}
+
+    def test_multiple_steps_accumulate(self, client):
+        client.post("/api/session", json={"sessionId": "j11", "selections": {"p1": {}}})
+        client.post("/api/session/journey", json={"sessionId": "j11", "type": "add", "label": "A +1"})
+        client.post("/api/session/journey", json={"sessionId": "j11", "type": "search", "label": 'Searched "gummy"'})
+        client.post("/api/session/journey", json={"sessionId": "j11", "type": "remove", "label": "A -1"})
+        import app as flask_app
+        journey = flask_app.sessions["j11"]["journey"]
+        assert len(journey) == 3
+        assert [s["type"] for s in journey] == ["add", "search", "remove"]
+
+    def test_missing_fields_returns_400(self, client):
+        assert client.post("/api/session/journey", json={"sessionId": "x"}).status_code == 400
+        assert client.post("/api/session/journey", json={"sessionId": "x", "type": "add"}).status_code == 400
+        assert client.post("/api/session/journey", json={"type": "add", "label": "foo"}).status_code == 400
+
+    def test_ignores_unknown_session(self, client):
+        r = client.post("/api/session/journey", json={
+            "sessionId": "ghost", "type": "add", "label": "foo"
+        })
+        assert r.status_code == 204  # silent no-op
+
+
+class TestJourneyPreservation:
+    def test_cart_sync_preserves_journey(self, client):
+        """POST /api/session (cart sync) must not erase existing journey."""
+        client.post("/api/session", json={"sessionId": "j20", "selections": {"p1": {}}})
+        client.post("/api/session/journey", json={"sessionId": "j20", "type": "add", "label": "A +1"})
+        client.post("/api/session/journey", json={"sessionId": "j20", "type": "filter", "label": "Filter: brand"})
+        # Cart sync overwrites selections
+        client.post("/api/session", json={"sessionId": "j20", "selections": {"p1": {}, "p2": {}}})
+        import app as flask_app
+        journey = flask_app.sessions["j20"]["journey"]
+        assert len(journey) == 2
+        assert journey[0]["type"] == "add"
+
+    def test_new_session_starts_with_empty_journey(self, client):
+        client.post("/api/session", json={"sessionId": "j21", "selections": {"p1": {}}})
+        import app as flask_app
+        assert flask_app.sessions["j21"]["journey"] == []
+
+
+class TestJourneySubmit:
+    def test_submit_appends_journey_step(self, client):
+        client.post("/api/session", json={"sessionId": "j30", "selections": {"p1": {}}})
+        client.post("/api/session/j30/submit")
+        import app as flask_app
+        journey = flask_app.sessions["j30"]["journey"]
+        assert len(journey) == 1
+        assert journey[0]["type"] == "submit"
+        assert journey[0]["label"].startswith("Order #")
+
+    def test_submit_step_has_padded_number(self, client):
+        client.post("/api/session", json={"sessionId": "j31", "selections": {"p1": {}}})
+        r = client.post("/api/session/j31/submit")
+        num = r.get_json()["orderNumber"]
+        import app as flask_app
+        step = flask_app.sessions["j31"]["journey"][-1]
+        assert step["label"] == f"Order #{str(num).zfill(2)}"
+
+
+class TestJourneyInListEndpoint:
+    def test_get_sessions_includes_journey(self, client):
+        client.post("/api/session", json={"sessionId": "j40", "selections": {"p1": {}}})
+        client.post("/api/session/heartbeat", json={"sessionId": "j40", "route": "/flower"})
+        client.post("/api/session/journey", json={"sessionId": "j40", "type": "add", "label": "A +1"})
+        r = client.get("/api/sessions")
+        session = [s for s in r.get_json() if s["sessionId"] == "j40"][0]
+        assert "journey" in session
+        assert len(session["journey"]) == 2
+        assert session["journey"][0]["type"] == "navigate"
+        assert session["journey"][1]["type"] == "add"
+
+
+class TestJourneyCartShare:
+    def test_cart_share_appends_share_step(self, client):
+        client.post("/api/session", json={"sessionId": "j50", "selections": {"p1": {"name": "A"}}})
+        client.get("/api/session/j50")
+        import app as flask_app
+        journey = flask_app.sessions["j50"]["journey"]
+        assert any(s["type"] == "share" for s in journey)
+        assert journey[-1]["label"] == "Cart shared to phone"
+
+    def test_cart_share_step_not_duplicated(self, client):
+        client.post("/api/session", json={"sessionId": "j51", "selections": {"p1": {"name": "A"}}})
+        client.get("/api/session/j51")
+        client.get("/api/session/j51")
+        client.get("/api/session/j51")
+        import app as flask_app
+        share_steps = [s for s in flask_app.sessions["j51"]["journey"] if s["type"] == "share"]
+        assert len(share_steps) == 1

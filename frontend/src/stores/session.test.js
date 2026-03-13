@@ -125,6 +125,159 @@ describe('removeSelections', () => {
   })
 })
 
+describe('reportJourney', () => {
+  it('sends POST to /api/session/journey with correct payload', async () => {
+    const store = useSessionStore()
+    await store.initialize()
+    mockFetch.mockClear()
+    mockFetch.mockResolvedValue({ ok: true })
+
+    store.reportJourney('search', 'Searched "gummies"')
+
+    const journeyCall = mockFetch.mock.calls.find(
+      ([url, opts]) => url === '/api/session/journey' && opts?.method === 'POST'
+    )
+    expect(journeyCall).toBeTruthy()
+    const body = JSON.parse(journeyCall[1].body)
+    expect(body.sessionId).toBe(store.sessionId)
+    expect(body.type).toBe('search')
+    expect(body.label).toBe('Searched "gummies"')
+  })
+
+  it('does nothing when sessionId is null', () => {
+    const store = useSessionStore()
+    mockFetch.mockClear()
+
+    store.reportJourney('search', 'test')
+
+    expect(mockFetch.mock.calls.length).toBe(0)
+  })
+
+  it('does not throw on fetch failure (fire-and-forget)', async () => {
+    const store = useSessionStore()
+    await store.initialize()
+    mockFetch.mockRejectedValueOnce(new Error('Network error'))
+
+    // Should not throw
+    store.reportJourney('add', 'test +1')
+  })
+})
+
+describe('updateQuantity journey reporting', () => {
+  it('reports add with source label', async () => {
+    const store = useSessionStore()
+    await store.initialize()
+    mockFetch.mockClear()
+    mockFetch.mockResolvedValue({ ok: true })
+
+    await store.updateQuantity('p1', { name: 'OG Kush', unitWeight: '1g', price: 15 }, 1, 'browse')
+
+    const journeyCall = mockFetch.mock.calls.find(
+      ([url, opts]) => url === '/api/session/journey' && opts?.method === 'POST'
+    )
+    expect(journeyCall).toBeTruthy()
+    const body = JSON.parse(journeyCall[1].body)
+    expect(body.type).toBe('add')
+    expect(body.label).toBe('OG Kush +1 from list')
+  })
+
+  it('reports remove with source label', async () => {
+    const store = useSessionStore()
+    await store.updateQuantity('p1', { name: 'OG Kush', unitWeight: '1g', price: 15 }, 1)
+    mockFetch.mockClear()
+    mockFetch.mockResolvedValue({ ok: true })
+
+    await store.updateQuantity('p1', { name: 'OG Kush', unitWeight: '1g', price: 15 }, -1, 'cart')
+
+    const journeyCall = mockFetch.mock.calls.find(
+      ([url, opts]) => url === '/api/session/journey' && opts?.method === 'POST'
+    )
+    expect(journeyCall).toBeTruthy()
+    const body = JSON.parse(journeyCall[1].body)
+    expect(body.type).toBe('remove')
+    expect(body.label).toBe('OG Kush -1 in cart')
+  })
+
+  it('reports add without source when none provided', async () => {
+    const store = useSessionStore()
+    await store.initialize()
+    mockFetch.mockClear()
+    mockFetch.mockResolvedValue({ ok: true })
+
+    await store.updateQuantity('p1', { name: 'Blue Dream', unitWeight: '1g', price: 15 }, 1)
+
+    const journeyCall = mockFetch.mock.calls.find(
+      ([url, opts]) => url === '/api/session/journey' && opts?.method === 'POST'
+    )
+    expect(journeyCall).toBeTruthy()
+    const body = JSON.parse(journeyCall[1].body)
+    expect(body.label).toBe('Blue Dream +1')
+  })
+
+  it('maps all source keys to labels', async () => {
+    const store = useSessionStore()
+    await store.initialize()
+    const sources = {
+      browse: 'from list',
+      drag: 'via drag',
+      modal: 'from details',
+      guided: 'from guide',
+      group_card: 'from group',
+      cross_sell: 'from suggested',
+      bundle: 'from deal',
+      cart: 'in cart',
+    }
+
+    for (const [source, expected] of Object.entries(sources)) {
+      mockFetch.mockClear()
+      mockFetch.mockResolvedValue({ ok: true })
+
+      await store.updateQuantity(`p-${source}`, { name: 'Test', unitWeight: '1g', price: 10 }, 1, source)
+
+      const journeyCall = mockFetch.mock.calls.find(
+        ([url, opts]) => url === '/api/session/journey' && opts?.method === 'POST'
+      )
+      expect(journeyCall).toBeTruthy()
+      const body = JSON.parse(journeyCall[1].body)
+      expect(body.label).toBe(`Test +1 ${expected}`)
+    }
+  })
+})
+
+describe('removeSelections journey reporting', () => {
+  it('reports remove for each out-of-stock product', async () => {
+    const store = useSessionStore()
+    await store.updateQuantity('p1', { name: 'OG Kush', unitWeight: '1g', price: 10 }, 1)
+    await store.updateQuantity('p2', { name: 'Blue Dream', unitWeight: '1g', price: 15 }, 1)
+    mockFetch.mockClear()
+    mockFetch.mockResolvedValue({ ok: true })
+
+    await store.removeSelections(['p1', 'p2'])
+
+    const journeyCalls = mockFetch.mock.calls.filter(
+      ([url, opts]) => url === '/api/session/journey' && opts?.method === 'POST'
+    )
+    expect(journeyCalls).toHaveLength(2)
+    const labels = journeyCalls.map(([, opts]) => JSON.parse(opts.body).label)
+    expect(labels).toContain('OG Kush (out of stock)')
+    expect(labels).toContain('Blue Dream (out of stock)')
+  })
+
+  it('does not report for products not in selections', async () => {
+    const store = useSessionStore()
+    await store.updateQuantity('p1', { name: 'A', unitWeight: '1g', price: 10 }, 1)
+    mockFetch.mockClear()
+    mockFetch.mockResolvedValue({ ok: true })
+
+    await store.removeSelections(['p999'])
+
+    const journeyCalls = mockFetch.mock.calls.filter(
+      ([url, opts]) => url === '/api/session/journey' && opts?.method === 'POST'
+    )
+    expect(journeyCalls).toHaveLength(0)
+  })
+})
+
 describe('clearSession', () => {
   it('resets all state and removes localStorage entry', async () => {
     const store = useSessionStore()
