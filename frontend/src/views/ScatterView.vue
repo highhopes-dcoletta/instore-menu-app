@@ -53,7 +53,7 @@ function onSelect(product) {
         </div>
         <ScatterChart v-else :products="plottable" @select="onSelect" />
         <p v-if="sampledCount > 0 || skippedCount > 0" class="text-sm text-gray-400 mt-2 text-center">
-          Showing {{ plottable.length }} most distinctive products<span v-if="sampledCount > 0"> ({{ sampledCount }} similar products in the middle not shown)</span><span v-if="skippedCount > 0"> · {{ skippedCount }} excluded (missing price or THC %)</span>
+          Showing {{ plottable.length }} most distinctive products<span v-if="sampledCount > 0"> ({{ sampledCount }} similar products in the middle not shown)</span><span v-if="skippedCount > 0"> · {{ skippedCount }} excluded (missing price/g or THC %)</span>
         </p>
       </div>
     </div>

@@ -25,6 +25,25 @@ const CATEGORY_COLORS = {
 }
 const DEFAULT_COLOR = '#6b7280'
 
+// Price per gram — returns null if weight can't be parsed
+function pricePerGram(product) {
+  const price = product.Price
+  const weight = product['Unit Weight']
+  if (!price || !weight) return null
+  const match = weight.match(/([\d./]+)\s*(oz|g)/i)
+  if (!match) return null
+  let grams
+  if (match[2].toLowerCase() === 'g') {
+    grams = parseFloat(match[1])
+  } else {
+    const parts = match[1].split('/')
+    const oz = parts.length === 2 ? parseFloat(parts[0]) / parseFloat(parts[1]) : parseFloat(parts[0])
+    grams = oz * 28.3495
+  }
+  if (!grams || grams <= 0) return null
+  return Math.round(price / grams * 100) / 100
+}
+
 // Simple hash for deterministic jitter
 function hash(str) {
   let h = 0
@@ -49,13 +68,19 @@ function niceTicks(min, max) {
   return ticks
 }
 
+// Products with a computable price-per-gram
+const plottableProducts = computed(() =>
+  props.products.filter(p => pricePerGram(p) != null)
+)
+
 const extents = computed(() => {
-  const ps = props.products
-  if (!ps.length) return { minX: 0, maxX: 100, minY: 0, maxY: 40 }
+  const ps = plottableProducts.value
+  if (!ps.length) return { minX: 0, maxX: 20, minY: 0, maxY: 40 }
   let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity
   for (const p of ps) {
-    if (p.Price < minX) minX = p.Price
-    if (p.Price > maxX) maxX = p.Price
+    const ppg = pricePerGram(p)
+    if (ppg < minX) minX = ppg
+    if (ppg > maxX) maxX = ppg
     if (p.Potency < minY) minY = p.Potency
     if (p.Potency > maxY) maxY = p.Potency
   }
@@ -85,13 +110,15 @@ const xTicks = computed(() => niceTicks(extents.value.minX, extents.value.maxX))
 const yTicks = computed(() => niceTicks(extents.value.minY, extents.value.maxY))
 
 const dots = computed(() =>
-  props.products.map(p => {
+  plottableProducts.value.map(p => {
     const h = hash(String(p.id))
     const jx = ((h % 100) / 100 - 0.5) * 6
     const jy = (((h >> 8) % 100) / 100 - 0.5) * 6
+    const ppg = pricePerGram(p)
     return {
       product: p,
-      cx: scaleX(p.Price) + jx,
+      ppg,
+      cx: scaleX(ppg) + jx,
       cy: scaleY(p.Potency) + jy,
       color: CATEGORY_COLORS[p.Category] || DEFAULT_COLOR,
     }
@@ -101,7 +128,7 @@ const dots = computed(() =>
 const legendItems = computed(() => {
   const seen = new Set()
   const items = []
-  for (const p of props.products) {
+  for (const p of plottableProducts.value) {
     if (!seen.has(p.Category)) {
       seen.add(p.Category)
       items.push({
@@ -251,7 +278,7 @@ function lensY(d) {
       <g v-for="v in xTicks" :key="'x' + v">
         <line :x1="scaleX(v)" :y1="H - PAD.bottom" :x2="scaleX(v)" :y2="H - PAD.bottom + 6" stroke="#9ca3af" />
         <line :x1="scaleX(v)" :y1="PAD.top" :x2="scaleX(v)" :y2="H - PAD.bottom" stroke="#e5e7eb" stroke-width="0.5" />
-        <text :x="scaleX(v)" :y="H - PAD.bottom + 20" text-anchor="middle" fill="#6b7280" font-size="12">${{ v }}</text>
+        <text :x="scaleX(v)" :y="H - PAD.bottom + 20" text-anchor="middle" fill="#6b7280" font-size="12">${{ Number(v).toFixed(2) }}/g</text>
       </g>
 
       <!-- Y ticks + labels -->
@@ -262,7 +289,7 @@ function lensY(d) {
       </g>
 
       <!-- Axis labels -->
-      <text :x="(PAD.left + W - PAD.right) / 2" :y="H - 5" text-anchor="middle" fill="#9ca3af" font-size="13" font-weight="bold">Price</text>
+      <text :x="(PAD.left + W - PAD.right) / 2" :y="H - 5" text-anchor="middle" fill="#9ca3af" font-size="13" font-weight="bold">Price per gram</text>
       <text :x="14" :y="(PAD.top + H - PAD.bottom) / 2" text-anchor="middle" fill="#9ca3af" font-size="13" font-weight="bold" transform-origin="14 260" transform="rotate(-90, 14, 260)">THC %</text>
 
       <!-- Product dots (no labels — the lens shows them) -->
@@ -310,7 +337,7 @@ function lensY(d) {
             <text
               :x="lensX(d) + 16" :y="lensY(d) + 9"
               text-anchor="start" fill="#6b7280" font-size="8"
-            >${{ Number(d.product.Price).toFixed(2) }} · {{ d.product.Potency }}%</text>
+            >${{ d.ppg.toFixed(2) }}/g · {{ d.product.Potency }}%</text>
           </g>
         </g>
 
