@@ -109,6 +109,13 @@ function formatReleaseDate(timestamp) {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
 }
 
+const currentReleaseIndex = computed(() => releases.value.findIndex(r => r.current))
+
+function isDeploying(idx) {
+  const ci = currentReleaseIndex.value
+  return ci >= 0 && idx < ci
+}
+
 function relativeTime(timestamp) {
   if (!timestamp) return ''
   const m = timestamp.match(/^(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})$/)
@@ -404,7 +411,7 @@ onMounted(async () => {
           <div
             v-for="(rel, idx) in releases"
             :key="rel.name"
-            :class="['rounded-lg border text-sm', rel.current ? 'border-teal-300 bg-teal-50' : 'border-gray-200 bg-white']"
+            :class="['rounded-lg border text-sm', rel.current ? 'border-teal-300 bg-teal-50' : isDeploying(idx) ? 'border-blue-200 bg-blue-50' : 'border-gray-200 bg-white']"
           >
             <div class="flex items-center gap-4 px-4 py-3">
               <div class="flex-1 min-w-0">
@@ -412,6 +419,7 @@ onMounted(async () => {
                   <span class="font-bold" :class="rel.current ? 'text-teal-700' : 'text-gray-700'">{{ rel.version ? `Version ${rel.version}` : rel.sha }}</span>
                   <span class="font-mono text-xs" :class="rel.current ? 'text-teal-600' : 'text-gray-400'">{{ rel.version ? `· ${rel.name}` : '' }}</span>
                   <span v-if="rel.current" class="text-xs font-bold uppercase text-teal-600">current</span>
+                  <span v-else-if="isDeploying(idx)" class="text-xs font-bold uppercase text-blue-500">deploy in progress</span>
                   <span v-if="rel.branch && rel.branch !== 'main'" class="text-xs font-mono text-purple-500 bg-purple-50 px-1.5 py-0.5 rounded">{{ rel.branch }}</span>
                   <span v-if="rel.commitCount" class="text-xs text-gray-400">{{ rel.commitCount }} commit{{ rel.commitCount === 1 ? '' : 's' }}</span>
                 </div>
@@ -426,7 +434,7 @@ onMounted(async () => {
                 </div>
               </div>
               <button
-                v-if="!rel.current"
+                v-if="!rel.current && !isDeploying(idx)"
                 type="button"
                 @click="rollbackTarget = rel"
                 class="px-3 py-1.5 rounded-lg bg-amber-500 text-white text-xs font-bold hover:bg-amber-600 transition-colors shrink-0"
