@@ -138,12 +138,21 @@ ssh $SSHOPTS "$HOST" bash <<EOF
 set -e
 cp $BASE/current/infra/$SERVICE.service /etc/systemd/system/$SERVICE.service
 systemctl daemon-reload
+EOF
 
+# Skip nginx config when deploying to a non-default host (alt instances have
+# their own domain-specific nginx configs set up during provisioning)
+if [ -z "${DEPLOY_HOST:-}" ]; then
+  ssh $SSHOPTS "$HOST" bash <<EOF
+set -e
 cp $BASE/current/infra/nginx.conf /etc/nginx/sites-available/$SERVICE
 ln -sf /etc/nginx/sites-available/$SERVICE /etc/nginx/sites-enabled/$SERVICE
 nginx -t
 systemctl reload nginx
 EOF
+else
+  echo "  Skipping nginx config (DEPLOY_HOST override — using existing server config)"
+fi
 
 # ── Restart service ──────────────────────────────────────────────────────────
 echo "==> Restarting service..."

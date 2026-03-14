@@ -128,17 +128,25 @@ ssh $SSHOPTS "$HOST" "ln -sfn $BASE/releases/$RELEASE $BASE/current"
 echo "==> Installing service configs..."
 ssh $SSHOPTS "$HOST" bash <<EOF
 set -e
-# nginx
-cp $BASE/current/infra/nginx-stage.conf /etc/nginx/sites-available/$SERVICE
-ln -sf /etc/nginx/sites-available/$SERVICE /etc/nginx/sites-enabled/$SERVICE
-nginx -t
-systemctl reload nginx
-
 # systemd
 cp $BASE/current/infra/$SERVICE.service /etc/systemd/system/$SERVICE.service
 systemctl daemon-reload
 systemctl enable $SERVICE
 EOF
+
+# Skip nginx config when deploying to a non-default host (alt instances have
+# their own domain-specific nginx configs set up during provisioning)
+if [ -z "${DEPLOY_HOST:-}" ]; then
+  ssh $SSHOPTS "$HOST" bash <<EOF
+set -e
+cp $BASE/current/infra/nginx-stage.conf /etc/nginx/sites-available/$SERVICE
+ln -sf /etc/nginx/sites-available/$SERVICE /etc/nginx/sites-enabled/$SERVICE
+nginx -t
+systemctl reload nginx
+EOF
+else
+  echo "  Skipping nginx config (DEPLOY_HOST override — using existing server config)"
+fi
 
 # ── Restart service ──────────────────────────────────────────────────────────
 echo "==> Restarting staging service..."
@@ -180,16 +188,21 @@ ls -1t *.db 2>/dev/null | tail -n +\$(($KEEP_BACKUPS + 1)) | xargs -r rm -f
 EOF
 
 # ── SSL cert ─────────────────────────────────────────────────────────────────
-echo "==> Provisioning SSL certificate..."
-ssh $SSHOPTS "$HOST" "certbot --nginx -d menu2-stage.highhopesma.com -n --redirect 2>&1" || \
-  echo "  WARNING: certbot failed — DNS may not be propagated yet."
+STAGE_DOMAIN="${DEPLOY_STAGE_DOMAIN:-menu2-stage.highhopesma.com}"
+if [ -z "${DEPLOY_HOST:-}" ]; then
+  echo "==> Provisioning SSL certificate..."
+  ssh $SSHOPTS "$HOST" "certbot --nginx -d $STAGE_DOMAIN -n --redirect 2>&1" || \
+    echo "  WARNING: certbot failed — DNS may not be propagated yet."
+else
+  echo "==> Skipping SSL provisioning (DEPLOY_HOST override)"
+fi
 
 # ── E2E tests ────────────────────────────────────────────────────────────────
 echo ""
 echo "==> Running e2e tests against staging..."
 E2E_OUTPUT=$(mktemp)
 E2E_EXIT=0
-E2E_BASE_URL=https://menu2-stage.highhopesma.com npx --prefix monitor playwright test --config monitor/playwright.config.js --reporter=list 2>&1 | tee "$E2E_OUTPUT" || E2E_EXIT=$?
+E2E_BASE_URL=https://$STAGE_DOMAIN npx --prefix monitor playwright test --config monitor/playwright.config.js --reporter=list 2>&1 | tee "$E2E_OUTPUT" || E2E_EXIT=$?
 
 # Parse test results and append to deploy metadata
 E2E_PASSED=$(grep -oE '[0-9]+ passed' "$E2E_OUTPUT" | grep -oE '[0-9]+' || echo 0)
@@ -212,5 +225,5 @@ if [ $E2E_EXIT -ne 0 ]; then
 fi
 
 echo ""
-echo "==> Done! https://menu2-stage.highhopesma.com"
+echo "==> Done! https://$STAGE_DOMAIN"
 echo "    Release: $RELEASE"
