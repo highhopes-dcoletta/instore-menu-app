@@ -556,6 +556,8 @@ def list_releases():
 
     entries = []
     for name in sorted(os.listdir(releases_dir), reverse=True):
+        if not RELEASE_NAME_RE.match(name):
+            continue
         path = os.path.join(releases_dir, name)
         if not os.path.isdir(path):
             continue
