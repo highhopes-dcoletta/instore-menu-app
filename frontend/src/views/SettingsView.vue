@@ -409,8 +409,8 @@ onMounted(async () => {
             <div class="flex items-center gap-4 px-4 py-3">
               <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-2 flex-wrap">
-                  <span v-if="rel.version" class="font-bold" :class="rel.current ? 'text-teal-700' : 'text-gray-700'">v{{ rel.version }}</span>
-                  <span class="font-mono" :class="rel.current ? 'text-teal-600' : 'text-gray-400'">{{ rel.sha }}</span>
+                  <span class="font-bold" :class="rel.current ? 'text-teal-700' : 'text-gray-700'">{{ rel.version ? `Version ${rel.version}` : rel.sha }}</span>
+                  <span class="font-mono text-xs" :class="rel.current ? 'text-teal-600' : 'text-gray-400'">{{ rel.version ? `· ${rel.name}` : '' }}</span>
                   <span v-if="rel.current" class="text-xs font-bold uppercase text-teal-600">current</span>
                   <span v-if="rel.branch && rel.branch !== 'main'" class="text-xs font-mono text-purple-500 bg-purple-50 px-1.5 py-0.5 rounded">{{ rel.branch }}</span>
                   <span v-if="rel.commitCount" class="text-xs text-gray-400">{{ rel.commitCount }} commit{{ rel.commitCount === 1 ? '' : 's' }}</span>
