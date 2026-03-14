@@ -163,7 +163,7 @@ function loadCache() {
 
 export const useProductsStore = defineStore('products', () => {
   const products = ref([])
-  const loading = ref(false)
+  const loading = ref(true)
   const error = ref(false)
   const usingCache = ref(false)
   const outOfStockNotice = ref([]) // names of items silently removed by background refresh

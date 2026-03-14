@@ -99,6 +99,11 @@ test.describe('navbar', () => {
   })
 })
 
+// Wait for the guided flow step 1 to be ready (products must load first)
+async function waitForGuideStep1(page) {
+  await expect(page.getByText('How familiar are you with cannabis?')).toBeVisible({ timeout: 25000 })
+}
+
 // ─── Group 2: Guided flow ─────────────────────────────────────────────────────
 
 test.describe('guided flow', () => {
@@ -106,7 +111,7 @@ test.describe('guided flow', () => {
     await page.goto(`${BASE}/guide`)
 
     // Step 1: experience
-    await expect(page.getByText('How familiar are you with cannabis?')).toBeVisible()
+    await waitForGuideStep1(page)
     await page.getByRole('button', { name: /occasional user/i }).click()
 
     // Step 2: effect
@@ -122,30 +127,37 @@ test.describe('guided flow', () => {
 
   test('back button is hidden on step 1, visible on step 2+', async ({ page }) => {
     await page.goto(`${BASE}/guide`)
+    await waitForGuideStep1(page)
     await expect(page.getByRole('button', { name: /back/i })).not.toBeVisible()
     await page.getByRole('button', { name: /occasional user/i }).click()
+    await expect(page.getByText('What are you looking for today?')).toBeVisible()
     await expect(page.getByRole('button', { name: /back/i })).toBeVisible()
   })
 
   test('back button returns to previous step', async ({ page }) => {
     await page.goto(`${BASE}/guide`)
+    await waitForGuideStep1(page)
     await page.getByRole('button', { name: /occasional user/i }).click()
     await expect(page.getByText('What are you looking for today?')).toBeVisible()
     await page.getByRole('button', { name: /back/i }).click()
-    await expect(page.getByText('How familiar are you with cannabis?')).toBeVisible()
+    await waitForGuideStep1(page)
   })
 
   test('"Browse full menu" exits to home', async ({ page }) => {
     await page.goto(`${BASE}/guide`)
+    await waitForGuideStep1(page)
     await page.getByRole('button', { name: /browse full menu/i }).click()
     await expect(page).toHaveURL(BASE + '/')
   })
 
   test('"Change my answers" returns to step 3 from results', async ({ page }) => {
     await page.goto(`${BASE}/guide`)
+    await waitForGuideStep1(page)
     await page.getByRole('button', { name: /new to this/i }).click()
+    await expect(page.getByText('What are you looking for today?')).toBeVisible()
     await page.getByRole('button', { name: /help me sleep/i }).click()
     // Step 3: Edibles option — getByRole('button') won't match the navbar <a> links
+    await expect(page.getByText('How do you prefer to consume?')).toBeVisible()
     await page.getByRole('button', { name: /Edibles/i }).click()
     await expect(page.getByText('Our top picks for you')).toBeVisible()
     await page.getByRole('button', { name: /change my answers/i }).click()
@@ -154,8 +166,11 @@ test.describe('guided flow', () => {
 
   test('results show product cards with add buttons', async ({ page }) => {
     await page.goto(`${BASE}/guide`)
+    await waitForGuideStep1(page)
     await page.getByRole('button', { name: /regular user/i }).click()
+    await expect(page.getByText('What are you looking for today?')).toBeVisible()
     await page.getByRole('button', { name: /energy.*focus/i }).click()
+    await expect(page.getByText('How do you prefer to consume?')).toBeVisible()
     await page.getByRole('button', { name: /no preference/i }).click()
     await expect(page.getByText('Our top picks for you')).toBeVisible()
     await expect(page.locator('main').getByRole('button', { name: '+' }).first()).toBeVisible({ timeout: 10000 })
@@ -164,8 +179,11 @@ test.describe('guided flow', () => {
   test('adding a product from results enables Send to Budtender', async ({ page }) => {
     await useE2eSessionId(page)
     await page.goto(`${BASE}/guide`)
+    await waitForGuideStep1(page)
     await page.getByRole('button', { name: /regular user/i }).click()
+    await expect(page.getByText('What are you looking for today?')).toBeVisible()
     await page.getByRole('button', { name: /relax.*unwind/i }).click()
+    await expect(page.getByText('How do you prefer to consume?')).toBeVisible()
     await page.getByRole('button', { name: /no preference/i }).click()
     await expect(page.getByText('Our top picks for you')).toBeVisible()
 
