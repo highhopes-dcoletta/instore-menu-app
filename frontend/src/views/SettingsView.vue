@@ -430,7 +430,7 @@ onMounted(async () => {
                 </div>
                 <div class="flex items-center gap-2 mt-1 flex-wrap">
                   <span v-if="e2eLabel(rel.e2e)" :class="['text-xs font-semibold', e2eLabel(rel.e2e).color]">{{ e2eLabel(rel.e2e).text }}</span>
-                  <span v-if="rel.hasBackup" class="text-xs text-gray-400" title="Pre-deploy database backup available">DB backup</span>
+                  <span v-if="rel.hasBackup" class="text-xs text-gray-400" title="Pre-deploy database backup available">DB backup available</span>
                 </div>
               </div>
               <button

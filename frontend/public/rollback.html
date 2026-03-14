@@ -118,7 +118,7 @@
               else if (rel.e2e.flaky > 0) badges += '<span style="color:#f59e0b;font-weight:600">' + rel.e2e.passed + ' passed, ' + rel.e2e.flaky + ' flaky</span> '
               else badges += '<span style="color:#16a34a;font-weight:600">' + rel.e2e.passed + ' passed</span> '
             }
-            if (rel.hasBackup) badges += '<span style="color:#9ca3af">DB backup</span>'
+            if (rel.hasBackup) badges += '<span style="color:#9ca3af">DB backup available</span>'
             if (badges) html += '<div style="font-size:0.75rem;margin-top:2px">' + badges + '</div>'
             html += '</div>'
             if (!rel.current && !deploying) {
