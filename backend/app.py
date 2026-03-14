@@ -1,7 +1,9 @@
 from datetime import datetime, timezone, timedelta
 import json
 import os
+import re
 import sqlite3
+import subprocess
 
 from dotenv import load_dotenv
 from flask import Flask, jsonify, request
@@ -13,6 +15,7 @@ app = Flask(__name__)
 CORS(app, origins=["https://menu2.highhopesma.com", "https://menu2-stage.highhopesma.com", "http://localhost:5173"])
 
 SESSION_TIMEOUT_MINUTES = int(os.getenv("SESSION_TIMEOUT_MINUTES", 15))
+SERVICE_NAME = os.getenv("SERVICE_NAME", "highhopes-menu")
 
 SETTINGS_DEFAULTS = {
     "timeouts.inactivityMs": 120000,
@@ -127,6 +130,9 @@ def create_or_update_session():
         return jsonify({"error": "sessionId required"}), 400
 
     now = datetime.now(timezone.utc)
+    ip = request.headers.get("X-Forwarded-For", request.remote_addr)
+    if ip:
+        ip = ip.split(",")[0].strip()
     existing = sessions.get(session_id)
     sessions[session_id] = {
         "updatedAt": now,
@@ -136,6 +142,7 @@ def create_or_update_session():
         "ready": False,
         "orderNumber": None,
         "journey": existing.get("journey", []) if existing else [],
+        "ip": ip or (existing.get("ip") if existing else None),
     }
     return "", 200
 
@@ -150,8 +157,13 @@ def session_heartbeat():
         return "", 400
 
     now = datetime.now(timezone.utc)
+    ip = request.headers.get("X-Forwarded-For", request.remote_addr)
+    if ip:
+        ip = ip.split(",")[0].strip()
     if session_id in sessions:
         sessions[session_id]["updatedAt"] = now
+        if not sessions[session_id].get("ip"):
+            sessions[session_id]["ip"] = ip
         if route is not None:
             sessions[session_id]["currentRoute"] = route
             # Append navigate step if route changed (dedup)
@@ -176,6 +188,7 @@ def session_heartbeat():
             "ready": False,
             "orderNumber": None,
             "journey": journey,
+            "ip": ip,
         }
     return "", 204
 
@@ -270,6 +283,7 @@ def get_sessions():
                 "ready": s.get("ready", False),
                 "orderNumber": s.get("orderNumber"),
                 "journey": s.get("journey", []),
+                "ip": s.get("ip"),
             }
         )
     # Ready orders first, then sessions with items, then by updatedAt
@@ -500,6 +514,90 @@ def push_settings_to_prod():
         dst.commit()
 
     return jsonify({"pushed": len(rows)})
+
+
+# ── Releases / Rollback ───────────────────────────────────────────────────────
+
+# Resolve the base directory (e.g. /home/highhopes/highhopes-menu) by following
+# the real path of this file: .../releases/{name}/backend/app.py → go up 3 levels.
+# Returns None when running locally (no releases/ dir).
+def _get_releases_base():
+    real = os.path.realpath(__file__)                   # resolve symlink
+    base = os.path.dirname(os.path.dirname(os.path.dirname(real)))  # up 3
+    releases_dir = os.path.join(base, "releases")
+    if os.path.isdir(releases_dir):
+        return base
+    return None
+
+
+def _parse_deploy_meta(meta_path):
+    meta = {}
+    try:
+        with open(meta_path) as f:
+            for line in f:
+                if "=" in line:
+                    k, v = line.strip().split("=", 1)
+                    meta[k] = v
+    except OSError:
+        pass
+    return meta
+
+
+@app.route("/api/admin/releases", methods=["GET"])
+def list_releases():
+    base = _get_releases_base()
+    if not base:
+        return jsonify({"current": None, "releases": []})
+
+    releases_dir = os.path.join(base, "releases")
+    current_link = os.path.join(base, "current")
+    current_name = os.path.basename(os.path.realpath(current_link)) if os.path.islink(current_link) else None
+
+    entries = []
+    for name in sorted(os.listdir(releases_dir), reverse=True):
+        path = os.path.join(releases_dir, name)
+        if not os.path.isdir(path):
+            continue
+        meta = _parse_deploy_meta(os.path.join(path, ".deploy-meta"))
+        entries.append({
+            "name": name,
+            "sha": meta.get("short_sha", ""),
+            "timestamp": meta.get("timestamp", ""),
+            "deployer": meta.get("deployer", ""),
+            "current": name == current_name,
+        })
+
+    return jsonify({"current": current_name, "releases": entries})
+
+
+RELEASE_NAME_RE = re.compile(r"^\d{8}-\d{6}-[a-f0-9]+$")
+
+
+@app.route("/api/admin/rollback", methods=["POST"])
+def rollback():
+    base = _get_releases_base()
+    if not base:
+        return jsonify({"error": "releases not available"}), 501
+
+    data = request.get_json(force=True)
+    release = data.get("release", "")
+
+    if not RELEASE_NAME_RE.match(release):
+        return jsonify({"error": "invalid release name"}), 400
+
+    release_path = os.path.join(base, "releases", release)
+    if not os.path.isdir(release_path):
+        return jsonify({"error": "release not found"}), 404
+
+    current_link = os.path.join(base, "current")
+    current_name = os.path.basename(os.path.realpath(current_link)) if os.path.islink(current_link) else None
+    if release == current_name:
+        return jsonify({"error": "already the current release"}), 400
+
+    cmd = f"sleep 1 && ln -sfn {release_path} {current_link} && systemctl restart {SERVICE_NAME}"
+    subprocess.Popen(["bash", "-c", cmd], start_new_session=True)
+
+    return jsonify({"ok": True, "release": release})
 
 
 @app.route("/api/event", methods=["POST"])

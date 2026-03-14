@@ -271,6 +271,7 @@ onUnmounted(() => clearInterval(pollTimer))
               <span v-if="s.startedAt">{{ duration(s.startedAt) }}</span>
               <span v-if="s.ready" class="inline-block bg-teal-500 text-white text-xs font-bold uppercase tracking-widest px-2 py-0.5 rounded-full">Ready</span>
               <span v-else>{{ timeSince(s.updatedAt) }}</span>
+              <span v-if="s.ip" class="text-gray-300 tabular-nums">{{ s.ip }}</span>
             </div>
           </div>
           <img
