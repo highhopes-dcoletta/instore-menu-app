@@ -8,10 +8,12 @@ import subprocess
 from dotenv import load_dotenv
 from flask import Flask, jsonify, request
 from flask_cors import CORS
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 load_dotenv()
 
 app = Flask(__name__)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 CORS(app, origins=["https://menu2.highhopesma.com", "https://menu2-stage.highhopesma.com", "http://localhost:5173"])
 
 SESSION_TIMEOUT_MINUTES = int(os.getenv("SESSION_TIMEOUT_MINUTES", 15))
@@ -130,9 +132,7 @@ def create_or_update_session():
         return jsonify({"error": "sessionId required"}), 400
 
     now = datetime.now(timezone.utc)
-    ip = request.headers.get("X-Forwarded-For", request.remote_addr)
-    if ip:
-        ip = ip.split(",")[0].strip()
+    ip = request.remote_addr
     existing = sessions.get(session_id)
     sessions[session_id] = {
         "updatedAt": now,
@@ -157,9 +157,7 @@ def session_heartbeat():
         return "", 400
 
     now = datetime.now(timezone.utc)
-    ip = request.headers.get("X-Forwarded-For", request.remote_addr)
-    if ip:
-        ip = ip.split(",")[0].strip()
+    ip = request.remote_addr
     if session_id in sessions:
         sessions[session_id]["updatedAt"] = now
         if not sessions[session_id].get("ip"):
