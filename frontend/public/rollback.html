@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Emergency Rollback</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f9fafb; color: #111827; padding: 2rem; max-width: 600px; margin: 0 auto; }
+  h1 { font-size: 1.5rem; font-weight: 800; margin-bottom: 0.5rem; }
+  .subtitle { color: #6b7280; font-size: 0.875rem; margin-bottom: 2rem; }
+  .error { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; padding: 0.75rem 1rem; border-radius: 0.5rem; margin-bottom: 1rem; font-size: 0.875rem; }
+  .success { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; padding: 0.75rem 1rem; border-radius: 0.5rem; margin-bottom: 1rem; font-size: 0.875rem; }
+  .release { display: flex; align-items: center; gap: 1rem; padding: 0.75rem 1rem; border: 1px solid #e5e7eb; border-radius: 0.5rem; margin-bottom: 0.5rem; background: #fff; }
+  .release.current { border-color: #5eead4; background: #f0fdfa; }
+  .release-info { flex: 1; }
+  .release-name { font-family: monospace; font-weight: 700; font-size: 0.875rem; }
+  .release-name.current { color: #0d9488; }
+  .release-meta { font-size: 0.75rem; color: #9ca3af; }
+  .badge { display: inline-block; font-size: 0.625rem; font-weight: 700; text-transform: uppercase; color: #0d9488; margin-left: 0.5rem; }
+  button { padding: 0.375rem 0.75rem; border-radius: 0.375rem; font-size: 0.75rem; font-weight: 700; border: none; cursor: pointer; transition: background 0.15s; }
+  .btn-rollback { background: #f59e0b; color: #fff; }
+  .btn-rollback:hover { background: #d97706; }
+  .btn-rollback:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-cancel { background: #f3f4f6; color: #374151; }
+  .btn-cancel:hover { background: #e5e7eb; }
+  .btn-confirm { background: #ef4444; color: #fff; }
+  .btn-confirm:hover { background: #dc2626; }
+  .btn-confirm:disabled { opacity: 0.5; cursor: not-allowed; }
+  .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; z-index: 50; }
+  .modal { background: #fff; border-radius: 1rem; padding: 1.5rem; max-width: 400px; width: 90%; box-shadow: 0 25px 50px rgba(0,0,0,0.25); }
+  .modal h2 { font-size: 1.125rem; font-weight: 700; margin-bottom: 0.75rem; }
+  .modal p { font-size: 0.875rem; color: #4b5563; margin-bottom: 1rem; }
+  .modal-actions { display: flex; gap: 0.5rem; justify-content: flex-end; }
+  .loading { color: #9ca3af; font-size: 0.875rem; }
+  a { color: #0d9488; text-decoration: none; font-size: 0.875rem; }
+  a:hover { text-decoration: underline; }
+  .nav { margin-bottom: 1.5rem; }
+</style>
+</head>
+<body>
+  <div class="nav"><a href="/settings">&larr; Back to Settings</a></div>
+  <h1>Emergency Rollback</h1>
+  <p class="subtitle">Revert the kiosk to a previous release. This page works independently of the main app.</p>
+
+  <div id="message"></div>
+  <div id="releases"><p class="loading">Loading releases...</p></div>
+
+  <div id="modal" style="display:none"></div>
+
+  <script>
+    var target = null
+    var rolling = false
+
+    function formatDate(ts) {
+      if (!ts) return ''
+      var m = ts.match(/^(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})$/)
+      if (!m) return ts
+      var d = new Date(+m[1], +m[2]-1, +m[3], +m[4], +m[5], +m[6])
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+    }
+
+    function showMessage(type, text) {
+      document.getElementById('message').innerHTML = '<div class="' + type + '">' + text + '</div>'
+    }
+
+    function loadReleases() {
+      fetch('/api/admin/releases')
+        .then(function(r) { return r.json() })
+        .then(function(data) {
+          var el = document.getElementById('releases')
+          if (!data.releases || !data.releases.length) {
+            el.innerHTML = '<p class="loading">No releases found.</p>'
+            return
+          }
+          var html = ''
+          for (var i = 0; i < data.releases.length; i++) {
+            var rel = data.releases[i]
+            html += '<div class="release' + (rel.current ? ' current' : '') + '">'
+            html += '<div class="release-info">'
+            html += '<div class="release-name' + (rel.current ? ' current' : '') + '">' + rel.sha
+            if (rel.current) html += '<span class="badge">current</span>'
+            html += '</div>'
+            html += '<div class="release-meta">' + formatDate(rel.timestamp)
+            if (rel.deployer) html += ' &middot; ' + rel.deployer
+            html += '</div></div>'
+            if (!rel.current) {
+              html += '<button class="btn-rollback" onclick="showConfirm(\'' + rel.name + '\', \'' + rel.sha + '\', \'' + formatDate(rel.timestamp) + '\')">Roll Back</button>'
+            }
+            html += '</div>'
+          }
+          el.innerHTML = html
+        })
+        .catch(function(e) {
+          document.getElementById('releases').innerHTML = '<div class="error">Failed to load releases: ' + e.message + '</div>'
+        })
+    }
+
+    function showConfirm(name, sha, date) {
+      target = name
+      var modal = document.getElementById('modal')
+      modal.style.display = ''
+      modal.innerHTML = '<div class="modal-backdrop" onclick="if(event.target===this)hideModal()">'
+        + '<div class="modal">'
+        + '<h2>Roll back?</h2>'
+        + '<p>This will revert the kiosk to release <strong style="font-family:monospace">' + sha + '</strong> (' + date + '). The page will reload in a few seconds.</p>'
+        + '<div class="modal-actions">'
+        + '<button class="btn-cancel" onclick="hideModal()">Cancel</button>'
+        + '<button class="btn-confirm" id="confirmBtn" onclick="doRollback()">Confirm Roll Back</button>'
+        + '</div></div></div>'
+    }
+
+    function hideModal() {
+      target = null
+      document.getElementById('modal').style.display = 'none'
+      document.getElementById('modal').innerHTML = ''
+    }
+
+    function doRollback() {
+      if (!target || rolling) return
+      rolling = true
+      var btn = document.getElementById('confirmBtn')
+      if (btn) { btn.disabled = true; btn.textContent = 'Rolling back...' }
+
+      fetch('/api/admin/rollback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ release: target })
+      })
+        .then(function(r) {
+          if (!r.ok) return r.json().then(function(d) { throw new Error(d.error || 'HTTP ' + r.status) })
+          return r.json()
+        })
+        .then(function() {
+          hideModal()
+          showMessage('success', 'Rolling back... The page will reload in 5 seconds.')
+          setTimeout(function() { location.reload() }, 5000)
+        })
+        .catch(function(e) {
+          hideModal()
+          showMessage('error', 'Rollback failed: ' + e.message)
+          rolling = false
+        })
+    }
+
+    loadReleases()
+  </script>
+</body>
+</html>
