@@ -9,10 +9,11 @@ let initPromise = null
 const STAFF_SESSION_KEY = 'staff_login_at'
 const STAFF_SESSION_MS = 30 * 60 * 1000 // 30 minutes
 
+const msalRedirectUri = import.meta.env.VITE_MSAL_REDIRECT_URI || `${window.location.origin}/auth`
+
 const msalConfigured = !!(
   import.meta.env.VITE_MSAL_CLIENT_ID &&
-  import.meta.env.VITE_MSAL_TENANT_ID &&
-  import.meta.env.VITE_MSAL_REDIRECT_URI
+  import.meta.env.VITE_MSAL_TENANT_ID
 )
 
 /**
@@ -32,7 +33,7 @@ export async function initializeMsal() {
       auth: {
         clientId: import.meta.env.VITE_MSAL_CLIENT_ID,
         authority: `https://login.microsoftonline.com/${import.meta.env.VITE_MSAL_TENANT_ID}`,
-        redirectUri: import.meta.env.VITE_MSAL_REDIRECT_URI,
+        redirectUri: msalRedirectUri,
         navigateToLoginRequestUrl: false,
       },
       cache: {

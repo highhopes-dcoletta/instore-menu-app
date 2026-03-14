@@ -263,6 +263,23 @@ def delete_all_sessions():
     return "", 200
 
 
+import socket
+
+_rdns_cache = {}
+
+def _reverse_dns(ip):
+    if not ip or ip == "127.0.0.1":
+        return None
+    if ip in _rdns_cache:
+        return _rdns_cache[ip]
+    try:
+        hostname = socket.gethostbyaddr(ip)[0]
+    except (socket.herror, socket.gaierror, OSError):
+        hostname = None
+    _rdns_cache[ip] = hostname
+    return hostname
+
+
 @app.route("/api/sessions", methods=["GET"])
 def get_sessions():
     _purge_expired()
@@ -280,6 +297,7 @@ def get_sessions():
                 "orderNumber": s.get("orderNumber"),
                 "journey": s.get("journey", []),
                 "ip": s.get("ip"),
+                "hostname": _reverse_dns(s.get("ip")),
             }
         )
     # Ready orders first, then sessions with items, then by updatedAt

@@ -51,6 +51,7 @@
   <script>
     var target = null
     var rolling = false
+    var isForward = false
 
     function formatDate(ts) {
       if (!ts) return ''
@@ -120,8 +121,11 @@
             if (rel.hasBackup) badges += '<span style="color:#9ca3af">DB backup available</span>'
             if (badges) html += '<div style="font-size:0.75rem;margin-top:2px">' + badges + '</div>'
             html += '</div>'
+            if (!rel.current && newerThanCurrent) {
+              html += '<button class="btn-rollback" style="background:#14b8a6" onmouseover="this.style.background=\'#0d9488\'" onmouseout="this.style.background=\'#14b8a6\'" onclick="showConfirm(\'' + rel.name + '\', \'' + rel.sha + '\', \'' + formatDate(rel.timestamp) + '\', true)">Roll Forward</button>'
+            }
             if (!rel.current && !newerThanCurrent) {
-              html += '<button class="btn-rollback" onclick="showConfirm(\'' + rel.name + '\', \'' + rel.sha + '\', \'' + formatDate(rel.timestamp) + '\')">Roll Back</button>'
+              html += '<button class="btn-rollback" onclick="showConfirm(\'' + rel.name + '\', \'' + rel.sha + '\', \'' + formatDate(rel.timestamp) + '\', false)">Roll Back</button>'
             }
             html += '</div>'
             if (rel.notes && rel.notes.length) {
@@ -141,17 +145,22 @@
         })
     }
 
-    function showConfirm(name, sha, date) {
+    function showConfirm(name, sha, date, forward) {
       target = name
+      isForward = !!forward
+      var verb = isForward ? 'advance' : 'revert'
+      var label = isForward ? 'Roll forward?' : 'Roll back?'
+      var btnLabel = isForward ? 'Confirm Roll Forward' : 'Confirm Roll Back'
+      var btnStyle = isForward ? 'background:#14b8a6' : ''
       var modal = document.getElementById('modal')
       modal.style.display = ''
       modal.innerHTML = '<div class="modal-backdrop" onclick="if(event.target===this)hideModal()">'
         + '<div class="modal">'
-        + '<h2>Roll back?</h2>'
-        + '<p>This will revert the kiosk to release <strong style="font-family:monospace">' + sha + '</strong> (' + date + '). The page will reload in a few seconds.</p>'
+        + '<h2>' + label + '</h2>'
+        + '<p>This will ' + verb + ' the kiosk to release <strong style="font-family:monospace">' + sha + '</strong> (' + date + '). The page will reload in a few seconds.</p>'
         + '<div class="modal-actions">'
         + '<button class="btn-cancel" onclick="hideModal()">Cancel</button>'
-        + '<button class="btn-confirm" id="confirmBtn" onclick="doRollback()">Confirm Roll Back</button>'
+        + '<button class="btn-confirm" id="confirmBtn" onclick="doRollback()" style="' + btnStyle + '">' + btnLabel + '</button>'
         + '</div></div></div>'
     }
 
@@ -165,7 +174,7 @@
       if (!target || rolling) return
       rolling = true
       var btn = document.getElementById('confirmBtn')
-      if (btn) { btn.disabled = true; btn.textContent = 'Rolling back...' }
+      if (btn) { btn.disabled = true; btn.textContent = isForward ? 'Rolling forward...' : 'Rolling back...' }
 
       fetch('/api/admin/rollback', {
         method: 'POST',
@@ -178,7 +187,7 @@
         })
         .then(function() {
           hideModal()
-          showMessage('success', 'Rolling back... The page will reload in 5 seconds.')
+          showMessage('success', (isForward ? 'Rolling forward' : 'Rolling back') + '... The page will reload in 5 seconds.')
           setTimeout(function() { location.reload() }, 5000)
         })
         .catch(function(e) {

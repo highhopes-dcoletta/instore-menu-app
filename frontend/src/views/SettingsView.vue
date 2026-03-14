@@ -111,10 +111,22 @@ function formatReleaseDate(timestamp) {
 
 const currentReleaseIndex = computed(() => releases.value.findIndex(r => r.current))
 
-function isDeploying(idx) {
+function isNewerThanCurrent(idx) {
   const ci = currentReleaseIndex.value
   return ci >= 0 && idx < ci
 }
+
+// Keep old name for template compatibility
+function isDeploying(idx) {
+  return isNewerThanCurrent(idx)
+}
+
+const isRollingForward = computed(() => {
+  if (!rollbackTarget.value) return false
+  const ci = currentReleaseIndex.value
+  const ti = releases.value.indexOf(rollbackTarget.value)
+  return ci >= 0 && ti < ci
+})
 
 function relativeTime(timestamp) {
   if (!timestamp) return ''
@@ -433,6 +445,12 @@ onMounted(async () => {
                 </div>
               </div>
               <button
+                v-if="!rel.current && isDeploying(idx)"
+                type="button"
+                @click="rollbackTarget = rel"
+                class="px-3 py-1.5 rounded-lg bg-teal-500 text-white text-xs font-bold hover:bg-teal-600 transition-colors shrink-0"
+              >Roll Forward</button>
+              <button
                 v-if="!rel.current && !isDeploying(idx)"
                 type="button"
                 @click="rollbackTarget = rel"
@@ -588,15 +606,15 @@ onMounted(async () => {
       <Transition name="toast">
         <div v-if="rollbackTarget" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40" @click.self="rollbackTarget = null">
           <div class="bg-white rounded-2xl shadow-xl p-6 max-w-md w-full mx-4">
-            <h3 class="text-lg font-bold text-gray-900 mb-2">Roll back?</h3>
+            <h3 class="text-lg font-bold text-gray-900 mb-2">{{ isRollingForward ? 'Roll forward?' : 'Roll back?' }}</h3>
             <p class="text-sm text-gray-600 mb-1">
-              This will revert the kiosk to release <span class="font-mono font-bold">{{ rollbackTarget.sha }}</span>
+              This will {{ isRollingForward ? 'advance' : 'revert' }} the kiosk to release <span class="font-mono font-bold">{{ rollbackTarget.sha }}</span>
               <span class="text-gray-400">({{ formatReleaseDate(rollbackTarget.timestamp) }})</span>.
             </p>
             <p class="text-sm text-gray-600 mb-6">The page will reload automatically in a few seconds.</p>
             <div class="flex gap-3 justify-end">
               <button type="button" @click="rollbackTarget = null" class="px-4 py-2 rounded-lg text-sm font-semibold text-gray-600 hover:bg-gray-100 transition-colors">Cancel</button>
-              <button type="button" @click="confirmRollback" :disabled="rollingBack" class="px-4 py-2 rounded-lg text-sm font-bold bg-amber-500 text-white hover:bg-amber-600 disabled:opacity-50 transition-colors">{{ rollingBack ? 'Rolling back...' : 'Confirm Roll Back' }}</button>
+              <button type="button" @click="confirmRollback" :disabled="rollingBack" :class="['px-4 py-2 rounded-lg text-sm font-bold text-white disabled:opacity-50 transition-colors', isRollingForward ? 'bg-teal-500 hover:bg-teal-600' : 'bg-amber-500 hover:bg-amber-600']">{{ rollingBack ? (isRollingForward ? 'Rolling forward...' : 'Rolling back...') : (isRollingForward ? 'Confirm Roll Forward' : 'Confirm Roll Back') }}</button>
             </div>
           </div>
         </div>

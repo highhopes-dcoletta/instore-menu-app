@@ -18,5 +18,6 @@ frontend/dist/
 # Runtime data
 backend/analytics.db
 .db-backups/
+.provision-state
 monitor/test-results/
 test-results/

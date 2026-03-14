@@ -6,7 +6,7 @@
 
 set -e
 
-HOST="root@104.236.29.111"
+HOST="${DEPLOY_HOST:-root@104.236.29.111}"
 BASE="/home/highhopes/highhopes-menu"
 SERVICE="highhopes-menu"
 KEEP_RELEASES=10
@@ -21,6 +21,11 @@ RELEASE="${TIMESTAMP}-${SHORT_SHA}"
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
 VERSION=$(git rev-list --count HEAD)
 echo "==> Release: $RELEASE (branch: $BRANCH, v$VERSION)"
+
+# ── Tag the commit ──────────────────────────────────────────────────────────
+TAG="v${VERSION}-${RELEASE}"
+echo "==> Tagging: $TAG"
+git tag -f "$TAG"
 
 # ── Check for uncommitted changes ────────────────────────────────────────────
 if [ -n "$(git status --porcelain)" ]; then
