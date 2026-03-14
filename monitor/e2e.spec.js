@@ -38,6 +38,12 @@ async function waitForRowCountChange(page, fromCount) {
   await expect(page.locator('table tbody tr')).not.toHaveCount(fromCount, { timeout: 5000 })
 }
 
+// Ensure every test creates e2e-prefixed session IDs so heartbeat-created
+// browse sessions never appear on the budtender view.
+test.beforeEach(async ({ page }) => {
+  await useE2eSessionId(page)
+})
+
 // ─── Group 1: Navigation & entry points ──────────────────────────────────────
 
 test.describe('home page', () => {
@@ -177,7 +183,6 @@ test.describe('guided flow', () => {
   })
 
   test('adding a product from results enables Send to Budtender', async ({ page }) => {
-    await useE2eSessionId(page)
     await page.goto(`${BASE}/guide`)
     await waitForGuideStep1(page)
     await page.getByRole('button', { name: /regular user/i }).click()
@@ -336,7 +341,6 @@ test.describe('product modal on /flower', () => {
   }
 
   test.beforeEach(async ({ page }) => {
-    await useE2eSessionId(page)
     await page.goto(`${BASE}/flower`)
     await waitForProducts(page)
   })
@@ -396,7 +400,6 @@ test('products load from Dutchie', async ({ page }) => {
 })
 
 test('add to cart and send-to-budtender button activates', async ({ page }) => {
-  await useE2eSessionId(page)
   await page.goto(`${BASE}/flower`, { waitUntil: 'domcontentloaded' })
   const firstRow = page.locator('table tbody tr').first()
   await expect(firstRow).toBeVisible({ timeout: 25000 })
