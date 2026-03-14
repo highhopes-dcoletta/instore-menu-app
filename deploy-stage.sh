@@ -94,6 +94,7 @@ scp $SSHOPTS backend/.env "$HOST:$BASE/shared/backend.env"
 ssh $SSHOPTS "$HOST" "grep -q DB_PATH $BASE/shared/backend.env || echo 'DB_PATH=$BASE/shared/analytics.db' >> $BASE/shared/backend.env"
 # Add PROD_DB_PATH for push-to-prod feature (stage points to prod DB)
 ssh $SSHOPTS "$HOST" "grep -q PROD_DB_PATH $BASE/shared/backend.env || echo 'PROD_DB_PATH=/home/highhopes/highhopes-menu/shared/analytics.db' >> $BASE/shared/backend.env"
+ssh $SSHOPTS "$HOST" "grep -q '^SERVICE_NAME=' $BASE/shared/backend.env || echo 'SERVICE_NAME=$SERVICE' >> $BASE/shared/backend.env"
 
 # ── Atomic symlink swap ──────────────────────────────────────────────────────
 echo "==> Swapping symlink to new release..."

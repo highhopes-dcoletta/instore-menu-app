@@ -51,6 +51,57 @@ const canPush = ref(false)
 const pushing = ref(false)
 const pushResult = ref(null)
 
+// ── Releases / Rollback ──────────────────────────────────────────────────────
+const releases = ref([])
+const currentRelease = ref(null)
+const rollbackTarget = ref(null) // set to a release object to show confirmation modal
+const rollingBack = ref(false)
+const rollbackResult = ref(null)
+
+async function loadReleases() {
+  try {
+    const res = await fetch('/api/admin/releases')
+    if (!res.ok) return
+    const data = await res.json()
+    releases.value = data.releases || []
+    currentRelease.value = data.current
+  } catch {}
+}
+
+function formatReleaseDate(timestamp) {
+  if (!timestamp) return ''
+  // timestamp format: YYYYMMDD-HHMMSS
+  const m = timestamp.match(/^(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})$/)
+  if (!m) return timestamp
+  const d = new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6])
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+}
+
+async function confirmRollback() {
+  if (!rollbackTarget.value) return
+  rollingBack.value = true
+  rollbackResult.value = null
+  try {
+    const res = await fetch('/api/admin/rollback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ release: rollbackTarget.value.name }),
+    })
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      throw new Error(data.error || `HTTP ${res.status}`)
+    }
+    rollbackResult.value = { success: true, message: `Rolling back to ${rollbackTarget.value.name}. Reloading in 5 seconds...` }
+    rollbackTarget.value = null
+    setTimeout(() => location.reload(), 5000)
+  } catch (e) {
+    rollbackResult.value = { success: false, message: `Rollback failed: ${e.message}` }
+  } finally {
+    rollingBack.value = false
+    rollbackTarget.value = null
+  }
+}
+
 const CATEGORY_FACTOR_LABELS = {
   FLOWER: 'Flower',
   PRE_ROLLS: 'Pre-Rolls',
@@ -138,6 +189,7 @@ function resetToDefaults() {
 onMounted(async () => {
   await settingsStore.loadSettings()
   loadForm()
+  loadReleases()
   try {
     const res = await fetch('/api/bundles/push-available')
     if (res.ok) {
@@ -159,6 +211,73 @@ onMounted(async () => {
         <button @click="logout" class="text-sm font-semibold text-gray-400 hover:text-gray-600 transition-colors">Sign Out</button>
       </div>
     </div>
+
+    <!-- Releases -->
+    <div v-if="releases.length" class="mb-10">
+      <h2 class="text-sm font-bold uppercase tracking-widest text-gray-400 mb-4">Releases</h2>
+      <div class="space-y-2">
+        <div
+          v-for="rel in releases"
+          :key="rel.name"
+          :class="[
+            'flex items-center gap-4 px-4 py-3 rounded-lg border text-sm',
+            rel.current ? 'border-teal-300 bg-teal-50' : 'border-gray-200 bg-white',
+          ]"
+        >
+          <div class="flex-1 min-w-0">
+            <span class="font-mono font-bold" :class="rel.current ? 'text-teal-700' : 'text-gray-700'">{{ rel.sha }}</span>
+            <span v-if="rel.current" class="ml-2 text-xs font-bold uppercase text-teal-600">current</span>
+            <div class="text-xs text-gray-400 truncate">{{ formatReleaseDate(rel.timestamp) }}<span v-if="rel.deployer"> &middot; {{ rel.deployer }}</span></div>
+          </div>
+          <button
+            v-if="!rel.current"
+            type="button"
+            @click="rollbackTarget = rel"
+            class="px-3 py-1.5 rounded-lg bg-amber-500 text-white text-xs font-bold hover:bg-amber-600 transition-colors shrink-0"
+          >Roll Back</button>
+        </div>
+      </div>
+
+      <!-- Rollback toast -->
+      <Transition name="toast">
+        <div
+          v-if="rollbackResult"
+          :class="[
+            'mt-4 rounded-lg px-4 py-3 text-sm font-semibold',
+            rollbackResult.success ? 'bg-teal-50 text-teal-700 border border-teal-200' : 'bg-red-50 text-red-700 border border-red-200',
+          ]"
+        >{{ rollbackResult.message }}</div>
+      </Transition>
+    </div>
+
+    <!-- Rollback Confirmation Modal -->
+    <Teleport to="body">
+      <Transition name="toast">
+        <div v-if="rollbackTarget" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40" @click.self="rollbackTarget = null">
+          <div class="bg-white rounded-2xl shadow-xl p-6 max-w-md w-full mx-4">
+            <h3 class="text-lg font-bold text-gray-900 mb-2">Roll back?</h3>
+            <p class="text-sm text-gray-600 mb-1">
+              This will revert the kiosk to release <span class="font-mono font-bold">{{ rollbackTarget.sha }}</span>
+              <span class="text-gray-400">({{ formatReleaseDate(rollbackTarget.timestamp) }})</span>.
+            </p>
+            <p class="text-sm text-gray-600 mb-6">The page will reload automatically in a few seconds.</p>
+            <div class="flex gap-3 justify-end">
+              <button
+                type="button"
+                @click="rollbackTarget = null"
+                class="px-4 py-2 rounded-lg text-sm font-semibold text-gray-600 hover:bg-gray-100 transition-colors"
+              >Cancel</button>
+              <button
+                type="button"
+                @click="confirmRollback"
+                :disabled="rollingBack"
+                class="px-4 py-2 rounded-lg text-sm font-bold bg-amber-500 text-white hover:bg-amber-600 disabled:opacity-50 transition-colors"
+              >{{ rollingBack ? 'Rolling back...' : 'Confirm Roll Back' }}</button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
 
     <form @submit.prevent="save" class="space-y-8">
       <div v-for="section in FIELDS" :key="section.section">

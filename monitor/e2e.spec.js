@@ -458,6 +458,22 @@ const E2E_BUNDLE_ID = `${E2E_PREFIX}-${Date.now()}`
 const E2E_LABEL = `${E2E_BUNDLE_ID} Test Deal`
 const E2E_LABEL_UPDATED = `${E2E_BUNDLE_ID} Updated Deal`
 
+// ─── Group 8: Releases API ──────────────────────────────────────────────────
+
+test('releases API returns current release and list', async ({ request }) => {
+  const res = await request.fetch(`${BASE}/api/admin/releases`)
+  expect(res.ok()).toBeTruthy()
+  const data = await res.json()
+  expect(data.current).toBeTruthy()
+  expect(data.releases.length).toBeGreaterThan(0)
+  const current = data.releases.find(r => r.current)
+  expect(current).toBeTruthy()
+  expect(current.name).toBe(data.current)
+  expect(current.sha).toBeTruthy()
+})
+
+// ─── Group 9: Bundle editor ─────────────────────────────────────────────────
+
 test.describe.serial('bundle editor', () => {
   test.beforeEach(async ({ page }) => {
     await fakeStaffSession(page)
