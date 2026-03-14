@@ -18,7 +18,8 @@ SSHOPTS="-o IdentityAgent=SSH_AUTH_SOCK"
 SHORT_SHA=$(git rev-parse --short HEAD)
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 RELEASE="${TIMESTAMP}-${SHORT_SHA}"
-echo "==> Release: $RELEASE"
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
+echo "==> Release: $RELEASE (branch: $BRANCH)"
 
 # ── Check for uncommitted changes ────────────────────────────────────────────
 if [ -n "$(git status --porcelain)" ]; then
@@ -64,6 +65,19 @@ echo "  index.html verified."
 # ── Set permissions for nginx ────────────────────────────────────────────────
 ssh $SSHOPTS "$HOST" "chmod -R o+rX $BASE/releases/$RELEASE"
 
+# ── Generate release metadata ────────────────────────────────────────────────
+echo "==> Generating release notes..."
+PREV_SHA=$(ssh $SSHOPTS "$HOST" "cat $BASE/current/.deploy-meta 2>/dev/null | grep '^sha=' | cut -d= -f2")
+RELEASE_NOTES=$(bash scripts/release-notes.sh "$PREV_SHA")
+echo "  Notes: $RELEASE_NOTES"
+
+# Commit count since previous release
+COMMIT_COUNT=0
+if [ -n "$PREV_SHA" ] && git cat-file -t "$PREV_SHA" >/dev/null 2>&1; then
+  COMMIT_COUNT=$(git rev-list --count "$PREV_SHA"..HEAD 2>/dev/null || echo 0)
+fi
+echo "  Commits: $COMMIT_COUNT"
+
 # ── Write deploy metadata ───────────────────────────────────────────────────
 ssh $SSHOPTS "$HOST" bash <<EOF
 cat > $BASE/releases/$RELEASE/.deploy-meta <<METAEOF
@@ -71,6 +85,9 @@ sha=$(git rev-parse HEAD)
 short_sha=$SHORT_SHA
 timestamp=$TIMESTAMP
 deployer=$(whoami)@$(hostname)
+branch=$BRANCH
+commit_count=$COMMIT_COUNT
+notes=$RELEASE_NOTES
 METAEOF
 EOF
 

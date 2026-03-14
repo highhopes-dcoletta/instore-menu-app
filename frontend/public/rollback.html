@@ -60,6 +60,21 @@
       return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
     }
 
+    function relativeTime(ts) {
+      if (!ts) return ''
+      var m = ts.match(/^(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})$/)
+      if (!m) return ts
+      var d = new Date(+m[1], +m[2]-1, +m[3], +m[4], +m[5], +m[6])
+      var diff = Date.now() - d.getTime()
+      var mins = Math.floor(diff / 60000)
+      if (mins < 1) return 'just now'
+      if (mins < 60) return mins + 'm ago'
+      var hours = Math.floor(mins / 60)
+      if (hours < 24) return hours + 'h ago'
+      var days = Math.floor(hours / 24)
+      return days + 'd ago'
+    }
+
     function showMessage(type, text) {
       document.getElementById('message').innerHTML = '<div class="' + type + '">' + text + '</div>'
     }
@@ -76,16 +91,38 @@
           var html = ''
           for (var i = 0; i < data.releases.length; i++) {
             var rel = data.releases[i]
-            html += '<div class="release' + (rel.current ? ' current' : '') + '">'
+            html += '<div class="release' + (rel.current ? ' current' : '') + '" style="display:block">'
+            html += '<div style="display:flex;align-items:center;gap:1rem">'
             html += '<div class="release-info">'
             html += '<div class="release-name' + (rel.current ? ' current' : '') + '">' + rel.sha
             if (rel.current) html += '<span class="badge">current</span>'
+            if (rel.branch && rel.branch !== 'main') html += '<span style="font-size:0.625rem;color:#a855f7;background:#faf5ff;padding:1px 6px;border-radius:3px;margin-left:0.5rem">' + rel.branch + '</span>'
+            if (rel.commitCount) html += '<span style="font-size:0.625rem;color:#9ca3af;margin-left:0.5rem">' + rel.commitCount + ' commit' + (rel.commitCount === 1 ? '' : 's') + '</span>'
             html += '</div>'
-            html += '<div class="release-meta">' + formatDate(rel.timestamp)
+            html += '<div class="release-meta">' + relativeTime(rel.timestamp)
             if (rel.deployer) html += ' &middot; ' + rel.deployer
-            html += '</div></div>'
+            html += '</div>'
+            // e2e + backup badges
+            var badges = ''
+            if (rel.e2e) {
+              if (rel.e2e.failed > 0) badges += '<span style="color:#ef4444;font-weight:600">' + rel.e2e.passed + ' passed, ' + rel.e2e.failed + ' failed</span> '
+              else if (rel.e2e.flaky > 0) badges += '<span style="color:#f59e0b;font-weight:600">' + rel.e2e.passed + ' passed, ' + rel.e2e.flaky + ' flaky</span> '
+              else badges += '<span style="color:#16a34a;font-weight:600">' + rel.e2e.passed + ' passed</span> '
+            }
+            if (rel.hasBackup) badges += '<span style="color:#9ca3af">DB backup</span>'
+            if (badges) html += '<div style="font-size:0.75rem;margin-top:2px">' + badges + '</div>'
+            html += '</div>'
             if (!rel.current) {
               html += '<button class="btn-rollback" onclick="showConfirm(\'' + rel.name + '\', \'' + rel.sha + '\', \'' + formatDate(rel.timestamp) + '\')">Roll Back</button>'
+            }
+            html += '</div>'
+            if (rel.notes && rel.notes.length) {
+              html += '<div style="border-top:1px solid #f3f4f6;padding:0.5rem 1rem;font-size:0.75rem;color:#6b7280">'
+              for (var j = 0; j < rel.notes.length; j++) {
+                var n = rel.notes[j]
+                html += '<div>' + n.title + ' <a href="https://github.com/highhopes-dcoletta/instore-menu-app/issues/' + n.number + '" target="_blank" style="color:#0d9488">#' + n.number + '</a></div>'
+              }
+              html += '</div>'
             }
             html += '</div>'
           }

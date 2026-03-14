@@ -16,7 +16,8 @@ SSHOPTS="-o IdentityAgent=SSH_AUTH_SOCK"
 SHORT_SHA=$(git rev-parse --short HEAD)
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 RELEASE="${TIMESTAMP}-${SHORT_SHA}"
-echo "==> Release: $RELEASE"
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
+echo "==> Release: $RELEASE (branch: $BRANCH)"
 
 # ── Build frontend ───────────────────────────────────────────────────────────
 echo "==> Building frontend (staging mode)..."
@@ -54,6 +55,19 @@ echo "  index.html verified."
 # ── Set permissions for nginx ────────────────────────────────────────────────
 ssh $SSHOPTS "$HOST" "chmod -R o+rX $BASE/releases/$RELEASE"
 
+# ── Generate release metadata ────────────────────────────────────────────────
+echo "==> Generating release notes..."
+PREV_SHA=$(ssh $SSHOPTS "$HOST" "cat $BASE/current/.deploy-meta 2>/dev/null | grep '^sha=' | cut -d= -f2")
+RELEASE_NOTES=$(bash scripts/release-notes.sh "$PREV_SHA")
+echo "  Notes: $RELEASE_NOTES"
+
+# Commit count since previous release
+COMMIT_COUNT=0
+if [ -n "$PREV_SHA" ] && git cat-file -t "$PREV_SHA" >/dev/null 2>&1; then
+  COMMIT_COUNT=$(git rev-list --count "$PREV_SHA"..HEAD 2>/dev/null || echo 0)
+fi
+echo "  Commits: $COMMIT_COUNT"
+
 # ── Write deploy metadata ───────────────────────────────────────────────────
 ssh $SSHOPTS "$HOST" bash <<EOF
 cat > $BASE/releases/$RELEASE/.deploy-meta <<METAEOF
@@ -61,6 +75,9 @@ sha=$(git rev-parse HEAD)
 short_sha=$SHORT_SHA
 timestamp=$TIMESTAMP
 deployer=$(whoami)@$(hostname)
+branch=$BRANCH
+commit_count=$COMMIT_COUNT
+notes=$RELEASE_NOTES
 METAEOF
 EOF
 
@@ -163,12 +180,30 @@ ssh $SSHOPTS "$HOST" "certbot --nginx -d menu2-stage.highhopesma.com -n --redire
 # ── E2E tests ────────────────────────────────────────────────────────────────
 echo ""
 echo "==> Running e2e tests against staging..."
-if E2E_BASE_URL=https://menu2-stage.highhopesma.com npx --prefix monitor playwright test --config monitor/playwright.config.js --reporter=list; then
-  echo ""
-  echo "==> Done! https://menu2-stage.highhopesma.com"
-  echo "    Release: $RELEASE"
-else
+E2E_OUTPUT=$(mktemp)
+E2E_EXIT=0
+E2E_BASE_URL=https://menu2-stage.highhopesma.com npx --prefix monitor playwright test --config monitor/playwright.config.js --reporter=list 2>&1 | tee "$E2E_OUTPUT" || E2E_EXIT=$?
+
+# Parse test results and append to deploy metadata
+E2E_PASSED=$(grep -oE '[0-9]+ passed' "$E2E_OUTPUT" | grep -oE '[0-9]+' || echo 0)
+E2E_FAILED=$(grep -oE '[0-9]+ failed' "$E2E_OUTPUT" | grep -oE '[0-9]+' || echo 0)
+E2E_FLAKY=$(grep -oE '[0-9]+ flaky' "$E2E_OUTPUT" | grep -oE '[0-9]+' || echo 0)
+rm -f "$E2E_OUTPUT"
+
+ssh $SSHOPTS "$HOST" bash <<EOF
+cat >> $BASE/releases/$RELEASE/.deploy-meta <<METAEOF
+e2e_passed=$E2E_PASSED
+e2e_failed=$E2E_FAILED
+e2e_flaky=$E2E_FLAKY
+METAEOF
+EOF
+
+if [ $E2E_EXIT -ne 0 ]; then
   echo ""
   echo "ERROR: e2e tests failed against staging — see above for details." >&2
   exit 1
 fi
+
+echo ""
+echo "==> Done! https://menu2-stage.highhopesma.com"
+echo "    Release: $RELEASE"

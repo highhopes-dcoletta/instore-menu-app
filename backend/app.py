@@ -552,6 +552,7 @@ def list_releases():
     current_link = os.path.join(base, "current")
     current_name = os.path.basename(os.path.realpath(current_link)) if os.path.islink(current_link) else None
 
+    backups_dir = os.path.join(base, "backups", "db")
     entries = []
     for name in sorted(os.listdir(releases_dir), reverse=True):
         if not RELEASE_NAME_RE.match(name):
@@ -560,12 +561,34 @@ def list_releases():
         if not os.path.isdir(path):
             continue
         meta = _parse_deploy_meta(os.path.join(path, ".deploy-meta"))
+        notes_raw = meta.get("notes", "[]")
+        try:
+            notes = json.loads(notes_raw)
+        except (json.JSONDecodeError, TypeError):
+            notes = []
+
+        # E2e test results
+        e2e_passed = int(meta.get("e2e_passed", 0) or 0)
+        e2e_failed = int(meta.get("e2e_failed", 0) or 0)
+        e2e_flaky = int(meta.get("e2e_flaky", 0) or 0)
+        has_e2e = "e2e_passed" in meta
+        e2e = {"passed": e2e_passed, "failed": e2e_failed, "flaky": e2e_flaky} if has_e2e else None
+
+        # DB backup check
+        backup_file = f"analytics-{name}-pre-deploy.db"
+        has_backup = os.path.isfile(os.path.join(backups_dir, backup_file)) if os.path.isdir(backups_dir) else False
+
         entries.append({
             "name": name,
             "sha": meta.get("short_sha", ""),
             "timestamp": meta.get("timestamp", ""),
             "deployer": meta.get("deployer", ""),
+            "branch": meta.get("branch", ""),
+            "commitCount": int(meta.get("commit_count", 0) or 0),
             "current": name == current_name,
+            "notes": notes,
+            "e2e": e2e,
+            "hasBackup": has_backup,
         })
 
     return jsonify({"current": current_name, "releases": entries})
