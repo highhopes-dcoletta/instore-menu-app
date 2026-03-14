@@ -581,6 +581,7 @@ def list_releases():
         entries.append({
             "name": name,
             "sha": meta.get("short_sha", ""),
+            "version": meta.get("version", ""),
             "timestamp": meta.get("timestamp", ""),
             "deployer": meta.get("deployer", ""),
             "branch": meta.get("branch", ""),

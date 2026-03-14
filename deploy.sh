@@ -19,7 +19,8 @@ SHORT_SHA=$(git rev-parse --short HEAD)
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 RELEASE="${TIMESTAMP}-${SHORT_SHA}"
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
-echo "==> Release: $RELEASE (branch: $BRANCH)"
+VERSION=$(git rev-list --count HEAD)
+echo "==> Release: $RELEASE (branch: $BRANCH, v$VERSION)"
 
 # ── Check for uncommitted changes ────────────────────────────────────────────
 if [ -n "$(git status --porcelain)" ]; then
@@ -85,6 +86,7 @@ sha=$(git rev-parse HEAD)
 short_sha=$SHORT_SHA
 timestamp=$TIMESTAMP
 deployer=$(whoami)@$(hostname)
+version=$VERSION
 branch=$BRANCH
 commit_count=$COMMIT_COUNT
 notes=$RELEASE_NOTES
