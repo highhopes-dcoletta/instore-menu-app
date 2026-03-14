@@ -20,12 +20,12 @@ async function useE2eSessionId(page) {
   })
 }
 
-// Wait for products to fully load. networkidle ensures the Dutchie fetch
-// has completed before we check the DOM — prevents races where a localStorage
-// cache renders a partial table before the fresh fetch arrives.
+// Wait for products to fully load. We require at least 5 rows to be visible,
+// which ensures the full Dutchie fetch has completed (not just a partial
+// localStorage cache render). Avoids networkidle which never resolves due to
+// the 60s background refresh timer.
 async function waitForProducts(page) {
-  await page.waitForLoadState('networkidle', { timeout: 25000 })
-  await expect(page.locator('table tbody tr').first()).toBeVisible({ timeout: 25000 })
+  await expect(page.locator('table tbody tr').nth(4)).toBeVisible({ timeout: 25000 })
 }
 
 // Wait for the home view content (only renders after products finish loading)
