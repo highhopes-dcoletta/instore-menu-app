@@ -519,11 +519,12 @@ def push_settings_to_prod():
 # ── Releases / Rollback ───────────────────────────────────────────────────────
 
 # Resolve the base directory (e.g. /home/highhopes/highhopes-menu) by following
-# the real path of this file: .../releases/{name}/backend/app.py → go up 3 levels.
+# the real path of this file: .../releases/{name}/backend/app.py → go up 4 levels.
 # Returns None when running locally (no releases/ dir).
 def _get_releases_base():
     real = os.path.realpath(__file__)                   # resolve symlink
-    base = os.path.dirname(os.path.dirname(os.path.dirname(real)))  # up 3
+    # real = .../releases/{name}/backend/app.py → up 4: app.py → backend → {name} → releases → base
+    base = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(real))))
     releases_dir = os.path.join(base, "releases")
     if os.path.isdir(releases_dir):
         return base
