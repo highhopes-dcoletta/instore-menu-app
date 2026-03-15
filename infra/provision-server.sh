@@ -14,8 +14,7 @@
 #   bash infra/provision-server.sh
 #
 # After provisioning:
-#   1. Update DNS at pairdomains.com: point menu2.highhopesma.com and
-#      menu2-stage.highhopesma.com to the new droplet IP
+#   1. Run: bash infra/provision-server.sh --dns  (create/update A records via Cloudflare)
 #   2. Run: bash infra/provision-server.sh --ssl  (after DNS propagates)
 #   3. Run: bash infra/provision-server.sh --monitor <PAGERTREE_URL>  (install health check cron)
 #   4. Run: bash infra/provision-server.sh --azure  (register SPA redirect URIs in Entra ID)
@@ -80,7 +79,111 @@ wait_for_ssh() {
   die "SSH not available after 120s"
 }
 
+# ── Cloudflare API helper ────────────────────────────────────────────────────
+cf_api() {
+  local method="$1" path="$2"
+  shift 2
+  curl -sf -X "$method" \
+    -H "Authorization: Bearer $CF_API_TOKEN" \
+    -H "Content-Type: application/json" \
+    "https://api.cloudflare.com/client/v4$path" "$@"
+}
+
 # ── Handle sub-commands ───────────────────────────────────────────────────────
+if [ "${1:-}" = "--dns" ]; then
+  [ ! -f "$STATE_FILE" ] && die "No provision state found. Run the full provision first."
+  IP=$(grep '^IP=' "$STATE_FILE" | cut -d= -f2)
+  [ -z "$IP" ] && die "No IP in state file"
+  PROD_DOMAIN=$(grep '^PROD_DOMAIN=' "$STATE_FILE" | cut -d= -f2)
+  STAGE_DOMAIN=$(grep '^STAGE_DOMAIN=' "$STATE_FILE" | cut -d= -f2)
+  PROD_DOMAIN="${PROD_DOMAIN:-menu2.highhopesma.com}"
+  STAGE_DOMAIN="${STAGE_DOMAIN:-menu2-stage.highhopesma.com}"
+  [ -z "${CF_API_TOKEN:-}" ] && die "CF_API_TOKEN environment variable is required (Cloudflare API token with DNS edit permission)"
+
+  step "Configuring DNS via Cloudflare"
+  info "Droplet IP: $IP"
+  info "Domains: $PROD_DOMAIN, $STAGE_DOMAIN"
+
+  # Extract the base domain (zone) from PROD_DOMAIN
+  # e.g. "menu.tapleaf.app" → "tapleaf.app", "tapleaf.app" → "tapleaf.app"
+  ZONE_NAME=$(echo "$PROD_DOMAIN" | awk -F. '{print $(NF-1)"."$NF}')
+  info "Zone: $ZONE_NAME"
+
+  # Look up zone ID
+  ZONE_RESPONSE=$(cf_api GET "/zones?name=$ZONE_NAME") || die "Failed to query Cloudflare zones"
+  ZONE_ID=$(echo "$ZONE_RESPONSE" | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+zones = data.get('result', [])
+if not zones:
+    print('')
+else:
+    print(zones[0]['id'])
+")
+  [ -z "$ZONE_ID" ] && die "Zone '$ZONE_NAME' not found in your Cloudflare account. Register the domain first at https://domains.cloudflare.com"
+  info "Zone ID: $ZONE_ID"
+
+  # Function to create or update an A record
+  cf_upsert_a_record() {
+    local fqdn="$1" ip="$2"
+    local record_name="$fqdn"
+
+    info "Setting A record: $fqdn → $ip"
+
+    # Check if record already exists
+    local existing
+    existing=$(cf_api GET "/zones/$ZONE_ID/dns_records?type=A&name=$fqdn") || die "Failed to list DNS records"
+    local existing_id
+    existing_id=$(echo "$existing" | python3 -c "
+import sys, json
+records = json.load(sys.stdin).get('result', [])
+print(records[0]['id'] if records else '')
+")
+
+    if [ -n "$existing_id" ]; then
+      # Update existing record
+      cf_api PUT "/zones/$ZONE_ID/dns_records/$existing_id" \
+        -d "{\"type\":\"A\",\"name\":\"$fqdn\",\"content\":\"$ip\",\"ttl\":300,\"proxied\":false}" \
+        >/dev/null || die "Failed to update A record for $fqdn"
+      echo "    Updated (was already present)"
+    else
+      # Create new record
+      cf_api POST "/zones/$ZONE_ID/dns_records" \
+        -d "{\"type\":\"A\",\"name\":\"$fqdn\",\"content\":\"$ip\",\"ttl\":300,\"proxied\":false}" \
+        >/dev/null || die "Failed to create A record for $fqdn"
+      echo "    Created"
+    fi
+  }
+
+  cf_upsert_a_record "$PROD_DOMAIN" "$IP"
+  cf_upsert_a_record "$STAGE_DOMAIN" "$IP"
+
+  # Verify propagation
+  echo ""
+  info "Verifying DNS propagation (this may take a minute)..."
+  DNS_OK=true
+  for domain in "$PROD_DOMAIN" "$STAGE_DOMAIN"; do
+    RESOLVED=$(dig +short "$domain" @1.1.1.1 2>/dev/null | head -1)
+    if [ "$RESOLVED" = "$IP" ]; then
+      echo "    $domain → $RESOLVED ✓"
+    else
+      echo "    $domain → ${RESOLVED:-<not resolving yet>} (expected $IP)"
+      DNS_OK=false
+    fi
+  done
+
+  echo ""
+  if [ "$DNS_OK" = true ]; then
+    info "DNS is live! You can now run: bash infra/provision-server.sh --ssl"
+  else
+    info "DNS records created but not yet propagating. Wait a few minutes, then run:"
+    echo "    dig $PROD_DOMAIN @1.1.1.1"
+    echo ""
+    info "Once it resolves to $IP, run: bash infra/provision-server.sh --ssl"
+  fi
+  exit 0
+fi
+
 if [ "${1:-}" = "--ssl" ]; then
   [ ! -f "$STATE_FILE" ] && die "No provision state found. Run the full provision first."
   IP=$(grep '^IP=' "$STATE_FILE" | cut -d= -f2)
@@ -522,28 +625,27 @@ echo "  IP Address:  $IP"
 echo "  Snapshots:   enabled (weekly, \$2/month)"
 echo ""
 echo "  Next steps:"
-echo "    1. Update DNS at pairdomains.com:"
-echo "       $PROD_DOMAIN        → $IP"
-echo "       $STAGE_DOMAIN  → $IP"
+echo "    1. Point DNS to this server (requires CF_API_TOKEN):"
+echo "       CF_API_TOKEN=<token> bash infra/provision-server.sh --dns"
 echo ""
-echo "    2. After DNS propagates (check with: dig $PROD_DOMAIN):"
+echo "    2. After DNS propagates, install SSL:"
 echo "       bash infra/provision-server.sh --ssl"
 echo ""
 echo "    3. Install health monitor:"
 echo "       bash infra/provision-server.sh --monitor <PAGERTREE_URL>"
 echo ""
-echo "    4. Verify everything works:"
+echo "    4. Register redirect URIs in Azure AD:"
+echo "       bash infra/provision-server.sh --azure"
+echo ""
+echo "    5. Verify everything works:"
 echo "       curl https://$PROD_DOMAIN/api/sessions"
 echo "       curl https://$STAGE_DOMAIN/api/sessions"
 echo ""
-echo "    5. Once confirmed, destroy the old droplet in the DO console."
+echo "    6. Once confirmed, destroy the old droplet in the DO console."
 echo ""
-echo "    6. For future deploys to this server:"
+echo "    7. For future deploys to this server:"
 echo "       DEPLOY_HOST=root@$IP bash deploy.sh"
 echo "       DEPLOY_HOST=root@$IP bash deploy-stage.sh"
 echo ""
 echo "    To make it the default, update HOST in deploy.sh and deploy-stage.sh."
-echo ""
-echo "    7. Register redirect URIs in Azure AD app registration:"
-echo "       bash infra/provision-server.sh --azure"
 echo ""
