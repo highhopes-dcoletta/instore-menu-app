@@ -18,6 +18,7 @@
 #      menu2-stage.highhopesma.com to the new droplet IP
 #   2. Run: bash infra/provision-server.sh --ssl  (after DNS propagates)
 #   3. Run: bash infra/provision-server.sh --monitor <PAGERTREE_URL>  (install health check cron)
+#   4. Run: bash infra/provision-server.sh --azure  (register SPA redirect URIs in Entra ID)
 #
 # Monthly rebuild:
 #   To rebuild and switch over, run this script, update DNS, then destroy the
@@ -78,9 +79,6 @@ wait_for_ssh() {
   done
   die "SSH not available after 120s"
 }
-
-# ── Validate prerequisites ────────────────────────────────────────────────────
-[ -z "${DO_API_TOKEN:-}" ] && die "DO_API_TOKEN environment variable is required"
 
 # ── Handle sub-commands ───────────────────────────────────────────────────────
 if [ "${1:-}" = "--ssl" ]; then
@@ -186,6 +184,108 @@ if [ "${1:-}" = "--status" ]; then
   cat "$STATE_FILE"
   exit 0
 fi
+
+if [ "${1:-}" = "--azure" ]; then
+  [ ! -f "$STATE_FILE" ] && die "No provision state found. Run the full provision first."
+  PROD_DOMAIN=$(grep '^PROD_DOMAIN=' "$STATE_FILE" | cut -d= -f2)
+  STAGE_DOMAIN=$(grep '^STAGE_DOMAIN=' "$STATE_FILE" | cut -d= -f2)
+  PROD_DOMAIN="${PROD_DOMAIN:-menu2.highhopesma.com}"
+  STAGE_DOMAIN="${STAGE_DOMAIN:-menu2-stage.highhopesma.com}"
+
+  # Read MSAL client ID from frontend/.env
+  MSAL_CLIENT_ID=$(grep '^VITE_MSAL_CLIENT_ID=' "$PROJECT_DIR/frontend/.env" | cut -d= -f2)
+  [ -z "$MSAL_CLIENT_ID" ] && die "VITE_MSAL_CLIENT_ID not found in frontend/.env"
+
+  step "Registering Azure AD SPA redirect URIs"
+  info "App registration: $MSAL_CLIENT_ID"
+  info "Redirect URIs to add:"
+  echo "    https://$PROD_DOMAIN/auth"
+  echo "    https://$STAGE_DOMAIN/auth"
+
+  # Check if az CLI is installed
+  if ! command -v az &>/dev/null; then
+    echo ""
+    echo "Azure CLI (az) is not installed."
+    echo "Install it now? This runs: brew install azure-cli"
+    printf "  [y/N] "
+    read -r INSTALL_AZ
+    if [ "$INSTALL_AZ" = "y" ] || [ "$INSTALL_AZ" = "Y" ]; then
+      info "Installing Azure CLI..."
+      brew install azure-cli
+    else
+      echo ""
+      echo "You can install it manually:"
+      echo "  brew install azure-cli"
+      echo ""
+      echo "Or register the redirect URIs manually in the Azure portal:"
+      echo "  https://portal.azure.com → App registrations → $MSAL_CLIENT_ID → Authentication"
+      echo "  Add SPA redirect URIs:"
+      echo "    https://$PROD_DOMAIN/auth"
+      echo "    https://$STAGE_DOMAIN/auth"
+      exit 1
+    fi
+  fi
+
+  # Check if logged in
+  if ! az account show &>/dev/null; then
+    info "Not logged in to Azure. Opening browser login..."
+    az login || die "Azure login failed"
+  fi
+
+  # Get the app's object ID (Graph API uses object ID, not client ID)
+  OBJECT_ID=$(az ad app show --id "$MSAL_CLIENT_ID" --query "id" -o tsv 2>/dev/null) || \
+    die "Failed to find app registration $MSAL_CLIENT_ID. Check that you're logged into the correct tenant."
+  info "Object ID: $OBJECT_ID"
+
+  # Get existing SPA redirect URIs
+  EXISTING_URIS=$(az rest --method GET \
+    --url "https://graph.microsoft.com/v1.0/applications/$OBJECT_ID" \
+    --query "spa.redirectUris" -o json 2>/dev/null) || die "Failed to read existing redirect URIs"
+
+  info "Existing SPA redirect URIs:"
+  echo "$EXISTING_URIS" | python3 -c "import sys,json; [print('    ' + u) for u in json.load(sys.stdin)]" 2>/dev/null || echo "    (none)"
+
+  # Build merged URI list: existing + new (deduplicated)
+  NEW_PROD="https://$PROD_DOMAIN/auth"
+  NEW_STAGE="https://$STAGE_DOMAIN/auth"
+
+  MERGED_URIS=$(echo "$EXISTING_URIS" | python3 -c "
+import sys, json
+uris = set(json.load(sys.stdin) or [])
+uris.add('$NEW_PROD')
+uris.add('$NEW_STAGE')
+print(json.dumps(sorted(uris)))
+")
+
+  # Check if anything changed
+  EXISTING_COUNT=$(echo "$EXISTING_URIS" | python3 -c "import sys,json; print(len(json.load(sys.stdin) or []))")
+  MERGED_COUNT=$(echo "$MERGED_URIS" | python3 -c "import sys,json; print(len(json.load(sys.stdin)))")
+  if [ "$EXISTING_COUNT" = "$MERGED_COUNT" ]; then
+    info "Both redirect URIs are already registered. Nothing to do."
+    exit 0
+  fi
+
+  # Update the app registration
+  info "Updating app registration..."
+  az rest --method PATCH \
+    --url "https://graph.microsoft.com/v1.0/applications/$OBJECT_ID" \
+    --headers "Content-Type=application/json" \
+    --body "{\"spa\":{\"redirectUris\":$MERGED_URIS}}" || \
+    die "Failed to update redirect URIs"
+
+  # Verify
+  UPDATED_URIS=$(az rest --method GET \
+    --url "https://graph.microsoft.com/v1.0/applications/$OBJECT_ID" \
+    --query "spa.redirectUris" -o json 2>/dev/null)
+  info "Updated SPA redirect URIs:"
+  echo "$UPDATED_URIS" | python3 -c "import sys,json; [print('    ' + u) for u in json.load(sys.stdin)]"
+
+  info "Azure AD redirect URIs configured."
+  exit 0
+fi
+
+# ── Validate prerequisites (for full provisioning) ───────────────────────────
+[ -z "${DO_API_TOKEN:-}" ] && die "DO_API_TOKEN environment variable is required"
 
 # ── Step 1: Find SSH key ─────────────────────────────────────────────────────
 step "Finding SSH key in DigitalOcean account"
@@ -445,6 +545,5 @@ echo ""
 echo "    To make it the default, update HOST in deploy.sh and deploy-stage.sh."
 echo ""
 echo "    7. Register redirect URIs in Azure AD app registration:"
-echo "       https://$PROD_DOMAIN/auth"
-echo "       https://$STAGE_DOMAIN/auth"
+echo "       bash infra/provision-server.sh --azure"
 echo ""
