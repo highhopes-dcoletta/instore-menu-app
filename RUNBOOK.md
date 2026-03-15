@@ -290,30 +290,28 @@ The only data lost is analytics events and bundle definitions. Bundles would nee
 
 **Symptoms:** Site was working, you deployed, now it's broken.
 
-Each deploy creates a timestamped release directory on the server. Rolling back swaps the symlink to a previous release — no rebuild needed.
+There are three ways to roll back, all doing the same thing under the hood (swap the `current` symlink to a previous release directory, restart the service):
 
-**List available releases:**
+**Option A — It already happened automatically.** The production deploy script waits up to 30 seconds for the API to respond after restarting. If the health check fails, it automatically reverts to the previous release. Check the deploy output — if you see "ROLLING BACK", you're already on the old release.
 
-```bash
-bash rollback.sh            # production
-bash rollback.sh --stage    # staging
-```
-
-This shows all releases with the current one marked `*`.
-
-**Roll back:**
+**Option B — CLI rollback** (from your laptop):
 
 ```bash
-# List releases first, then copy the full name (or enough to be unique)
-bash rollback.sh 20260312-143052   # match by timestamp (production)
-bash rollback.sh --stage c8eae26   # match by git SHA (staging)
+bash rollback.sh            # list releases (current marked with *)
+bash rollback.sh 20260312   # roll back by timestamp (production)
+bash rollback.sh --stage c8eae26   # roll back by git SHA (staging)
 ```
 
-If a partial match hits multiple releases, the script picks the latest one. Use a longer fragment to be precise.
+If a partial match hits multiple releases, the script picks the latest one. It backs up the database, installs the target release's Python dependencies, swaps the symlink, restarts the service, and verifies the API responds.
 
-The script backs up the database, installs the target release's Python dependencies, swaps the symlink, restarts the service, and verifies the API responds.
+**Option C — Admin UI** (from a browser): Go to `/budtender` → Releases tab. Shows all releases with deploy metadata and E2E test results. Click to roll back — useful if you're away from your laptop or a non-developer needs to act.
 
-> **Note:** The deploy script also rolls back automatically if its post-deploy health check fails.
+**Option D — Emergency rollback page** (from a browser): Go to `/rollback.html`. This is a standalone static HTML page with zero dependencies on the Vue app — it talks directly to the `/api/admin/releases` and `/api/admin/rollback` API endpoints. Use this when the deploy broke the frontend itself (bad JS build, white screen, etc.) and the `/budtender` UI won't load. It only requires:
+- Nginx running (to serve the static file and proxy to the API)
+- Flask/Waitress running (to handle the rollback API calls)
+- A browser
+
+It does **not** need the Vue JS bundle, Node.js, or the Dutchie API.
 
 ---
 
@@ -436,11 +434,7 @@ ls -lht .db-backups/
 
 ### Versioned releases & rollback
 
-Each deploy creates a timestamped release directory under `/home/highhopes/highhopes-menu/releases/`. A `current` symlink points to the active release. Rolling back atomically swaps this symlink — no rebuild needed.
-
-**Automatic rollback:** The production deploy script (`deploy.sh`) waits up to 30 seconds for the API to respond on port 5001 after restarting the service. If the health check fails, it automatically reverts the symlink to the previous release and restarts.
-
-**Manual rollback:** See Scenario 7 above, or use the admin UI at `/budtender` (Releases tab) for browser-based rollback.
+Each deploy creates a timestamped release directory under `/home/highhopes/highhopes-menu/releases/`. A `current` symlink points to the active release. All three rollback methods (auto, CLI, admin UI) work the same way: swap the symlink, restart the service. See **Scenario 7** for details on each option.
 
 **Release metadata:** Each release includes a `.deploy-meta` file with SHA, timestamp, deployer, version, branch, and (for staging) E2E test results.
 
