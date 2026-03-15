@@ -1,6 +1,6 @@
 # High Hopes Menu — Incident Runbook
 
-**Last updated:** 2026-03-12 · **Version:** 1.1
+**Last updated:** 2026-03-14 · **Version:** 1.2
 
 ---
 
@@ -71,8 +71,8 @@ ssh -o IdentityAgent=SSH_AUTH_SOCK root@104.236.29.111 \
 
 Common causes:
 - Corrupt `analytics.db` — see Scenario 6
-- Bad `.env` file — verify with: `ssh ... "cat /home/highhopes/highhopes-menu/backend/.env"`
-- Missing Python dependency — run: `ssh ... "/home/highhopes/highhopes-menu/backend/venv/bin/pip install -r /home/highhopes/highhopes-menu/backend/requirements.txt"`
+- Bad `.env` file — verify with: `ssh ... "cat /home/highhopes/highhopes-menu/shared/backend.env"`
+- Missing Python dependency — run: `ssh ... "/home/highhopes/highhopes-menu/shared/venv/bin/pip install -r /home/highhopes/highhopes-menu/current/backend/requirements.txt"`
 
 **Note:** Restarting Flask clears all in-memory sessions. Active kiosk sessions will be lost, but kiosks recover automatically (the app creates a new session on the next interaction).
 
@@ -189,8 +189,12 @@ du -sh /var/log/* 2>/dev/null | sort -rh | head -10
 
 echo ""
 echo "=== Analytics DB size ==="
-ls -lh /home/highhopes/highhopes-menu/backend/analytics.db
-ls -lh /home/highhopes/highhopes-menu-stage/backend/analytics.db 2>/dev/null
+ls -lh /home/highhopes/highhopes-menu/shared/analytics.db
+ls -lh /home/highhopes/highhopes-menu-stage/shared/analytics.db 2>/dev/null
+
+echo ""
+echo "=== DB backup count ==="
+ls /home/highhopes/highhopes-menu/backups/db/ 2>/dev/null | wc -l
 EOF
 ```
 
@@ -217,19 +221,47 @@ EOF
 
 ```bash
 ssh -o IdentityAgent=SSH_AUTH_SOCK root@104.236.29.111 \
-  "/home/highhopes/highhopes-menu/backend/venv/bin/python3 -c \"
+  "/home/highhopes/highhopes-menu/shared/venv/bin/python3 -c \"
 import sqlite3
-conn = sqlite3.connect('/home/highhopes/highhopes-menu/backend/analytics.db')
+conn = sqlite3.connect('/home/highhopes/highhopes-menu/shared/analytics.db')
 conn.execute('PRAGMA integrity_check')
 print(conn.execute('PRAGMA integrity_check').fetchone())
 \""
 ```
 
-**Fix — rebuild from dump:**
+**Fix — restore from backup:**
 
 ```bash
 ssh -o IdentityAgent=SSH_AUTH_SOCK root@104.236.29.111 bash <<'EOF'
-cd /home/highhopes/highhopes-menu/backend
+cd /home/highhopes/highhopes-menu
+systemctl stop highhopes-menu
+
+# Find the latest backup
+LATEST=$(ls -t backups/db/*.db 2>/dev/null | head -1)
+if [ -n "$LATEST" ]; then
+  echo "Restoring from: $LATEST"
+  cp shared/analytics.db shared/analytics.db.corrupt.$(date +%s)
+  cp "$LATEST" shared/analytics.db
+else
+  echo "No backups found — see rebuild option below"
+fi
+
+systemctl start highhopes-menu
+EOF
+```
+
+Backups are stored at `/home/highhopes/highhopes-menu/backups/db/` (30 retained). You also have local copies in `.db-backups/` on the dev machine. To restore from a local backup:
+
+```bash
+scp .db-backups/latest.db root@104.236.29.111:/home/highhopes/highhopes-menu/shared/analytics.db
+ssh -o IdentityAgent=SSH_AUTH_SOCK root@104.236.29.111 "systemctl restart highhopes-menu"
+```
+
+**Fix — rebuild from dump** (if backups are also corrupt):
+
+```bash
+ssh -o IdentityAgent=SSH_AUTH_SOCK root@104.236.29.111 bash <<'EOF'
+cd /home/highhopes/highhopes-menu/shared
 cp analytics.db analytics.db.corrupt.$(date +%s)
 sqlite3 analytics.db ".dump" > dump.sql
 rm analytics.db
@@ -243,7 +275,7 @@ EOF
 
 ```bash
 ssh -o IdentityAgent=SSH_AUTH_SOCK root@104.236.29.111 bash <<'EOF'
-cd /home/highhopes/highhopes-menu/backend
+cd /home/highhopes/highhopes-menu/shared
 mv analytics.db analytics.db.corrupt.$(date +%s)
 systemctl restart highhopes-menu
 # Flask will create a fresh database on startup
@@ -368,6 +400,135 @@ This is an in-store display, not an e-commerce site. A few minutes of downtime i
 5. **Microsoft Entra ID outage** — Check [Azure status](https://status.azure.com). If Microsoft's login service is down, staff auth won't work, but this does not affect kiosk customers at all.
 
 **Note:** Staff authentication is entirely client-side (MSAL browser library + localStorage). There is no server-side component. The Flask backend is not involved.
+
+---
+
+## Disaster recovery
+
+### Backup inventory
+
+The system maintains multiple layers of database backups:
+
+| Backup type | Location (on server) | Frequency | Retention |
+|---|---|---|---|
+| Pre-deploy | `backups/db/analytics-{RELEASE}-pre-deploy.db` | Every deploy | Last 30 |
+| Pre-rollback | `backups/db/analytics-{TIMESTAMP}-pre-rollback.db` | Every rollback | Last 30 |
+| Daily cron | `backups/db/analytics-daily-{YYYYMMDD}.db` | 3 AM daily | 30 days |
+| Local copies | `.db-backups/` on dev machine | Every prod deploy | Manual |
+| DO snapshots | DigitalOcean control panel | Weekly | Per DO plan |
+
+All server backups are in `/home/highhopes/highhopes-menu/backups/db/`.
+
+**List available backups:**
+
+```bash
+ssh -o IdentityAgent=SSH_AUTH_SOCK root@104.236.29.111 \
+  "ls -lht /home/highhopes/highhopes-menu/backups/db/ | head -20"
+```
+
+**List local backups:**
+
+```bash
+ls -lht .db-backups/
+```
+
+---
+
+### Versioned releases & rollback
+
+Each deploy creates a timestamped release directory under `/home/highhopes/highhopes-menu/releases/`. A `current` symlink points to the active release. Rolling back atomically swaps this symlink — no rebuild needed.
+
+**Automatic rollback:** The production deploy script (`deploy.sh`) waits up to 30 seconds for the API to respond on port 5001 after restarting the service. If the health check fails, it automatically reverts the symlink to the previous release and restarts.
+
+**Manual rollback:** See Scenario 7 above, or use the admin UI at `/budtender` (Releases tab) for browser-based rollback.
+
+**Release metadata:** Each release includes a `.deploy-meta` file with SHA, timestamp, deployer, version, branch, and (for staging) E2E test results.
+
+**Release retention:** Only the last 10 releases are kept; older ones are automatically cleaned up. The current release is never deleted.
+
+---
+
+### Recovering from complete server loss
+
+If the server is destroyed or unrecoverable, you can rebuild from scratch using the provisioning script. Prerequisites:
+- `DO_API_TOKEN` environment variable set (DigitalOcean API token)
+- SSH keys registered in your DigitalOcean account
+- Local `.db-backups/` directory with database backups (if you want to restore data)
+
+**Step 1: Provision a new server**
+
+```bash
+bash infra/provision-server.sh
+```
+
+This automatically:
+1. Creates a new DigitalOcean droplet (Ubuntu 24.04, 1GB RAM)
+2. Installs system packages (nginx, Python 3, certbot, etc.)
+3. Creates the directory structure for prod and staging
+4. Installs systemd services
+5. Restores the latest database from `.db-backups/` (or starts fresh)
+6. Deploys both production and staging from the current git branch
+7. Saves the new droplet IP to `.provision-state`
+
+If provisioning fails partway through, the script automatically cleans up the droplet.
+
+**Step 2: Update DNS**
+
+Point `menu2.highhopesma.com` and `menu2-stage.highhopesma.com` to the new IP address (managed at pairdomains.com). Wait for DNS to propagate.
+
+**Step 3: Install SSL certificates**
+
+```bash
+bash infra/provision-server.sh --ssl
+```
+
+**Step 4: Install the health monitor**
+
+```bash
+bash infra/provision-server.sh --monitor <PAGERTREE_INTEGRATION_URL>
+```
+
+**Step 5: Enable weekly snapshots**
+
+```bash
+bash infra/provision-server.sh --enable-snapshots
+```
+
+**Step 6: Verify**
+
+```bash
+bash infra/provision-server.sh --status
+curl -sI https://menu2.highhopesma.com | head -1
+```
+
+---
+
+### What data survives vs. what's lost
+
+| Component | Survives restart? | Survives rollback? | Survives server rebuild? |
+|---|---|---|---|
+| Product data (from Dutchie) | Yes (re-fetched) | Yes (re-fetched) | Yes (re-fetched) |
+| Analytics events | Yes (SQLite) | Yes (shared DB) | If backup available |
+| Bundle definitions | Yes (SQLite) | Yes (shared DB) | If backup available |
+| Settings overrides | Yes (SQLite) | Yes (shared DB) | If backup available |
+| Kiosk sessions | No (in-memory) | No (in-memory) | No |
+| localStorage product cache | Yes (per browser) | Yes (per browser) | Yes (per browser) |
+| Staff auth sessions | Yes (MSAL/browser) | Yes (MSAL/browser) | Yes (MSAL/browser) |
+
+**Key point:** The database is stored in `/home/highhopes/highhopes-menu/shared/analytics.db`, which is outside the release directories and persists across deploys and rollbacks. Only a server loss or DB corruption puts it at risk, and backups exist at multiple levels.
+
+---
+
+### Monitoring & alerting overview
+
+| Monitor | Frequency | What it checks | Alerts via |
+|---|---|---|---|
+| `monitor.sh` (cron) | Every 5 min | HTTP 200, API CRUD, SSL expiry (<14 days) | PagerTree webhook |
+| GitHub Actions E2E | Every 15 min | Full Playwright test suite against prod | PagerTree webhook |
+| Systemd `Restart=always` | On crash | Flask/Waitress process health | Auto-restarts (5s delay) |
+| Deploy health check | On deploy | API port 5001 responds within 30s | Auto-rollback |
+
+The monitor cron (`/etc/highhopes-monitor.env` for PagerTree URL) runs on the server itself. If the server is down, the GitHub Actions E2E monitor (running externally) will catch it within 15 minutes.
 
 ---
 
